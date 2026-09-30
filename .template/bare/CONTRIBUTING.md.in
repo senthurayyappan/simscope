@@ -1,0 +1,21 @@
+# Contributing
+
+1. Create a branch from `main` and run `make install`.
+2. Add tests for your changes.
+3. Run `make check` and `make test`.
+4. Open a pull request.
+
+The Makefile contains the uv commands for each task. You can also run those
+commands directly on Windows. If a Git hook changes a file, review and stage
+the change before you commit again.
+
+Use `uv add` for project dependencies and `uv add --dev` for development tools.
+Commit `pyproject.toml` and `uv.lock` together. When you change the supported
+Python versions, update `.python-version`, `requires-python`, Ruff's target,
+and the Python versions in CI.
+
+## Workflows
+
+{{workflow_note}}
+
+{{enable_ci_note}}

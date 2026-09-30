@@ -1,0 +1,21 @@
+name: PR title
+on:
+  pull_request:
+    types: [opened, edited, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: pr-title-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  title:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: {{action_checkout}}
+        with:
+          persist-credentials: false
+      - name: Check PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: python3 .github/scripts/check_commit_message.py

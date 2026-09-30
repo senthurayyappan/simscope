@@ -1,0 +1,50 @@
+name: Release Please
+on:
+{{push_trigger}}  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-please
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: {{action_release_please}}
+        id: release
+        with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
+          config-file: .release-please-config.json
+          manifest-file: .release-please-manifest.json
+  publish:
+    needs: release
+    if: needs.release.outputs.release_created == 'true' && vars.PUBLISH_PYPI == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: {{action_checkout}}
+        with:
+          ref: ${{ needs.release.outputs.tag_name }}
+          persist-credentials: false
+      - uses: {{action_setup_uv}}
+        with:
+          # A release job that can publish should not restore a shared cache.
+          enable-cache: false
+      - run: uv sync --locked --group docs
+      - run: uv run pre-commit run --all-files
+      - run: uv run --group docs mkdocs build --strict
+      - run: uv run pytest --cov --cov-report=term-missing
+      - run: uv build --no-sources
+      - run: uv publish --trusted-publishing always

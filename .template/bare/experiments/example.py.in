@@ -1,0 +1,9 @@
+"""An example experiment. Replace it with your own."""
+
+
+def main() -> None:
+    print("Hello from your first experiment.")
+
+
+if __name__ == "__main__":
+    main()

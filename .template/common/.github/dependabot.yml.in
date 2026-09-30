@@ -1,0 +1,29 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    commit-message:
+      prefix: chore
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: pre-commit
+    commit-message:
+      prefix: chore
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: uv
+    commit-message:
+      prefix: chore
+    directory: /
+    schedule:
+      interval: monthly
+    cooldown:
+      default-days: 7
+    groups:
+      development:
+        dependency-type: development

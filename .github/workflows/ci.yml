@@ -1,0 +1,80 @@
+name: Template CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: template-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-suffix: unit
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run ty check
+      - run: uv run --no-project python .template/update_manifest.py
+      - run: git diff --exit-code .template/manifest.json
+      - run: uv run pytest --cov --cov-report=term-missing
+  presets:
+    strategy:
+      fail-fast: false
+      matrix:
+        kind: [library, app, bare]
+        python: ["3.11", "3.12", "3.13", "3.14"]
+        no-ci: [false]
+        include:
+          - kind: library
+            python: "3.12"
+            no-ci: true
+          - kind: app
+            python: "3.12"
+            no-ci: true
+          - kind: bare
+            python: "3.12"
+            no-ci: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-suffix: preset-${{ matrix.kind }}-${{ matrix.python }}
+      - run: uv sync --locked
+      - run: uv run python .template/smoke.py ${{ matrix.kind }} --python ${{ matrix.python }} ${{ matrix.no-ci && '--no-ci' || '' }}
+  release-lockfile:
+    runs-on: ubuntu-latest
+    env:
+      UV_NO_CACHE: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: false
+      # Keep this version in step with the release-please action pin below.
+      - name: Install template-only release updater test dependency
+        run: npm install --prefix "$RUNNER_TEMP/release-updater" release-please@17.6.0 --no-audit --no-fund
+      - name: Verify release updates remain uv-lock compatible
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/release-updater/node_modules"
+          for kind in library app; do
+            project="$RUNNER_TEMP/release-$kind"
+            uv run --no-project --python 3.12 python configure.py --kind "$kind" --name sample-project --owner template --author "Template CI" --output "$project"
+            node .template/check_release.cjs "$project"
+            uv lock --check --project "$project"
+          done
+  # Dependabot updates this pin. New projects copy it from this file.
+  release-please-pin:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0

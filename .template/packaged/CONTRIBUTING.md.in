@@ -1,0 +1,84 @@
+# Contributing
+
+1. Create a branch from `main` and run `make install`.
+2. Add tests for your changes. Ruff requires Google-style docstrings outside `tests/`, so
+   document public modules, classes, and functions.
+3. Run `make check`, `make test`, and `make docs-test`.
+4. Open a pull request with a title such as `fix: handle empty input`.
+5. Squash merge the pull request so Release Please can use its title. In
+   Settings → General → Pull Requests, set the squash merge message to
+   **Pull request title**. You can also require the CI checks to pass
+   before merging.
+
+The Makefile contains the uv commands for each task. You can also run those
+commands directly on Windows. If a Git hook changes a file, review and stage
+the change before you commit again. In a new repository, `make docs-test`
+needs at least one commit.
+
+Use `uv add` for project dependencies and `uv add --dev` for development tools.
+Commit `pyproject.toml` and `uv.lock` together. When you change the supported
+Python versions, update `.python-version`, `requires-python`, Ruff's target,
+and the Python versions in CI.
+
+## Workflows
+
+{{workflow_note}}
+
+{{enable_ci_note}}
+
+## Publish the docs
+
+The docs use the **mkdocs-shadcn** theme and a generated API reference. Run `make docs-test` to check them.
+To publish them:
+
+1. Set `DEPLOY_DOCS=true` in Settings → Secrets and variables → Actions → Variables.
+2. {{docs_start}}
+3. In Settings → Pages, select **Deploy from a branch**, `gh-pages`, `/ (root)`.
+
+For a private repository, check that your GitHub plan supports Pages.
+A private repository can have a public docs site, so check the Pages visibility
+before publishing. You can publish docs without publishing a Python package.
+
+## Releases
+
+Use [Conventional Commits](https://www.conventionalcommits.org/), such as
+`feat: add export` or `fix: handle empty input`. Add `!` after the commit type
+for a breaking change, as in `feat!: change the API`.
+The Git hook checks commit messages. CI checks titles when it runs on pull requests.
+
+Release Please opens a pull request with the new version and changelog.
+It updates the version in both `pyproject.toml` and `uv.lock`. After that pull
+request is merged, its next run creates the GitHub release and version tag.
+
+{{release_step_note}}In Settings → Actions → General, enable **Allow GitHub Actions to create and approve
+pull requests**. With automatic CI enabled, add a
+`RELEASE_PLEASE_TOKEN` secret to run checks on release pull requests. Use a
+fine-grained personal access token with
+read and write access to Contents, Pull requests, and Issues for this repository.
+
+Without that secret, Release Please uses `GITHUB_TOKEN`. GitHub does not start
+CI for pull requests created with that token. Run **CI** on the release branch
+before merging those pull requests.
+
+### Publish to PyPI
+
+To publish releases to PyPI:
+
+1. On PyPI, add a [pending publisher][pending] for this repository. It is
+   "pending" because the first release creates the project. Use workflow
+   `release-please.yml` and environment `pypi`.
+2. Create the `pypi` environment in GitHub. Consider adding required
+   reviewers, so a person approves each publish.
+3. Set the repository variable `PUBLISH_PYPI=true`.
+
+Check that the package name is available on PyPI before the first release.
+The workflow builds and tests the release tag, then publishes the package.
+It uses GitHub's identity to sign in to PyPI, so you do not need a PyPI
+API token.
+
+If publishing fails after the GitHub release is created, open the workflow run
+in the Actions tab and choose **Re-run failed jobs**. Running Release Please
+again does not publish an existing release.
+
+[pending]: https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/
+

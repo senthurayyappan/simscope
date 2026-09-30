@@ -1,0 +1,46 @@
+import importlib
+import runpy
+import sys
+
+import pytest
+
+import {{module}}.cli as cli
+
+
+def test_hello_default(capsys: pytest.CaptureFixture[str]) -> None:
+    cli.main(["hello"])
+    assert capsys.readouterr().out == "Hello, world!\n"
+
+
+def test_hello_trims_name(capsys: pytest.CaptureFixture[str]) -> None:
+    cli.main(["hello", " Ada "])
+    assert capsys.readouterr().out == "Hello, Ada!\n"
+
+
+def test_blank_name_is_a_usage_error(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["hello", " "])
+    assert exc.value.code == 2
+    assert "name must not be blank" in capsys.readouterr().err
+
+
+def test_help(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc:
+        cli.main(["--help"])
+    assert exc.value.code == 0
+    assert "hello" in capsys.readouterr().out
+
+
+def test_importing_main_does_not_run_the_cli() -> None:
+    importlib.import_module("{{module}}.__main__")
+
+
+def test_module_entrypoint(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sys.modules.pop("{{module}}.__main__", None)
+    monkeypatch.setattr(sys, "argv", ["{{module}}", "hello", "Ada"])
+    runpy.run_module("{{module}}", run_name="__main__", alter_sys=True)
+    assert capsys.readouterr().out == "Hello, Ada!\n"

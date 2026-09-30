@@ -1,0 +1,38 @@
+site_name: {{name_json}}
+site_description: {{description_json}}
+site_url: https://{{owner}}.github.io/{{repo}}/
+repo_url: https://github.com/{{owner}}/{{repo}}
+repo_name: {{owner}}/{{repo}}
+strict: true
+
+theme:
+  name: shadcn
+  show_title: true
+  show_stargazers: false
+  show_datetime: false
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - API reference: api.md
+plugins:
+  - shadcn/search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            allow_inspection: false
+            show_root_heading: true
+            show_signature_annotations: true
+            show_source: true
+markdown_extensions:
+  - admonition
+  - attr_list
+  - tables
+  - fenced_code
+  - codehilite:
+      guess_lang: false
+  - toc:
+      permalink: true
