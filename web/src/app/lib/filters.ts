@@ -53,16 +53,26 @@ function sorted(rows: RunRow[], sort: SortKey): RunRow[] {
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 
-/** The date section a recording time falls in, in the viewer's local timezone. */
+const DAY = 86400000;
+
+/**
+ * The date section a recording time falls in, in the viewer's local timezone:
+ * Today, Yesterday, This week, Last week (weeks start on Monday), then one
+ * section per month ("September", or "September 2025" in an earlier year).
+ */
 export function dateBucket(created: string, now: Date = new Date()): { id: string; title: string; rank: number } {
   const t = new Date(created);
   if (Number.isNaN(t.getTime())) return { id: "date:unknown", title: "Undated", rank: -Infinity };
-  const days = Math.round((startOfDay(now) - startOfDay(t)) / 86400000);
-  if (days <= 0) return { id: "date:today", title: "Today", rank: 1e9 };
-  if (days === 1) return { id: "date:yesterday", title: "Yesterday", rank: 1e9 - 1 };
-  if (days <= 7) return { id: "date:week", title: "Previous 7 days", rank: 1e9 - 2 };
-  if (days <= 30) return { id: "date:month", title: "Previous 30 days", rank: 1e9 - 3 };
-  const title = t.toLocaleDateString("en", { month: "long", year: "numeric" });
+  const today = startOfDay(now);
+  const day = startOfDay(t);
+  if (day >= today) return { id: "date:today", title: "Today", rank: 1e9 };
+  if (day >= today - DAY) return { id: "date:yesterday", title: "Yesterday", rank: 1e9 - 1 };
+  const monday = today - ((now.getDay() + 6) % 7) * DAY;
+  // Midnight-to-midnight differences are not always 24 h around a daylight
+  // saving change, so compare with a half-day tolerance.
+  if (day >= monday - DAY / 2) return { id: "date:week", title: "This week", rank: 1e9 - 2 };
+  if (day >= monday - 7 * DAY - DAY / 2) return { id: "date:last-week", title: "Last week", rank: 1e9 - 3 };
+  const title = t.toLocaleDateString("en", t.getFullYear() === now.getFullYear() ? { month: "long" } : { month: "long", year: "numeric" });
   return { id: `date:${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}`, title, rank: t.getFullYear() * 12 + t.getMonth() };
 }
 

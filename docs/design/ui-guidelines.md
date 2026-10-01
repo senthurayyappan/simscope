@@ -122,7 +122,7 @@ CVD simulation, OKLab ΔE×100) on surfaces #ffffff, #fafafa, #0a0a0a, #171717:
 - L6. **Group with spacing and hairlines, not cards or boxes.** *Proximity already groups; boxes add ink.* \[PROXIMITY\] \[COMMON-REGION\]
 - L7. **A toolbar has at most three groups, separated by a 1 px `border` divider.** \[APPLE-TOOLBARS\]
 - L8. **Targets are at least 28 × 28 px; the Play button is 32 px.** *Small, distant targets are slow.* \[FITTS\]
-- L9. **Long lists are sectioned, by date (`Today`, `Yesterday`, `Previous 7 days`, `Previous 30 days`, then months, from the run's recording time) or by group; each section shows 5 rows, then `Show N more`; headers stick and carry a count.** *Show the likely items first and the rest on request.* \[NN-PD\] \[LINEAR-DISPLAY\] \[OPENWEBUI\]
+- L9. **Long lists are sectioned, by date (`Today`, `Yesterday`, `This week`, `Last week` with weeks starting on Monday, then one section per month, from the run's recording time) or by group; each section shows 5 rows, then `Show N more`; headers stick and carry a count.** *Show the likely items first and the rest on request.* \[NN-PD\] \[LINEAR-DISPLAY\] \[OPENWEBUI\]
 - L10. **Pinned runs form a `Pinned` section above all others in both views.** *Favourites sit above everything else in Linear's sidebar.* \[LINEAR-FAV\]
 
 ## Components

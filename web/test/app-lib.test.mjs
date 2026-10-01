@@ -214,10 +214,24 @@ test("library dates: buckets in local time, newest first", () => {
   const at = (days, hour = 9) => new Date(2026, 8, 30 - days, hour).toISOString();
   assert.equal(dateBucket(at(0), now).title, "Today");
   assert.equal(dateBucket(at(1), now).title, "Yesterday");
-  assert.equal(dateBucket(at(5), now).title, "Previous 7 days");
-  assert.equal(dateBucket(at(20), now).title, "Previous 30 days");
-  assert.equal(dateBucket(new Date(2026, 7, 14).toISOString(), now).title, "August 2026");
+  // 2026-09-30 is a Wednesday: this week started on Monday the 28th.
+  assert.equal(dateBucket(at(2), now).title, "This week");
+  assert.equal(dateBucket(at(3), now).title, "Last week"); // Sunday the 27th
+  assert.equal(dateBucket(at(9), now).title, "Last week"); // Monday the 21st
+  assert.equal(dateBucket(at(10), now).title, "September"); // Sunday the 20th: earlier in the month
+  assert.equal(dateBucket(new Date(2026, 7, 14).toISOString(), now).title, "August");
+  assert.equal(dateBucket(new Date(2025, 11, 14).toISOString(), now).title, "December 2025");
   assert.equal(dateBucket("garbage", now).title, "Undated");
+});
+
+test("library dates: on a Monday there is no 'This week' beyond today and yesterday", () => {
+  const now = new Date(2026, 9, 5, 12, 0); // Monday 2026-10-05
+  const at = (d) => new Date(2026, 9, 5 - d, 9).toISOString();
+  assert.equal(dateBucket(at(0), now).title, "Today");
+  assert.equal(dateBucket(at(1), now).title, "Yesterday"); // Sunday
+  assert.equal(dateBucket(at(2), now).title, "Last week"); // Saturday the 3rd
+  assert.equal(dateBucket(at(7), now).title, "Last week"); // Monday the 28th
+  assert.equal(dateBucket(at(8), now).title, "September"); // Sunday the 27th
 });
 
 test("library sections: by date, pinned first, search first, empty sections never appear", () => {
@@ -231,10 +245,10 @@ test("library sections: by date, pinned first, search first, empty sections neve
   ];
   const o = { view: "date", query: "", sort: "newest", groups: [], now };
   const secs = buildSections(rows, o);
-  assert.deepEqual(secs.map((s) => s.title), ["Pinned", "Today", "Previous 7 days", "June 2026"]);
+  assert.deepEqual(secs.map((s) => s.title), ["Pinned", "Today", "Last week", "June"]);
   assert.deepEqual(secs[2].runs.map((r) => r.name), ["b_week", "d_week"]);
   assert.deepEqual(flatOrder(secs).map((r) => r.name), ["a_today", "b_week", "d_week", "c_old"]);
-  assert.deepEqual(buildSections(rows, { ...o, query: "week" }).map((s) => s.title), ["Pinned", "Previous 7 days"]);
+  assert.deepEqual(buildSections(rows, { ...o, query: "week" }).map((s) => s.title), ["Pinned", "Last week"]);
   assert.equal(buildSections(rows, { ...o, query: "zzz" }).length, 0);
   assert.equal(SECTION_LIMIT, 5);
 });

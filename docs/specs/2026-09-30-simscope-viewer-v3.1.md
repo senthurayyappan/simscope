@@ -53,8 +53,9 @@ These extend the proposal's decision log as D23–D30.
 
 ## 3. Library: dates and groups
 
-- **By date (default):** sections Today, Yesterday, Previous 7 days,
-  Previous 30 days, then one per month (`August 2026`), by the run's
+- **By date (default):** sections Today, Yesterday, This week, Last week
+  (weeks start on Monday), then one per month (`August`, or `August 2025` in
+  an earlier year), by the run's
   `created` time in the viewer's local timezone. Newest first within a
   section.
 - **By group:** one section per group in the library's order, then
