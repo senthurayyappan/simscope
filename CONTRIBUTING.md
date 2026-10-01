@@ -86,17 +86,6 @@ again does not publish an existing release.
 
 ## Project notes
 
-- Do not add `tests/io/__init__.py`. Pytest runs with `--import-mode=importlib`,
-  so that file would register a top-level `io` package that shadows the
-  standard library.
-- The browser code in `web/` (player core, `<simscope-player>` element, and
-  the React app shell) builds into `src/simscope/_assets/` (`simscope-player.js`,
-  `simscope-app.js`, `simscope-app.css`, `simscope-web.LICENSES.txt`), which
-  are committed. After changing `web/src/`, run
-  `cd web && npm ci && npm run build && npm test`, and commit the rebuilt
-  assets. Builds are byte-reproducible.
-- The viewer is our own frontend (viewer v3); the old viser viewer is gone.
-  `simscope serve` needs the `viewer` extra (starlette, uvicorn, watchfiles).
-  The browser tests run with `cd web && npm test`; Node 26 is what CI uses.
-- Design decisions live in the decision log of
-  `docs/specs/2026-09-30-simscope-proposal.md`. Change a decision there first.
+The repository layout, the browser build, and where to extend the package are
+in `docs/developing.md`. Design decisions are in `docs/design.md`. Change a
+decision there before changing the code that depends on it.

@@ -98,7 +98,7 @@ class _JsonRecord:
 
     Attributes:
         extra: Fields the reader did not know, written back unchanged so
-            newer tools do not lose data (spec 1).
+            newer tools do not lose data.
     """
 
     extra: dict[str, Any] = dataclasses.field(default_factory=dict)
@@ -132,7 +132,7 @@ class _JsonRecord:
 
 @dataclasses.dataclass(kw_only=True)
 class Record(_JsonRecord):
-    """Fields common to every list record (spec 2).
+    """Fields common to every list record.
 
     Attributes:
         id: ULID, unique within the file.
@@ -149,7 +149,7 @@ class Record(_JsonRecord):
 
 @dataclasses.dataclass(kw_only=True)
 class Marks(_JsonRecord):
-    """Run-level marks. The last write wins (spec 3.2).
+    """Run-level marks. The last write wins.
 
     ``flag``, ``status`` and ``tags`` are deprecated since viewer v3.1
     (decision D23): they are read and written back unchanged so that no data
@@ -179,7 +179,7 @@ class Marks(_JsonRecord):
 
 @dataclasses.dataclass(kw_only=True)
 class Note(Record):
-    """A Markdown note (spec 3.3).
+    """A Markdown note.
 
     Attributes:
         text: The note body, Markdown.
@@ -190,7 +190,7 @@ class Note(Record):
 
 @dataclasses.dataclass(kw_only=True)
 class Rating(Record):
-    """A rating on one criterion (spec 3.4).
+    """A rating on one criterion.
 
     Attributes:
         criterion: Free string, ``"overall"`` by default.
@@ -207,7 +207,7 @@ class Rating(Record):
 
 @dataclasses.dataclass(kw_only=True)
 class Event(Record):
-    """A time instant or segment on the timeline (spec 3.5).
+    """A time instant or segment on the timeline.
 
     Attributes:
         type: Key into the event-type registry, or ``""`` if untyped.
@@ -232,7 +232,7 @@ class Event(Record):
 
 @dataclasses.dataclass(kw_only=True)
 class Spatial(Record):
-    """A 3D point or box at a moment in time (spec 3.6).
+    """A 3D point or box at a moment in time.
 
     Attributes:
         kind: ``"point"`` or ``"box"``.
@@ -270,7 +270,7 @@ _LIST_TYPES: dict[str, type[Record]] = {
 
 @dataclasses.dataclass(kw_only=True)
 class EventType(_JsonRecord):
-    """One entry of the event vocabulary (spec 4).
+    """One entry of the event vocabulary.
 
     Attributes:
         type_id: The key the entry is stored under, such as ``"fall"``.
@@ -458,7 +458,7 @@ def check_group_name(name: object) -> str:
 
 @dataclasses.dataclass(kw_only=True)
 class Group(_JsonRecord):
-    """One entry of ``.simscope/groups.json`` (spec 5).
+    """One entry of ``.simscope/groups.json``.
 
     Attributes:
         name: The group's name, unique case-insensitively.
@@ -688,7 +688,7 @@ class Annotations:
         """Writes ``annotations.json`` atomically.
 
         Nothing is written if there are no changes and no file exists yet,
-        because writers create the file on the first change (spec 1).
+        because writers create the file on the first change.
 
         Returns:
             True if the file was written.
@@ -832,7 +832,7 @@ class Annotations:
     ) -> Rating:
         """Rates the run, replacing the author's rating for the criterion.
 
-        A replacement keeps the old ``id`` and ``created`` (spec 3.4).
+        A replacement keeps the old ``id`` and ``created``.
 
         Args:
             value: A number on ``scale``: 1-5 for ``stars5``, 0-100 for

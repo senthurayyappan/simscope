@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "description": "simscope's browser code: the framework-free player core, the CDN-free <simscope-player> element, and the React app shell used by `simscope serve` and full exports.",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",

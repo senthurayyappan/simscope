@@ -1,4 +1,4 @@
-"""Payload codecs for block files (spec 7.4) and mesh blobs (spec 6).
+"""Payload codecs for block files and mesh blobs.
 
 All functions are pure. Block codecs turn an f32 ``[n, K]`` array (the frames
 of one env) into a deflate-raw payload and back. The byte layout assumes a
@@ -66,8 +66,8 @@ def payload_ulen(codec: str | int, n: int, k: int) -> int:
         k: Floats per frame.
 
     Returns:
-        ``4*K*n`` for f32s and ``8*K + 2*K*n`` for q16d. (The spec text says
-        ``4*K*n`` for q16d, which contradicts its two u8 planes.)
+        ``4*K*n`` for f32s and ``8*K + 2*K*n`` for q16d. q16d is two u8
+        planes, so it is not ``4*K*n``.
     """
     if codec_id(codec) == CODEC_F32S:
         return 4 * k * n
@@ -237,7 +237,7 @@ def can_encode_q16d(x: npt.ArrayLike) -> bool:
 
 
 def encode_block(x: npt.ArrayLike, codec: str | int) -> bytes:
-    """Encodes one block into its compressed payload (spec 7.4).
+    """Encodes one block into its compressed payload.
 
     Args:
         x: Float32 data of shape ``[n, K]``: n frames of one env.
@@ -352,7 +352,7 @@ def decode_components(
 ) -> npt.NDArray[np.float32]:
     """Decodes only some components of a block payload.
 
-    Payloads are component-major byte planes (spec 7.4), so after inflating,
+    Payloads are component-major byte planes, so after inflating,
     only the wanted planes are unshuffled and prefix-summed. Reading the 7
     floats of one body out of 140 is about 20 times less work than
     :func:`decode_block`. q16d quaternions are not renormalized.
@@ -389,7 +389,7 @@ def decode_components(
 
 
 # --------------------------------------------------------------------------
-# Mesh blobs (spec 6)
+# Mesh blobs
 # --------------------------------------------------------------------------
 
 MESH_MAGIC = b"SSMH"

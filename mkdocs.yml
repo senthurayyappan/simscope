@@ -1,5 +1,5 @@
 site_name: "simscope"
-site_description: "Record, browse, curate, and ship robot simulation rollouts."
+site_description: "Record and replay robot simulation rollouts."
 site_url: https://senthurayyappan.github.io/simscope/
 repo_url: https://github.com/senthurayyappan/simscope
 repo_name: senthurayyappan/simscope
@@ -14,26 +14,11 @@ theme:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
+  - CLI: cli.md
   - API reference: api.md
-  - Design:
-      - Proposal: specs/2026-09-30-simscope-proposal.md
-      - Format v1: specs/2026-09-30-simscope-format-v1.md
-      - Annotations v1: specs/2026-09-30-simscope-annotations-v1.md
-      - Viewer v3: specs/2026-09-30-simscope-viewer-v3.md
-      - Viewer v3 contracts: specs/2026-09-30-simscope-viewer-v3-contracts.md
-      - Viewer v3.1: specs/2026-09-30-simscope-viewer-v3.1.md
-      - UI guidelines: design/ui-guidelines.md
-      - UI audit: design/ui-audit-2026-09-30.md
-      - Research:
-          - Overview: research/index.md
-          - Viser: research/viser.md
-          - Simulators: research/simulators.md
-          - Platforms: research/platforms.md
-          - Storage: research/storage.md
-          - HTML export: research/html-export.md
-          - "Spike: Viser timeline": research/spike-viser-timeline.md
-          - Frontend architecture review: research/2026-09-30-frontend-architecture-review.md
-          - Frontend landscape: research/2026-09-30-frontend-landscape.md
+  - Design: design.md
+  - Developing: developing.md
+
 plugins:
   - shadcn/search
   - mkdocstrings:
@@ -46,6 +31,7 @@ plugins:
             show_root_heading: true
             show_signature_annotations: true
             show_source: true
+
 markdown_extensions:
   - admonition
   - attr_list

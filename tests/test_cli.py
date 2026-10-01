@@ -102,7 +102,7 @@ def test_ls_empty_library_and_missing_folder(tmp_path, capsys):
     empty = tmp_path / "empty"
     empty.mkdir()
     code, out, err = run(capsys, "ls", empty)
-    assert (code, out, err.strip()) == (0, "", "no runs")
+    assert (code, out, err.strip()) == (0, "", "no rollouts")
     code, out, err = run(capsys, "ls", tmp_path / "nope")
     assert code == 1 and out == ""
     assert err.startswith("simscope: error: no library folder")
@@ -439,7 +439,7 @@ def test_import_files_and_folders(tmp_path, capsys):
     lines = out.splitlines()
     assert lines[0].startswith("a  4 frames") and "a.html" in lines[0]
     assert lines[1].startswith("b  6 frames")
-    assert "imported 2 runs" in lines[-1] and "library grew by" in lines[-1]
+    assert "imported 2 rollouts" in lines[-1] and "library grew by" in lines[-1]
     code, out, _ = run(capsys, "ls", lib_dir, "--sort", "name", "--json")
     rows = [json.loads(ln) for ln in out.splitlines()]
     assert [r["name"] for r in rows] == ["a", "b"]

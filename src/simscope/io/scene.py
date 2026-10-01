@@ -15,7 +15,7 @@ AssetGetter = Callable[[cas.Ref], bytes]
 
 
 def canonical_bytes(obj: Any) -> bytes:
-    """Serializes a JSON value canonically (spec 3).
+    """Serializes a JSON value canonically, so equal content hashes the same.
 
     Args:
         obj: A JSON-compatible value. Floats must already be widened from f32.
@@ -36,7 +36,7 @@ def canonical_bytes(obj: Any) -> bytes:
 
 
 def _f(x: float) -> float:
-    """Widens a value through float32, as the spec requires."""
+    """Widens a value through float32, so the JSON hash is stable."""
     return float(np.float32(x))
 
 

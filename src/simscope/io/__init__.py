@@ -1,4 +1,4 @@
-"""Storage format reference implementation (format spec v1).
+"""On-disk format shared by the recorder and the player.
 
 Modules:
     codecs: Block payload codecs (f32s, q16d) and mesh blobs (raw, q16).

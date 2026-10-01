@@ -1,6 +1,6 @@
 """A simscope library: a folder of recorded rollouts.
 
-``Library(root)`` is a cheap handle; the folder layout (format spec 2) is
+``Library(root)`` is a cheap handle. The folder layout is
 created lazily, by the first recording. ``lib.record`` returns a
 :class:`~simscope.recorder.Recorder`, ``lib.open`` a :class:`Rollout`, and
 ``lib.query`` searches the SQLite index cache.
@@ -344,7 +344,7 @@ class RecoverReport:
 
 
 class Library:
-    """A folder of rollouts (format spec 2).
+    """A folder of rollouts.
 
     Attributes:
         root: The library folder.

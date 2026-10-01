@@ -1,8 +1,9 @@
-"""The ``simscope`` command line: serve, ls, export, pack, import, ...
+"""The ``simscope`` command line.
 
-Everything except ``serve`` works without the viewer extra. ``serve``
-imports the server lazily, so the other commands never load starlette,
-uvicorn, or watchfiles.
+Commands are ``serve``, ``ls``, ``export``, ``rename``, ``pack``, ``import``,
+``recover``, and ``info``. Everything except ``serve`` works without the
+viewer extra. ``serve`` imports the server lazily, so the other commands
+never load starlette, uvicorn, or watchfiles.
 """
 
 import argparse
@@ -128,7 +129,7 @@ def _cmd_ls(args: argparse.Namespace) -> int:
             print(json.dumps(dataclasses.asdict(info), sort_keys=True))
         return 0
     if not rows:
-        print("no runs", file=sys.stderr)
+        print("no rollouts", file=sys.stderr)
         return 0
     header = (
         "NAME",
@@ -254,7 +255,7 @@ def _cmd_import(args: argparse.Namespace) -> int:
     src_bytes = sum(p.stat().st_size for p, _ in files)
     added = _tree_bytes(root) - before
     print(
-        f"imported {imported} runs"
+        f"imported {imported} rollouts"
         + (f", skipped {failed}" if failed else "")
         + f" in {time.perf_counter() - started:.1f} s: input"
         f" {_human(src_bytes)}, library grew by {_human(added)}"
@@ -373,8 +374,7 @@ def _build_parser() -> argparse.ArgumentParser:
     """Builds the argument parser with one subparser per command."""
     parser = argparse.ArgumentParser(
         prog="simscope",
-        description="Record, browse, curate, and ship robot simulation "
-        "rollouts.",
+        description="Record and replay robot simulation rollouts.",
     )
     sub = parser.add_subparsers(dest="command", required=True, metavar="CMD")
 
@@ -384,30 +384,32 @@ def _build_parser() -> argparse.ArgumentParser:
         p.add_argument("dir", metavar="DIR", help="the library folder")
         return p
 
-    p = add(
-        "serve", _cmd_serve, "browse, compare, and curate runs in the browser"
-    )
+    p = add("serve", _cmd_serve, "browse and replay rollouts in the browser")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=_port, default=8080)
     p.add_argument("--author", help="author of new annotations")
 
-    p = add("ls", _cmd_ls, "list runs")
+    p = add("ls", _cmd_ls, "list rollouts")
     p.add_argument("--tag", action="append", help="require a tag (repeatable)")
-    p.add_argument("--favorite", action="store_true", help="only favorites")
+    p.add_argument(
+        "--favorite", action="store_true", help="only pinned rollouts"
+    )
     p.add_argument("--status", help="recording, complete, or a curation status")
     p.add_argument("--sort", choices=_SORTS, default="created")
-    p.add_argument("--limit", type=_positive, help="at most N runs")
+    p.add_argument("--limit", type=_positive, help="at most N rollouts")
     p.add_argument("--json", action="store_true", help="one object per line")
 
-    p = add("export", _cmd_export, "export runs as one self-contained HTML")
+    p = add(
+        "export", _cmd_export, "export rollouts as one self-contained HTML file"
+    )
     p.add_argument("runs", nargs="+", metavar="RUN")
     p.add_argument("-o", "--output", required=True, metavar="OUT.html")
     p.add_argument("--layout", choices=("single", "grid", "compare"))
     p.add_argument(
         "--arrange",
         choices=export.ARRANGEMENTS,
-        help="compare panes: side (default for 2 runs), stack, or grid "
-        "(default for 3-4); needs --layout compare",
+        help="compare panes: side (default for 2 rollouts), stack, or grid "
+        "(default for 3 or 4); needs --layout compare",
     )
     p.add_argument("--title")
     p.add_argument(
@@ -425,26 +427,28 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--no-transcode", action="store_true")
     p.add_argument("--no-annotations", action="store_true")
 
-    p = add("rename", _cmd_rename, "rename a run")
-    p.add_argument("old", metavar="OLD", help="the run's current name")
+    p = add("rename", _cmd_rename, "rename a rollout")
+    p.add_argument("old", metavar="OLD", help="the rollout's current name")
     p.add_argument("new", metavar="NEW", help="its new name")
 
-    p = add("pack", _cmd_pack, "write runs to a .simscope pack")
+    p = add("pack", _cmd_pack, "write rollouts to a .simscope pack")
     p.add_argument("runs", nargs="+", metavar="RUN")
     p.add_argument("-o", "--output", required=True, metavar="OUT.simscope")
     p.add_argument("--no-transcode", action="store_true")
     p.add_argument("--no-annotations", action="store_true")
 
-    p = add("import", _cmd_import, "import .rbundle and Brax HTML rollouts")
+    p = add("import", _cmd_import, "import .rbundle files and Brax HTML pages")
     p.add_argument("paths", nargs="+", metavar="PATH", help="files or folders")
     p.add_argument("--tag", action="append", help="add a tag (repeatable)")
-    p.add_argument("--overwrite", action="store_true", help="replace runs")
+    p.add_argument(
+        "--overwrite", action="store_true", help="replace an existing rollout"
+    )
     p.add_argument("--jobs", type=_positive, help="worker processes")
 
-    p = add("recover", _cmd_recover, "repair a run whose recording crashed")
+    p = add("recover", _cmd_recover, "repair a rollout whose recording stopped")
     p.add_argument("run", metavar="RUN")
 
-    p = add("info", _cmd_info, "summarize a run")
+    p = add("info", _cmd_info, "summarize a rollout")
     p.add_argument("run", metavar="RUN")
     return parser
 

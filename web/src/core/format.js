@@ -1,4 +1,4 @@
-// simscope format v1 decoders (docs/specs/2026-09-30-simscope-format-v1.md).
+// Decoders for the on-disk rollout files.
 //
 // Pure functions over Uint8Array, no DOM and no three.js, so Node can test
 // them. Everything is little-endian. Every failure throws an Error whose

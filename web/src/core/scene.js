@@ -1,4 +1,4 @@
-// Scene building: simscope scene JSON (format spec §4) -> three.js objects.
+// Scene building: scene JSON to three.js objects.
 //
 // Geometry table and colours follow mkdeck's rollout_viewer.js (makeGeometry,
 // buildScene), but every geom becomes an *instance* of an InstancedMesh:

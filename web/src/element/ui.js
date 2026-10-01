@@ -1,6 +1,6 @@
 // The control bar, shared by the single <simscope-player> and the compare
 // master (master.js): the same markup, styles, icons and behaviour, in the
-// visual language of the app (docs/design/ui-guidelines.md): neutral colours,
+// visual language of the app: neutral colours,
 // hairlines, 28 px controls with 6 px radius, icon buttons, a thin scrubber
 // and one readout in tabular figures. System font (the lean build carries no
 // font). Light and dark follow `prefers-color-scheme`.

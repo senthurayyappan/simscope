@@ -82,7 +82,7 @@ _SORTS = {
 
 @dataclasses.dataclass(frozen=True)
 class RunInfo:
-    """Summary of one run, as browsing needs it (annotations spec 6).
+    """Summary of one rollout, as browsing needs it.
 
     Attributes:
         name: Run name (the directory name).

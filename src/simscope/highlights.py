@@ -2,11 +2,11 @@
 
 A highlight is a marker on the timeline. Two kinds are built in, both
 computed from signals every simulator provides, so they mean the same for any
-robot or task (viewer v3.2 contracts 9):
+robot or task:
 
 ``contact``
     The **net contact force**: the norm of the sum of all the force vectors
-    of the ``contacts`` stream (format spec 5, viewer contracts 7). A run
+    of the ``contacts`` stream. A rollout
     without a ``contacts`` stream gets none.
 ``acceleration``
     The **centre-of-mass acceleration**: the second difference of the centre

@@ -1,6 +1,6 @@
 """Vectorized quaternion and pose math.
 
-Quaternions are xyzw (format spec §1). Poses are ``[..., 7]`` arrays of
+Quaternions are xyzw. Poses are ``[..., 7]`` arrays of
 position xyz followed by quaternion xyzw. Every function broadcasts over
 leading axes and never loops in Python.
 """
@@ -124,7 +124,7 @@ def enforce_sign_continuity(
     """Flips quaternion signs so consecutive frames stay in one hemisphere.
 
     ``q`` and ``-q`` are the same rotation. Keeping ``dot(q[t], q[t-1]) >= 0``
-    makes time deltas small, which the block codecs rely on (format spec §1).
+    makes time deltas small, which the block codecs rely on.
 
     Args:
         quat: Quaternions with shape ``[T, ..., 4]``, time first.

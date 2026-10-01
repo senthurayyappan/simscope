@@ -1,4 +1,4 @@
-"""Content-addressed storage for assets and scenes (spec 2)."""
+"""Content-addressed storage for assets and scenes."""
 
 import dataclasses
 import hashlib

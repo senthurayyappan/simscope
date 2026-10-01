@@ -267,8 +267,8 @@ class Recorder:
             labels: Optional component names.
             units: Optional unit string.
             codec: ``"f32s"`` (lossless, default) or ``"q16d"``.
-            scale: For ``arrows`` streams, metres drawn per unit of vector
-                (format spec 5). ``None`` means viewers use 1.
+            scale: For ``arrows`` streams, metres drawn per unit of vector.
+                ``None`` means viewers use 1.
 
         Raises:
             RecorderError: If recording already started.

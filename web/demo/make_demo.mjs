@@ -1,6 +1,6 @@
 // Writes demo.simscope and index.html (pack inlined as base64) for the
 // simscope-player demo page, using the test-only encoder that mirrors the
-// format spec.
+// on-disk format.
 //
 //   node demo/make_demo.mjs
 

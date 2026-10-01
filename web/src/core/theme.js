@@ -1,6 +1,5 @@
-// The viewport's colours, from the UI guidelines (docs/design/ui-guidelines.md,
-// Colour): a neutral grey ground and background (C5), the contact kind's
-// violet for contact points and arrows (C9), neutral greys for every other
+// The viewport's colours: a neutral grey ground and background, the contact kind's
+// violet for contact points and arrows, neutral greys for every other
 // overlay and for collision geoms. They are written in oklch, as the app's
 // tokens are, and converted to sRGB here; three.js takes sRGB and converts to
 // its linear working space itself (`Color.setRGB(r, g, b, SRGBColorSpace)`,

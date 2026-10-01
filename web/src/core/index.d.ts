@@ -1,12 +1,12 @@
-// Types of the player core (docs/specs/2026-09-30-simscope-viewer-v3-contracts.md §3).
+// Types of the player core.
 //
 // Hand-written. The app and the <simscope-player> element import only from
 // `web/src/core/index.js`; this file is its typing. Everything marked
-// "extension" goes beyond the contract and is additive.
+// "extension" is additive.
 
 // ---- sources ----
 
-/** One entry of a block file's directory (format spec §7.3). */
+/** One entry of a block file's directory. */
 export interface BlockEntry {
   env: number;
   t0: number;
@@ -365,7 +365,7 @@ export function stepLoop(nowMs: number): void;
 /** The clock shared by all players that name `name` (extension; the element's `sync` attribute). */
 export function clockFor(name: string): Clock;
 
-// ---- format (format spec v1 readers; pure, no DOM) ----
+// ---- format (on-disk readers; pure, no DOM) ----
 
 export namespace format {
   function crc32(bytes: Uint8Array, start?: number, end?: number): number;

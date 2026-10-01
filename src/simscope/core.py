@@ -1,10 +1,9 @@
 """Simulator-neutral data model for scenes and rollouts.
 
 These types are the in-memory contract shared by the adapters, the storage
-layer, the viewer, and the exporter. The on-disk encoding is defined in
-``docs/specs/2026-09-30-simscope-format-v1.md``.
+layer, the viewer, and the exporter. The on-disk encoding is ``simscope.io``.
 
-Conventions (format spec §1): Z-up, right-handed, metres, seconds. A pose is
+Conventions: Z-up, right-handed, metres, seconds. A pose is
 ``[px, py, pz, qx, qy, qz, qw]`` with the quaternion in xyzw order.
 """
 
@@ -154,7 +153,7 @@ class Body:
 class Geom:
     """A visual or collision shape attached to a body.
 
-    ``kind`` and ``size`` follow format spec §4 (MuJoCo conventions).
+    ``kind`` and ``size`` follow MuJoCo conventions.
 
     Attributes:
         body: Index into ``Scene.bodies``.

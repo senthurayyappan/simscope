@@ -1,6 +1,6 @@
 # simscope web
 
-Browser code for simscope (viewer v3, `docs/specs/2026-09-30-simscope-viewer-v3.md`):
+Browser code for simscope:
 
 - `src/core/`: the framework-free player core (sources, decode worker, clock, scene, camera, tiers). The only renderer.
 - `src/element/`: the lean `<simscope-player>` custom element (decks, mkdeck, lean exports).
@@ -39,7 +39,6 @@ player.setVisual(true); player.setCollision(false); player.setContacts(true);   
 player.setColor("#e4572e");                                // compare slot colour, see info().color
 ```
 
-The contract is `docs/specs/2026-09-30-simscope-viewer-v3-contracts.md` §3;
 `index.d.ts` is the typing and lists the additive extras (`refresh()`,
 `setCrowdColor()`, `stats()`, `clockFor()`, `stepLoop()`, and the `direct` and
 `follow` options). The `renderer` option replaces the WebGL renderer, so tests
@@ -156,8 +155,7 @@ players per frame.
 
 ## `<simscope-player>`
 
-The CDN-free custom element. It plays `.simscope` packs (format spec:
-`docs/specs/2026-09-30-simscope-format-v1.md`) with three.js r186 and makes no
+The CDN-free custom element. It plays `.simscope` packs with three.js r186 and makes no
 network requests at runtime.
 
 ```html

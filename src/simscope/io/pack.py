@@ -1,4 +1,4 @@
-"""Packs (``*.simscope``, spec 8): one file holding a library subtree."""
+"""Packs (``*.simscope``): one file holding a library subtree."""
 
 import contextlib
 import dataclasses
@@ -21,7 +21,7 @@ MAGIC = b"SSPK"
 MAJOR = 1
 MINOR = 0
 MINOR_DERIVED = 1
-"""Minor version of a pack that carries ``derived/`` entries (spec 8)."""
+"""Minor version of a pack that carries ``derived/`` entries."""
 DERIVED_PREFIX = "derived/"
 HEADER = struct.Struct("<4sHHIIQII")
 HEADER_SIZE = 32
@@ -175,7 +175,7 @@ def subset_annotations(data: bytes, envs: Sequence[int]) -> bytes:
         envs: Kept envs, in output order.
 
     Returns:
-        The sidecar bytes, formatted as the annotations spec requires.
+        The sidecar bytes, with only the kept envs.
     """
     doc = json.loads(data)
     new = {env: i for i, env in enumerate(envs)}
@@ -321,7 +321,7 @@ def write_pack(
 
 
 def _sidecars(*, annotations: bool, posters: bool) -> tuple[str, ...]:
-    """Names the optional per-run files a pack should carry (spec 8)."""
+    """Names the optional per-run files a pack should carry."""
     names = []
     if annotations:
         names.append(ANNOTATIONS_NAME)

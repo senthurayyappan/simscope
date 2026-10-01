@@ -19,7 +19,7 @@ comments below. Verified against the reference code and the real data:
     ``body_pos`` is ``[T, B, 3]`` and ``body_quat`` ``[T, B, 4]`` in
     **wxyz** (MuJoCo ``xquat``), world frame, Z-up, metres. Body 0 is the
     MuJoCo world body. Geoms carry MuJoCo ``geom_size`` conventions (the
-    same as the format spec: box half-extents, capsule/cylinder ``[r, h]``
+    same as MuJoCo: box half-extents, capsule/cylinder ``[r, h]``
     with the axis along local z, plane ``[hx, hy, spacing]``) and
     ``local_quat`` in wxyz. Mesh geoms hold the vertices already in the
     geom's local frame (``verts_count`` and ``faces_count`` count *elements*,

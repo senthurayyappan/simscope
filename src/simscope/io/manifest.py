@@ -1,4 +1,4 @@
-"""Rollout manifests (``rollout.json``, spec 5), ULIDs and run names."""
+"""Rollout manifests (``rollout.json``), ULIDs and run names."""
 
 import dataclasses
 import datetime
@@ -136,7 +136,7 @@ class StreamInfo:
 
 @dataclasses.dataclass
 class RolloutManifest:
-    """The manifest of one run (spec 5).
+    """The manifest of one rollout.
 
     Attributes:
         id: ULID, fixed at creation.

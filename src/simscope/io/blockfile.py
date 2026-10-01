@@ -1,4 +1,4 @@
-"""Block files (``*.blk``, spec 7): writer, reader and crash recovery."""
+"""Block files (``*.blk``): writer, reader and crash recovery."""
 
 import collections
 import dataclasses
@@ -55,7 +55,7 @@ def _align8(offset: int) -> int:
 
 @dataclasses.dataclass(frozen=True)
 class Header:
-    """Parsed block-file header (spec 7.1).
+    """Parsed block-file header.
 
     Attributes:
         item_shape: Shape of one env-frame item.
@@ -443,7 +443,7 @@ class BlockReader:
     cache. Instances are safe to share between threads.
 
     With ``partial=True`` the reader can also tail a file that a
-    :class:`BlockWriter` is still writing (spec 7.3, D14): it builds the
+    :class:`BlockWriter` is still writing: it builds the
     directory by scanning blocks and :meth:`refresh` picks up windows
     appended later. It never writes to the file, and only complete windows
     whose CRCs check out are visible, so a window the writer is in the middle
@@ -474,7 +474,7 @@ class BlockReader:
             source: A path, or the file bytes (for example a pack entry).
             cache_blocks: Decoded blocks to keep in the LRU cache.
             kind: The stream kind from the manifest. For ``"pose"`` streams,
-                quaternions of q16d blocks are renormalized (spec 7.4).
+                quaternions of q16d blocks are renormalized.
             verify: Check each block's payload CRC when it is decoded.
             partial: Accept an unfinished file (``dir_offset == 0``) by
                 scanning its blocks. A finished file opens as usual.
@@ -826,7 +826,7 @@ class _ScanState:
 
 
 def _advance(view: memoryview, h: Header, st: _ScanState) -> None:
-    """Continues a block walk, keeping only complete valid windows (spec 7.3).
+    """Continues a block walk, keeping only complete valid windows.
 
     Checks each block's magic, lengths and CRC, and stops at the first one
     that fails or is not fully present yet. Only the bytes after ``st.off``
@@ -894,7 +894,7 @@ def _scan_blocks(
 
 
 def recover(path: os.PathLike[str] | str) -> RecoverResult:
-    """Rebuilds the directory of an unfinished block file (spec 7.3).
+    """Rebuilds the directory of an unfinished block file.
 
     Walks blocks from offset 64, keeps every complete time window (a block
     for every env) whose header and CRC check out, truncates the rest, then

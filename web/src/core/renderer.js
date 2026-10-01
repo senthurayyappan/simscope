@@ -4,8 +4,7 @@
 // page. Browsers keep about 16 live WebGL contexts and evict the oldest
 // beyond that, so a deck of many players cannot give each its own. The one
 // renderer draws a player's scene into a corner of its own canvas and blits
-// that region into the player's 2D canvas with drawImage(), the way
-// <model-viewer> does (docs/research/html-export.md, section 3.6).
+// that region into the player's 2D canvas with drawImage().
 //
 // Direct mode, for the one big viewport of the app: the player's own canvas
 // is the WebGL canvas, so a 7-megapixel viewport does not pay a per-frame

@@ -1,89 +1,89 @@
 # Getting started
 
+simscope needs Python 3.12 or newer and [uv](https://docs.astral.sh/uv/getting-started/installation/). It is not on PyPI yet, so work from a clone:
+
 ```bash
-uv sync --extra viewer
-uv run simscope --help
+git clone https://github.com/senthurayyappan/simscope
+cd simscope
+uv sync --extra viewer --extra mujoco
 ```
 
-The workflow is record, serve, browse, export:
+The built browser code is in the repository, so this install does not need Node.
 
 ```bash
-uv run python examples/viewer_demo.py --out demo_lib   # record a small MuJoCo run
-uv run simscope serve demo_lib                         # http://127.0.0.1:8080
+uv run python examples/viewer_demo.py --out demo_lib
+uv run simscope serve demo_lib
 uv run simscope ls demo_lib
-uv run simscope export demo_lib box_drop -o box.html           # lean player
-uv run simscope export demo_lib box_drop -o box.html --ui full # whole app
+uv run simscope export demo_lib box_drop -o box.html
 ```
 
-The README has a complete MuJoCo recording example. `simscope serve` shows
-runs that are still recording, and `simscope import` brings in `.rbundle`
-files and Brax HTML viewers.
+`serve` opens http://127.0.0.1:8080. The [CLI reference](cli.md) lists every flag.
 
-## Renaming runs
+## Record
 
-`simscope rename demo_lib old_name new_name` renames a run (in Python,
-`Library.rename(old, new)`; in the app, double-click the name). A run's name
-is its folder name; its id never changes, so notes, ratings, groups, cached
-highlights and exports stay with it. A run that is still recording cannot be
-renamed, and neither can one onto an existing name. Reopen any `Rollout` you
-had open before the rename, because it still points at the old folder.
+A recording wraps the simulation loop. This one drops a box and logs its pose, its contact forces, and its height:
 
-## Exports
+```python
+import mujoco
+import simscope
+from simscope import mujoco as smj
 
-`simscope export` writes one HTML file that works offline. A lean export
-(the default) shows the run in a plain page: the player fills the window and a
-single control bar sits under it. A full export (`--ui full`) is the whole app
-with the same runs loaded.
+model = mujoco.MjModel.from_xml_string(
+    "<mujoco><worldbody><geom type='plane' size='2 2 0.1'/>"
+    "<body pos='0 0 1'><freejoint/><geom type='box' size='.1 .1 .1'/></body>"
+    "</worldbody></mujoco>"
+)
+data = mujoco.MjData(model)
 
-To compare runs, export them with `--layout compare`. The file looks like the
-app's compare view: the panes fill the page, each titled with its run name,
-and one control bar at the bottom plays, steps and scrubs all of them
-together. Pick how the panes sit with `--arrange`:
-
-| `--arrange` | Panes |
-| --- | --- |
-| `side` | Side by side, left to right. The default for two runs. |
-| `stack` | One above the other, top to bottom. |
-| `grid` | Two by two; with three runs one cell stays empty. The default for three or four runs. |
-
-```bash
-uv run simscope export demo_lib run_a run_b -o compare.html --layout compare
-uv run simscope export demo_lib run_a run_b run_c -o compare.html \
-    --layout compare --arrange stack
+lib = simscope.Library("rollouts")
+with lib.record("drop", scene=smj.scene_from_model(model), dt=0.02) as rec:
+    smj.add_contacts_stream(rec, model, max_contacts=16)
+    for _ in range(100):
+        for _ in range(10):
+            mujoco.mj_step(model, data)
+        rec.log(
+            smj.poses(data),
+            contacts=smj.contacts(model, data, max_contacts=16),
+            height=float(data.xpos[1, 2]),
+        )
 ```
 
-Compare takes up to four runs, and `--arrange` only applies with
-`--layout compare`. In Python, pass `layout="compare"` and `arrange="stack"`
-to `simscope.export.export_html`. The viewer's Export button sends the
-arrangement you are looking at.
+Open the rollout with `simscope serve rollouts`. The camera follows the box. The plot shows `height`. The timeline marks the landing twice, once for center-of-mass acceleration and once for net contact force. Contact forces are drawn as arrows.
+
+For Isaac Lab, call `simscope.isaaclab` from inside that environment: `scene_from_env`, `PoseBuffer`, and `contacts`.
+
+`examples/viewer_demo.py` records a longer tumbling drop into a folder you choose with `--out`.
 
 ## In the app
 
-The library is on the left (by date or by group, five runs per section), the
-plots and metadata on the right, and the timeline at the bottom; each
-collapses. Keys: K play or pause, J and L step (Shift for 10 frames), F
-follow, C contacts, M label the moment, `[` and `]` step envs, N and P step
-runs, 1 to 5 rate, V pin, T theme.
+The library sits on the left, five rollouts per section, grouped by date or by group. Plots and metadata sit on the right. The timeline sits at the bottom. Each region collapses.
 
-Highlights are the markers on the timeline. Two kinds are built in, and they
-mean the same for any robot: **Contact force** (the net force of the
-`contacts` stream, such as "412 N, 5.1x typical") and **Acceleration** (the
-acceleration of the centre of mass, such as "41 m/s², 4.2 g"). A peak is a
-moment that stands out from the run's usual level. They are cached under
-`.simscope/derived/` in the library and travel inside full exports (the lean
-player does not draw them). Anything more
-specific to your robot or task, such as a jump or a slip, is yours to add; see
-the next section.
+| Key | Action |
+| --- | --- |
+| K | Play or pause |
+| J, L | Step one frame. Shift steps ten |
+| F | Follow the selected body |
+| C | Contacts |
+| M | Label the moment |
+| `[`, `]` | Step envs |
+| N, P | Next or previous rollout |
+| U | Next unrated rollout |
+| 1 to 5 | Rate |
+| V | Pin or unpin |
+| 0 | Frame the whole scene |
+| W, S | Zoom |
+| A, D | Pan |
+| T | Theme |
+
+Highlights are the markers on the timeline. Two kinds are built in, and they mean the same thing for any rollout. **Contact force** is the net force of the `contacts` stream. **Acceleration** is the acceleration of the centre of mass. A peak is a moment that stands out from that rollout's usual level. The markers are cached under `.simscope/derived/` and travel inside a full export. The lean player does not draw them.
+
+Anything else you want marked is yours to add. The next section shows how.
 
 ## Custom markers
 
 There are two ways to put your own markers on the timeline.
 
-**1. Compute them.** Write a function that takes the run and returns a list
-of `highlights.Highlight`, and register it. Each `Highlight` has a time `t`
-in seconds, a `frame`, an `env`, your kind's key, a `score` (higher is more
-notable) and a `value`. Give `t1` and `frame1` as well to mark a span. This
-one marks every stretch of at least 0.2 s where the root sits below 0.2 m:
+**Compute them.** Write a function that takes the rollout and returns a list of `highlights.Highlight`, and register it. Each `Highlight` has a time `t` in seconds, a `frame`, an `env`, your kind's key, a `score` (higher is more notable), and a `value`. Set `t1` and `frame1` to mark a span. This detector marks every stretch of at least 0.2 s where the root sits below 0.2 m:
 
 ```python
 import numpy as np
@@ -109,55 +109,63 @@ def low_stretches(rollout):
 highlights.register("low", low_stretches, label="Low", color="#d9480f")
 ```
 
-The key is lower case letters, digits and `_`. The colour is optional (a CSS
-hex colour). The detector runs once per run, in the background, and its
-markers are cached with the built-in ones; changing the detector's label or
-colour, or adding another detector, refreshes the cache. A detector that
-raises, or returns a marker with a frame or env outside the run or a time
-that is not finite, is logged with its name and skipped, and the other kinds
-still show. Register before you serve or export, in the same process:
+The key is lower case letters, digits, and `_`. The colour is a CSS hex colour, and it is optional. The detector runs once per rollout, in the background, and its markers are cached with the built-in ones. Changing the label or the colour, or adding another detector, refreshes the cache. A detector that raises, or that returns a marker with a frame or env outside the rollout or a time that is not finite, is logged and skipped. The other kinds still show.
+
+Register before you serve or export, in the same process:
 
 ```python
 from simscope import server
-server.serve("my_library")      # the same as `simscope serve`, with your kinds
+server.serve("my_library")
 ```
 
-**2. Add them by hand.** An event is a marker you place yourself, with a time
-or a span, a label and, if you like, a type with a colour. Events are saved
-next to the run (`annotations.json`) and show in the Labels lane:
+**Add them by hand.** An event is a marker you place yourself, with a time or a span, a label, and an optional type. Events are saved next to the rollout in `annotations.json` and show in the Labels lane:
 
 ```python
 from simscope import annotations, library
 
-lib = library.Library("my_library")
-lib.set_event_types([annotations.EventType(type_id="slip", name="Slip", color="#e59a1c")])
-with lib.open("walk") as run:
-    run.annotations.add_event("slip", t0=1.2, t1=1.5, label="left foot slips", env=0)
-    run.annotations.save()
+lib = library.Library("rollouts")
+lib.set_event_types([annotations.EventType(type_id="landing", name="Landing", color="#e59a1c")])
+with lib.open("drop") as rollout:
+    rollout.annotations.add_event("landing", t0=0.4, t1=0.5, label="box lands", env=0)
+    rollout.annotations.save()
 ```
 
-Use computed markers for something you can find from the data in every run,
-and events for something you noticed.
+Use a detector for something the data can find in every rollout. Use an event for something you noticed.
 
-## Development
+## Exports
 
-Python:
+`simscope export` writes one HTML file that works offline. A lean export, the default, fills the window with the player and puts one control bar under it. A full export (`--ui full`) is the whole app, with the same rollouts loaded, and it includes highlights.
+
+To compare rollouts, pass `--layout compare`. The panes fill the page. Each pane is titled with its rollout name, and one control bar plays, steps, and scrubs all of them together. `--arrange` sets how the panes sit:
+
+| `--arrange` | Panes |
+| --- | --- |
+| `side` | Side by side, left to right. The default for two rollouts |
+| `stack` | One above the other |
+| `grid` | Two by two. With three rollouts, one cell stays empty. The default for three or four rollouts |
 
 ```bash
-uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
-uv run pre-commit run --all-files
-uv run pytest --cov --cov-report=term-missing
-uv run --group docs mkdocs serve
+uv run simscope export demo_lib drop_a drop_b -o compare.html --layout compare
+uv run simscope export demo_lib drop_a drop_b drop_c -o compare.html \
+    --layout compare --arrange stack
 ```
 
-Browser code lives in `web/` (player core, `<simscope-player>` element, React
-app). The built bundles are committed under `src/simscope/_assets/`, and CI
-fails if they differ from a fresh build. Rebuild after editing `web/src`:
+Compare takes up to four rollouts. `--arrange` applies only with `--layout compare`. In Python, pass `layout="compare"` and `arrange="stack"` to `simscope.export.export_html`. The viewer's Export button sends the arrangement you are looking at.
 
-```bash
-cd web && npm ci && npm run build && npm test
-```
+Without `--layout`, one rollout exports as `single` and several rollouts export as `grid`.
 
-Add runtime dependencies with `uv add package-name`, development tools with
-`uv add --dev tool-name`, and documentation tools with `uv add --group docs tool-name`.
-Commit both `pyproject.toml` and `uv.lock` after dependency changes.
+A lean file on an mkdeck slide is an image of that file. Copy it next to the deck and write `![Rollout](assets/box.html)`.
+
+## Rename
+
+`simscope rename demo_lib old_name new_name` renames a rollout. In Python, call `Library.rename(old, new)`. In the app, double-click the name.
+
+The name is the folder name. The id never changes, so notes, ratings, groups, cached highlights, and exports stay with the rollout. A rollout that is still recording cannot be renamed. The new name must not already exist. Reopen any `Rollout` you had open, because it still points at the old folder.
+
+## Import
+
+`simscope import rollouts path/to/episode.rbundle` reads `.rbundle` files and Brax HTML pages. Pass a folder to import every such file inside it. `--tag` adds a tag, and `--overwrite` replaces a rollout that already has that name.
+
+## Work on simscope
+
+[Developing](developing.md) covers the layout, the checks, and where to add an adapter or a marker. Pull requests and releases are in [CONTRIBUTING.md](https://github.com/senthurayyappan/simscope/blob/main/CONTRIBUTING.md).

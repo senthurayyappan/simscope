@@ -1,10 +1,35 @@
 [project]
 name = "simscope"
 version = "0.1.0"
-description = "Record, browse, curate, and ship robot simulation rollouts."
+description = "Record and replay robot simulation rollouts."
 readme = "README.md"
-authors = [{ name = "senthurayyappan" }]
+authors = [{ name = "Senthur Ayyappan" }]
 requires-python = ">=3.12"
+keywords = ["robotics", "simulation", "mujoco", "isaac-lab", "rollout", "viewer"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Typing :: Typed",
+]
+# simscope's own code is Apache-2.0. The wheel also carries the browser
+# bundles: MIT, ISC, and 0BSD code, and the Geist font (OFL-1.1).
+# See THIRD_PARTY_NOTICES.md.
+license = "Apache-2.0 AND MIT AND ISC AND OFL-1.1 AND 0BSD"
+license-files = [
+    "LICENSE.md",
+    "THIRD_PARTY_NOTICES.md",
+    "src/simscope/_assets/simscope-web.LICENSES.txt",
+]
 dependencies = ["numpy>=2.2"]
 
 [project.scripts]
@@ -21,6 +46,7 @@ mujoco = ["mujoco>=3.14"]
 [project.urls]
 Repository = "https://github.com/senthurayyappan/simscope"
 Documentation = "https://senthurayyappan.github.io/simscope/"
+Issues = "https://github.com/senthurayyappan/simscope/issues"
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13"]
