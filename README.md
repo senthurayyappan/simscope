@@ -1,4 +1,4 @@
-![simscope: record robot rollouts, browse them in a browser, export one HTML file](https://raw.githubusercontent.com/senthurayyappan/simscope/main/docs/images/banner.jpg)
+![simscope: record robot rollouts, browse them in a browser, export one HTML file](docs/images/banner.jpg)
 
 [![CI](https://github.com/senthurayyappan/simscope/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/senthurayyappan/simscope/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://github.com/senthurayyappan/simscope/blob/main/pyproject.toml)

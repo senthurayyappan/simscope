@@ -467,3 +467,42 @@ while comparing. It is remembered in `localStorage`.
   attribute, no letters. `SimscopePlayer.attachMaster(box, "compare")` builds
   the shared bar and styles the layout itself (the page needs no CSS beyond
   `html, body {margin: 0; height: 100%}`).
+
+## 11. v3.4 changes: renaming runs, highlight card
+
+### 11.1 Renaming a run
+
+A run's name is its folder name (`runs/<name>/`) and the `name` field of its
+manifest; its identity is its `id` (ULID), which never changes, so
+annotations, the derived cache, groups and exports keep working.
+
+- Python: `Library.rename(old, new) -> None`. `new` must match the run-name
+  rule (`[A-Za-z0-9][A-Za-z0-9._-]{0,127}`). It raises `FileExistsError` if
+  `new` exists, `FileNotFoundError` if `old` does not, and `ValueError` for a
+  run that is still recording or an invalid name. It renames the folder, then
+  rewrites `rollout.json` with the new `name` atomically; the index follows.
+  Nothing in the scene store, assets or streams changes.
+- HTTP: `POST /api/runs/<name>/rename` with `{"to": "<new name>"}`, token and
+  Origin as for annotations. `200 {"name": "<new>"}`; `400` invalid name;
+  `404` unknown run; `409` the new name exists or the run is still recording;
+  `403` read-only library or bad token. `/api/changes` then lists the old
+  name in `removed` and the new one in `changed`.
+- App: double-clicking a run's name in the library edits it in place (Enter or
+  blur saves, Escape cancels; the row's duration and indicators step aside), and
+  the row menu has `Rename`. If the open run is renamed, the app keeps it open
+  under its new name. Pack-mode (read-only) hides it.
+
+### 11.2 Highlight hover card
+
+Spread out and justified, with the number as the point of the card:
+
+```
+Acceleration               0.88 s     <- kind name left, time right (muted, text-xs)
+164 m/s²                  16.7 g      <- the reading: large and medium weight on
+                                         the left, the second unit muted on the right
+```
+
+For contact force: `Contact force` / `0.88 s`, then `127 N` and `1.9× typical`.
+In compare the run title is a first muted row. Custom kinds: label and time on
+the first row, `detail` as the reading. The card has a fixed minimum width
+(about 168 px) so the two columns have room; nothing is dot-joined.
