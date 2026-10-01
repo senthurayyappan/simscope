@@ -31,7 +31,7 @@ Summarised from the review, in their terms:
 8. Viewport: Blender-style overlay buttons instead of a Display popover (a
    ground button with its own popover; toggles for visual, collision and
    contact geoms); export buttons in the top-right toolbar.
-9. Highlights: "height drop" is confusing; explain what a highlight is.
+9. Highlights: "height drop" is confusing; markers must be general across robots (net contact force and COM acceleration only) with an API for custom ones.
 10. Compare: every run's highlights on the shared timeline, one colour per
     run (max 4) with a matching dot on its pane; ground planes at the same
     screen height, so a 1 m wall and a 0.8 m wall compare honestly.
@@ -44,7 +44,7 @@ These extend the proposal's decision log as D23–D30.
 | --- | --- |
 | D23 | **Every element must change what the user does next.** Removed: the Complete badge (only a recording run is marked, with LIVE), source badges on rows (they move to Metadata), the highlight reel, the Curation heading, the flag/status system, and the tag UI. |
 | D24 | **Groups replace tags.** A run belongs to at most one group ("move to group"). Groups are ordered and may be empty. The library shows runs by date (default) or by group; each section shows 5 runs and a "Show N more" row. |
-| D25 | **Highlights v2 are named physical moments**, not raw signal peaks: landing, jump (a span), fall, contact spike, torque spike (§4). Each carries a plain-language label and detail. Markers within 0.15 s merge. |
+| D25 | **Highlights are general** (revised 2026-10-01, §4): built-in kinds are only net contact force and centre of mass acceleration; developers add their own. Each marker carries a plain-language label and detail. Markers of one kind within 0.15 s merge. |
 | D26 | **Timeline labels.** Users can label a moment ("custom labels at timestamps"): press M or use the ruler's context menu, type a name. Labels are untyped `events` in `annotations.json` and appear in a Labels lane that exists only when a run has labels. The Marks lane is removed. This revises D20 in one place: labels are the only manual annotation. |
 | D27 | **Compare identity and alignment.** Compare slots 1–4 have fixed colours from the categorical palette. Each run's highlights get their own lane in that colour, and its pane shows a matching dot. All panes share camera orientation, orthographic scale and the follow target's height, so world z = 0 sits at the same screen row under every followed robot. |
 | D28 | **Right panel = Plots, Metadata** (plus Envs when a run has more than one env). Metadata is a two-column table; rating, favourite and notes live there without a heading. |
@@ -71,25 +71,15 @@ These extend the proposal's decision log as D23–D30.
 - The compare bar: "2 selected" and a primary "Compare" button and a clear
   button, on one line.
 
-## 4. Highlights v2 (`simscope.highlights`, detector `simscope/2`)
+## 4. Highlights
 
-| Kind | Detected when | Label / detail example |
-| --- | --- | --- |
-| `landing` | a peak of root acceleration (gravity removed) above the run's typical level, preceded by downward root velocity < −0.5 m/s within 0.2 s | "Landing" / "4.1 g impact, after 0.38 s airborne" |
-| `jump` (span `t0`–`t1`) | from takeoff (root vertical velocity crosses +0.5 m/s while accelerating upward) to the matching landing | "Jump" / "0.38 s airborne, apex 0.83 m" |
-| `fall` | the body's up axis tilts more than 60° from its frame-0 attitude, or the root stays below 50 % of its standing height (median of the first 0.2 s), for at least 0.25 s | "Fall" / "tipped 94° at 2.40 s" |
-| `contact_spike` | contact force magnitude far above typical (robust score > 6) | "Contact spike" / "412 N, 5.1× typical" |
-| `torque_spike` | `\|τ\|` far above typical in a stream whose name contains `torque` | "Torque spike" / "38 N·m on joint 3, 4.0× typical" |
-
-- Acceleration peaks that are not landings (takeoff pushes, gait noise) are
-  not highlights. "height drop" is gone.
-- Markers of any kind within 0.15 s merge into one moment, keeping the
-  strongest kind and listing the others in its detail.
-- `score` stays (for ranking), but the UI shows the "× typical" ratio.
-- Caps stay: 10 per env per kind, 50 per kind across envs.
-- Acceptance: on the real library, every landing produces exactly one
-  marker (check 10 runs by eye against the poses and say which), takeoff
-  pushes produce none, and a robot that tips over produces a fall.
+Superseded on 2026-10-01 by the general highlights of the
+[contracts](2026-09-30-simscope-viewer-v3-contracts.md) §9: the only
+built-in kinds are `contact` (net contact force) and `acceleration` (centre
+of mass acceleration), and developers add their own with
+`highlights.register` or explicit annotation events. The task-specific kinds
+tried first (landing, jump, fall, torque spike) were removed because they
+only made sense for the vault and roll rollouts used to build the viewer.
 
 ## 5. Compare
 
@@ -137,8 +127,8 @@ wireframes). Highlights of the decisions:
   sizes; sentence case; tabular numerals; no monospace, no uppercase.
 - **Colour:** shadcn's neutral tokens, no accent hue. Colour only carries
   identity: compare runs A–D (blue, orange, green, magenta; also pinned
-  envs) and highlight kinds (landing amber, contact violet, torque pink,
-  fall red), with a glyph for every kind and a letter for every run. The
+  envs) and highlight kinds (acceleration amber, contact force violet,
+  custom kinds in their own colour), with a glyph for every kind and a letter for every run. The
   palette passes the `dataviz` validator for normal vision (the run set sits
   in the colour-blind warning band, hence the letters).
 - **Pinned** replaces favourites (a pin, not a heart or star); a single run

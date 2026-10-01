@@ -11,27 +11,18 @@ export function seriesVar(i: number): string {
   return `var(--series-${(i % MAX_SLOTS) + 1})`;
 }
 
-export type KindToken = "landing" | "contact" | "torque" | "fall" | "neutral";
+const HEX = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
-/** Highlight kind to colour token. Jumps and unknown kinds are neutral (C8). */
-export function kindToken(kind: string): KindToken {
-  switch (kind) {
-    case "landing":
-      return "landing";
-    case "contact_spike":
-      return "contact";
-    case "torque_spike":
-      return "torque";
-    case "fall":
-      return "fall";
-    default:
-      return "neutral";
-  }
+/** A developer-supplied kind colour if it is a plain hex colour, else null (anything else could smuggle CSS). */
+export function validColor(color: string | null | undefined): string | null {
+  return typeof color === "string" && HEX.test(color.trim()) ? color.trim() : null;
 }
 
-export function kindVar(kind: string): string {
-  const t = kindToken(kind);
-  return t === "neutral" ? "var(--muted-foreground)" : `var(--kind-${t})`;
+/** The two built-in kinds have palette slots; custom kinds bring a colour or stay neutral (C8). */
+export function kindVar(kind: string, custom?: string | null): string {
+  if (kind === "contact") return "var(--kind-contact)";
+  if (kind === "acceleration") return "var(--kind-acceleration)";
+  return validColor(custom) ?? "var(--muted-foreground)";
 }
 
 /** Reads a CSS variable from the root, for canvas and the player. */

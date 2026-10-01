@@ -3,10 +3,9 @@
 // UI's iconography without an image or font.
 
 import { __iconData as contact } from "lucide-react/dist/esm/icons/circle-dot.mjs";
-import { __iconData as landing } from "lucide-react/dist/esm/icons/arrow-down-to-line.mjs";
-import { __iconData as fall } from "lucide-react/dist/esm/icons/trending-down.mjs";
+import { __iconData as acceleration } from "lucide-react/dist/esm/icons/gauge.mjs";
+import { __iconData as custom } from "lucide-react/dist/esm/icons/diamond.mjs";
 import { __iconData as label } from "lucide-react/dist/esm/icons/tag.mjs";
-import { __iconData as torque } from "lucide-react/dist/esm/icons/rotate-cw.mjs";
 
 type Attrs = Record<string, string | number>;
 interface IconData {
@@ -52,15 +51,13 @@ function toPath(data: IconData): Path2D {
 
 let cache: Map<string, Path2D> | null = null;
 
-/** Glyph path (24x24 box) for a highlight kind (C8). Unknown kinds fall back to the landing arrow. */
+/** Glyph path (24x24 box) for a highlight kind: circle-dot for contact force, gauge for acceleration, a diamond for any custom kind (C8). */
 export function kindIcon(kind: string): Path2D {
   cache ??= new Map([
-    ["landing", toPath(landing as IconData)],
-    ["jump", toPath(landing as IconData)],
-    ["contact_spike", toPath(contact as IconData)],
-    ["torque_spike", toPath(torque as IconData)],
-    ["fall", toPath(fall as IconData)],
+    ["contact", toPath(contact as IconData)],
+    ["acceleration", toPath(acceleration as IconData)],
+    ["custom", toPath(custom as IconData)],
     ["label", toPath(label as IconData)],
   ]);
-  return cache.get(kind) ?? cache.get("landing")!;
+  return cache.get(kind) ?? cache.get("custom")!;
 }

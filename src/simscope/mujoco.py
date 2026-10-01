@@ -118,9 +118,12 @@ def scene_from_model(
     parents = model.body_parentid.tolist()
     if parents:
         parents[0] = -1
+    masses = model.body_mass.tolist()
+    if masses:
+        masses[0] = 0.0  # the world body has no mass
     bodies = tuple(
-        core.Body(name=name, parent=parent)
-        for name, parent in zip(body_names, parents, strict=True)
+        core.Body(name=name, parent=parent, mass=mass)
+        for name, parent, mass in zip(body_names, parents, masses, strict=True)
     )
 
     types = model.geom_type

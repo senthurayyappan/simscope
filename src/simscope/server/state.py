@@ -170,7 +170,7 @@ class LibraryState:
         path = derived.cache_root(self.root) / info.id / derived.HIGHLIGHTS
         try:
             doc = json.loads(path.read_bytes())
-            if doc["format"] != highlights.FORMAT:
+            if doc["detector"] != highlights.DETECTOR_VERSION:
                 return None  # computed by an older detector
             return len(doc["highlights"])
         except (OSError, ValueError, KeyError, TypeError):

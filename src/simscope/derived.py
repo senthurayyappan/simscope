@@ -10,8 +10,8 @@ reads it through the same path-addressed ``Source`` as the recording itself:
   sorts the env picker.
 * ``envelopes/<stream>.json``: the p5, p50 and p95 of a scalar or vector
   stream across envs, per frame.
-* ``highlights.json``: the named moments of :mod:`simscope.highlights`
-  (landings, jumps, falls, spikes); ``n_highlights`` counts them per env.
+* ``highlights.json``: the contact-force and acceleration peaks of
+  :mod:`simscope.highlights`; ``n_highlights`` counts them per env.
 
 Files live in ``.simscope/derived/<run id>/`` next to a ``stamp.json`` that
 holds the digest of the run's manifest: when the manifest changes, every
@@ -45,11 +45,12 @@ from simscope.io import blockfile, cas, codecs, manifest
 
 logger = logging.getLogger(__name__)
 
-VERSION = 3
+VERSION = 4
 """Bump to discard every cached derived file.
 
 2: highlights are ``simscope-highlights/2`` (viewer v3.1).
-3: detector simscope/2.1, a fall is a body that stayed down."""
+3: detector simscope/2.1, a fall is a body that stayed down.
+4: detector simscope/3, only contact and acceleration kinds."""
 CROWD_ENVS = 64
 """Runs with more envs than this get a ``root_pose.blk``."""
 ROOT_POSE = "root_pose.blk"

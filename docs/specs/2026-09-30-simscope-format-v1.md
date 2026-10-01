@@ -76,7 +76,7 @@ A scene is the static part of a rollout. Many rollouts share one scene file.
 ```json
 {
   "format": "simscope-scene/1",
-  "bodies": [{"name": "world", "parent": -1}, {"name": "torso", "parent": 0}],
+  "bodies": [{"name": "world", "parent": -1}, {"name": "torso", "parent": 0, "mass": 12.5}],
   "geoms": [
     {"body": 1, "kind": "capsule", "size": [0.05, 0.2, 0.0],
      "pos": [0.0, 0.0, 0.0], "quat": [0.0, 0.0, 0.0, 1.0], "scale": [1.0, 1.0, 1.0],
@@ -93,6 +93,10 @@ A scene is the static part of a rollout. Many rollouts share one scene file.
 - `bodies[i].parent` is the index of the parent body, or `-1`. Body 0 is
   usually the world. The per-frame pose stream (§5) has one pose per body, in
   this order.
+- `bodies[i].mass` (optional, kg) is the body's mass. It is written only for
+  a body above 0, so a scene without masses has the bytes, and the hash, it
+  had before the field existed; absent means unknown (0). Highlights weight
+  the centre of mass by it. The MuJoCo adapter fills it from `body_mass`.
 - `geoms[j].body` indexes `bodies`. `pos` and `quat` place the geom in its
   body's frame. The geom's world pose is `body_pose ∘ (pos, quat)`.
 - `material` indexes `materials`. `mesh` indexes `meshes`, or is `null`.
@@ -179,8 +183,8 @@ A scene is the static part of a rollout. Many rollouts share one scene file.
   is metres per newton, by default `1 / (m g)` of the robot so that body
   weight draws as 1 m, and its `units` is `"N"`. MuJoCo writes one row per
   active contact, Isaac Lab one row per `ContactSensor` body. Viewers draw
-  it for the focused envs only. Automatic highlights read the largest force
-  magnitude per frame from it.
+  it for the focused envs only. Automatic highlights read the net force
+  from it: the norm of the sum of the K force vectors of a frame.
 - `source` records provenance. `tags` and `meta` are free-form, set at
   record time. Curation after recording goes in `annotations.json`, never
   here.
@@ -423,16 +427,16 @@ The directory is JSON:
 
   | Path | Contents |
   | --- | --- |
-  | `derived/<name>/highlights.json` | automatic highlights (landings, jumps, falls, contact and torque spikes; `simscope-highlights/2`) |
+  | `derived/<name>/highlights.json` | automatic highlights (net contact force and centre-of-mass acceleration peaks, plus any custom kinds; `simscope-highlights/2`) |
   | `derived/<name>/root_pose.blk` | a block file `[E, 1, 7]` of the followed body's pose, `q16d`; written for packs with more than 64 envs, it is what the crowd tier draws |
   | `derived/<name>/summaries.json` | one number per env for each of a few columns, for sorting the env picker; written for packs with more than 64 envs |
 
   `highlights.json` is the object
-  `{"format": "simscope-highlights/2", "detector": "simscope/2",
-  "run_id": ..., "kinds": [{"key", "label"}], "highlights": [{"t", "frame",
-  "t1", "frame1", "env", "kind", "label", "detail", "score", "ratio",
-  "value", "body", "also"}]}`, sorted by `t` (a `jump` has `t1`; the
-  viewer contracts, section 8.2, define every field). `env` indexes the envs of the pack, so an export that keeps a subset
+  `{"format": "simscope-highlights/2", "detector": "simscope/3",
+  "run_id": ..., "kinds": [{"key", "label", "color"?}], "highlights":
+  [{"t", "frame", "t1", "frame1", "env", "kind", "label", "detail", "score",
+  "ratio", "value", "body", "also"}]}`, sorted by `t` (a custom kind may
+  have a span, `t1`; the viewer contracts, section 9, define every field). `env` indexes the envs of the pack, so an export that keeps a subset
   of envs renumbers them from 0 and drops the highlights of the others. The
   viewer contracts define the files in full. A writer records minor version
   1 in the header when the pack has any `derived/` entry, and minor 0

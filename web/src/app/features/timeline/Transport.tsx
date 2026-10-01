@@ -40,16 +40,14 @@ export function Transport({
   const clock = getClock();
 
   return (
-    <div className="@container flex h-11 shrink-0 items-center gap-2 overflow-hidden px-2">
-      <div className="flex shrink-0 items-center">
+    <div className="@container grid h-11 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 overflow-hidden px-2 @max-[40rem]:flex @max-[40rem]:justify-between">
+      <div className="flex min-w-0 items-center justify-self-start">
         <CameraMenu />
       </div>
 
-      <div className="min-w-0 flex-1" />
-
       <div className="flex shrink-0 items-center gap-1">
         <Hint label="Go to start">
-          <Button variant="ghost" size="icon-sm" className="@max-[40rem]:hidden" disabled={!hasRun} onClick={() => seekTo(0)} aria-label="Go to start">
+          <Button variant="ghost" size="icon-sm" className="@max-[48rem]:hidden" disabled={!hasRun} onClick={() => seekTo(0)} aria-label="Go to start">
             <SkipBack />
           </Button>
         </Hint>
@@ -69,16 +67,14 @@ export function Transport({
           </Button>
         </Hint>
         <Hint label="Go to end">
-          <Button variant="ghost" size="icon-sm" className="@max-[40rem]:hidden" disabled={!hasRun} onClick={() => seekTo(clock.duration)} aria-label="Go to end">
+          <Button variant="ghost" size="icon-sm" className="@max-[48rem]:hidden" disabled={!hasRun} onClick={() => seekTo(clock.duration)} aria-label="Go to end">
             <SkipForward />
           </Button>
         </Hint>
-        <Readout hasRun={hasRun} dt={info?.dt ?? 0.02} frames={info?.frames ?? 0} />
       </div>
 
-      <div className="min-w-0 flex-1" />
-
-      <div className="flex shrink-0 items-center gap-0.5">
+      <div className="flex min-w-0 items-center justify-self-end gap-0.5">
+        <Readout hasRun={hasRun} dt={info?.dt ?? 0.02} frames={info?.frames ?? 0} />
         <Hint label="Loop">
           <Toggle size="icon-sm" pressed={snap.loop} disabled={!hasRun} onPressedChange={(v) => (clock.loop = v)} aria-label="Loop">
             <Repeat />
@@ -120,7 +116,7 @@ export function Transport({
   );
 }
 
-/** `2.49 / 7.98 s`: no caption; click to type a time; the tooltip says `Frame 124 of 400` (TL2). */
+/** `2.49 / 7.98 s`: one small line, no caption; click to type a time; the tooltip says `Frame 124 of 400` (TL2). */
 function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: number }) {
   const timeEl = useRef<HTMLSpanElement>(null);
   const totalEl = useRef<HTMLSpanElement>(null);
@@ -147,11 +143,9 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
     if (t !== null) seekTo(t);
   };
 
-  if (editing) {
-    return (
-      <EditField initial={formatTimecode(getClock().time)} onCommit={commit} onCancel={() => setEditing(false)} />
-    );
-  }
+  // The button and the field share one box, so nothing moves when editing starts.
+  const box = "num mr-1 h-7 w-28 shrink-0 rounded-md px-2 text-xs";
+  if (editing) return <EditField className={box} initial={formatTimecode(getClock().time)} onCommit={commit} onCancel={() => setEditing(false)} />;
   return (
     <Tooltip onOpenChange={(o) => o && setTip(`Frame ${formatCount(Math.round(getClock().time / dt))} of ${formatCount(frames)}`)}>
       <TooltipTrigger asChild>
@@ -159,12 +153,14 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
           type="button"
           disabled={!hasRun}
           onClick={() => setEditing(true)}
-          className="num ml-2 flex h-7 items-baseline gap-1 rounded-md px-1.5 text-sm outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50"
+          className={cn(box, "block text-right leading-7 outline-none hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50")}
           aria-label="Current time, click to type a time"
         >
-          <span ref={timeEl} className="self-center font-medium" />
-          <span className="text-muted-foreground">/</span>
-          <span ref={totalEl} className="text-muted-foreground" />
+          <span ref={timeEl} className="font-medium" />
+          <span className="text-muted-foreground">
+            {" / "}
+            <span ref={totalEl} />
+          </span>
         </button>
       </TooltipTrigger>
       <TooltipContent>{tip}</TooltipContent>
@@ -172,7 +168,7 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
   );
 }
 
-function EditField({ initial, onCommit, onCancel }: { initial: string; onCommit(v: string): void; onCancel(): void }) {
+function EditField({ initial, onCommit, onCancel, className }: { initial: string; onCommit(v: string): void; onCancel(): void; className?: string }) {
   const ref = useRef<HTMLInputElement>(null);
   const done = useRef(false);
   useEffect(() => {
@@ -196,7 +192,7 @@ function EditField({ initial, onCommit, onCancel }: { initial: string; onCommit(
       onBlur={(e) => {
         if (!done.current) onCommit(e.currentTarget.value);
       }}
-      className={cn("num ml-2 h-7 w-24 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50")}
+      className={cn(className, "border border-input bg-transparent text-right outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50")}
       aria-label="Enter a time, such as 2.5, 1:05 or f120"
       spellCheck={false}
     />

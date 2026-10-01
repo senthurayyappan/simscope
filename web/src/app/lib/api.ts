@@ -250,7 +250,7 @@ export async function createApi(boot: Boot): Promise<Api> {
   if (boot.mode === "pack") {
     const id = (boot.pack ?? "#simscope-pack").replace(/^#/, "");
     const el = document.getElementById(id);
-    if (!el?.textContent) throw new Error(`the export has no pack (#${id})`);
+    if (!el?.textContent) throw new Error(`this export file has no run data (#${id} is missing)`);
     const source = await createPackSource(decodeBase64(el.textContent));
     return new PackApi(source, boot.runs ?? [], boot.library ?? "Export");
   }

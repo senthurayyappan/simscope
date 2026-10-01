@@ -20,6 +20,7 @@ import { Hint, Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/t
 import {
   buildSections,
   flatOrder,
+  shortName,
   SECTION_LIMIT,
   SORT_LABELS,
   type LibraryView,
@@ -43,7 +44,8 @@ type Item =
   | { kind: "empty"; section: Section }
   | { kind: "new-group" };
 
-const HEIGHT = { header: 32, row: 32, more: 28, empty: 28, "new-group": 36 } as const;
+// Rows are 32 px plus 1 px of gap above and below, so a ring never touches its neighbour.
+const HEIGHT = { header: 32, row: 34, more: 28, empty: 28, "new-group": 36 } as const;
 
 export function Library({ onCollapse }: { onCollapse(): void }) {
   const s = useApp(
@@ -99,8 +101,8 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
   }, [sections, s.folded, s.expanded, searching, s.view, s.writable, s.groups, activeName]);
 
   // Names for dialogs.
-  const [dialog, setDialog] = useState<{ type: "new"; names: string[] } | { type: "rename"; name: string } | null>(null);
-  const onNewGroup = useCallback((names: string[]) => setDialog({ type: "new", names }), []);
+  const [dialog, setDialog] = useState<{ names: string[] } | null>(null);
+  const onNewGroup = useCallback((names: string[]) => setDialog({ names }), []);
 
   // Virtual list with a sticky section header (TanStack's sticky recipe).
   const scroller = useRef<HTMLDivElement>(null);
@@ -290,13 +292,13 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
         ) : noGroupView ? null : items.length === 0 ? (
           <Empty icon="search" text={`No runs match “${deferred.trim()}”.`} action={<Button variant="outline" size="sm" onClick={() => act.setQuery("")}>Clear search</Button>} />
         ) : (
-          <div className="relative w-full px-2" style={{ height: virt.getTotalSize() }}>
+          <div className="relative w-full px-1" style={{ height: virt.getTotalSize() }}>
             {virt.getVirtualItems().map((v) => {
               const it = items[v.index];
               const isSticky = v.index === stickyIdx.current && it.kind === "header";
               const style: React.CSSProperties = isSticky
                 ? { position: "sticky", top: 0, zIndex: 2, height: v.size }
-                : { position: "absolute", top: 0, left: 8, right: 8, height: v.size, transform: `translateY(${v.start}px)` };
+                : { position: "absolute", top: 0, left: 4, right: 4, height: v.size, transform: `translateY(${v.start}px)` };
               return (
                 <div key={`${v.index}:${it.kind}:${it.kind === "row" ? `${it.section.id}/${it.run.name}` : it.kind === "new-group" ? "" : it.section.id}`} style={style}>
                   {it.kind === "header" ? (
@@ -304,7 +306,6 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
                       section={it.section}
                       folded={s.folded.includes(it.section.id)}
                       writable={s.writable}
-                      onRename={(name) => setDialog({ type: "rename", name })}
                     />
                   ) : it.kind === "row" ? (
                     <ContextMenu>
@@ -339,7 +340,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setDialog({ type: "new", names: [] })}
+                      onClick={() => setDialog({ names: [] })}
                       className="mt-1 flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       <FolderPlus className="size-4" />
@@ -361,17 +362,15 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
 
       <NameDialog
         open={dialog !== null}
-        title={dialog?.type === "rename" ? "Rename group" : "New group"}
-        description={dialog?.type === "new" && dialog.names.length ? `${dialog.names.length === 1 ? "The run moves" : `${dialog.names.length} runs move`} into it.` : undefined}
-        initial={dialog?.type === "rename" ? dialog.name : ""}
-        submit={dialog?.type === "rename" ? "Rename" : "Create"}
+        title="New group"
+        description={dialog && dialog.names.length ? `${dialog.names.length === 1 ? "The run moves" : `${dialog.names.length} runs move`} into it.` : undefined}
+        submit="Create"
         onClose={() => setDialog(null)}
         onSubmit={(value) => {
           const d = dialog;
           setDialog(null);
           if (!d) return;
-          if (d.type === "rename") void act.groupOp({ op: "rename", name: d.name, to: value });
-          else if (d.names.length) void act.moveToGroup(d.names, value);
+          if (d.names.length) void act.moveToGroup(d.names, value);
           else void act.groupOp({ op: "create", name: value });
         }}
       />
@@ -383,26 +382,49 @@ function SectionHeader({
   section,
   folded,
   writable,
-  onRename,
 }: {
   section: Section;
   folded: boolean;
   writable: boolean;
-  onRename(name: string): void;
 }) {
   const toggleFolded = useApp((s) => s.toggleFolded);
+  const [editing, setEditing] = useState(false);
   const Chevron = folded ? ChevronRight : ChevronDown;
   const editable = writable && section.kind === "group";
+  const { text, cut } = shortName(section.title);
+  const title = <span className="truncate">{text}</span>;
+
+  if (editing) {
+    // The same row, the same font: the name becomes a field; count and menu step aside.
+    const save = (value: string) => {
+      setEditing(false);
+      const next = value.trim();
+      if (next && next !== section.title) void useApp.getState().groupOp({ op: "rename", name: section.title, to: next });
+    };
+    return (
+      <div className="flex h-8 items-center bg-sidebar px-1">
+        <InlineName initial={section.title} onSave={save} onCancel={() => setEditing(false)} />
+      </div>
+    );
+  }
   return (
     <div className="group/header flex h-8 items-center bg-sidebar">
       <button
         type="button"
         onClick={() => toggleFolded(section.id)}
+        onDoubleClick={() => editable && setEditing(true)}
         aria-expanded={!folded}
         className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-md px-1 text-left text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
         <Chevron className="size-3.5 shrink-0" />
-        <span className="truncate">{section.title}</span>
+        {cut ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{title}</TooltipTrigger>
+            <TooltipContent side="right">{section.title}</TooltipContent>
+          </Tooltip>
+        ) : (
+          title
+        )}
       </button>
       {editable ? (
         <DropdownMenu>
@@ -412,13 +434,46 @@ function SectionHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => onRename(section.title)}>Rename…</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setTimeout(() => setEditing(true), 0)}>Rename</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void useApp.getState().groupOp({ op: "delete", name: section.title })}>Delete group</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
       <SidebarMenuBadge>{section.runs.length}</SidebarMenuBadge>
     </div>
+  );
+}
+
+/** An inline name field in a list row: Enter or blur saves, Escape cancels. Same height and font as the text it replaces. */
+function InlineName({ initial, onSave, onCancel }: { initial: string; onSave(v: string): void; onCancel(): void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const done = useRef(false);
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+  const finish = (save: boolean, value: string) => {
+    if (done.current) return;
+    done.current = true;
+    if (save) onSave(value);
+    else onCancel();
+  };
+  return (
+    <input
+      ref={ref}
+      defaultValue={initial}
+      maxLength={64}
+      aria-label="Group name"
+      spellCheck={false}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") finish(true, e.currentTarget.value);
+        else if (e.key === "Escape") finish(false, "");
+        e.stopPropagation();
+      }}
+      onBlur={(e) => finish(true, e.currentTarget.value)}
+      onClick={(e) => e.stopPropagation()}
+      className="h-7 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+    />
   );
 }
 

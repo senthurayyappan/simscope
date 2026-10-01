@@ -24,9 +24,10 @@ Both adapters record the `contacts` stream the viewer draws as force arrows:
 ## Curation and highlights
 
 Marks, notes, ratings, labels and run groups (`marks.group`, and the ordered
-list in `.simscope/groups.json`) are in `simscope.annotations`. The detector
-of `simscope.highlights` finds landings, jumps, falls and contact and torque
-spikes.
+list in `.simscope/groups.json`) are in `simscope.annotations`. The detectors
+of `simscope.highlights` find peaks of the net contact force and of the
+centre-of-mass acceleration; `highlights.register` adds your own kind of
+marker (see "Custom markers" in the getting-started guide).
 
 ::: simscope.annotations
 

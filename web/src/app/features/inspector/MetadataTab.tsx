@@ -15,7 +15,6 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { baseName, streamSummary } from "@/lib/metadata";
 import { Textarea } from "@/components/ui/input";
-import { splitName } from "@/lib/filters";
 import { formatCount, formatDuration, formatRate, formatRecorded, formatValue, lastFrameTime } from "@/lib/format";
 import { meanRating } from "@/lib/rows";
 import { useApp } from "@/lib/store";
@@ -105,15 +104,13 @@ export function MetadataTab() {
   const live = manifest?.status === "recording" || info?.live;
   const metrics = flatten(manifest?.meta?.metrics);
   const config = flatten(manifest?.meta?.config);
-  const [head, tail] = splitName(name);
   const m = manifest as Manifest | null;
 
   return (
     <div className="min-w-0 pb-6">
       <div className="flex items-center gap-2 px-4 py-3">
-        <h2 className="flex min-w-0 flex-1 text-base font-semibold" title={name}>
-          <span className="truncate">{head}</span>
-          <span className="shrink-0">{tail}</span>
+        <h2 className="min-w-0 flex-1 truncate text-base font-semibold" title={name}>
+          {name}
         </h2>
         {live ? (
           <Badge variant="destructive">

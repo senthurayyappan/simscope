@@ -1,8 +1,11 @@
-"""Tests for simscope.highlights: golden moments on synthetic runs."""
+"""Tests for simscope.highlights: built-in peaks and custom kinds."""
 
 import json
-import math
+import logging
 import os
+import pathlib
+import re
+from typing import Any
 
 import numpy as np
 import pytest
@@ -10,7 +13,7 @@ import pytest
 from simscope import core, highlights, library
 
 DT = 0.02
-N = 250
+N = 200
 G = 9.81
 
 
@@ -29,10 +32,12 @@ def clean_registry():
     highlights._REGISTRY.update(before)
 
 
-def scene(names=("world", "torso", "foot")):
+def scene(names=("world", "torso", "foot"), masses=None):
+    masses = masses or [0.0] * len(names)
     return core.Scene(
         bodies=tuple(
-            core.Body(n, -1 if i == 0 else 0) for i, n in enumerate(names)
+            core.Body(n, -1 if i == 0 else 0, mass=masses[i])
+            for i, n in enumerate(names)
         )
     )
 
@@ -45,90 +50,23 @@ def base_poses(n=N, envs=1, bodies=3):
     return poses
 
 
-def record(lib, name, poses, names=("world", "torso", "foot"), **streams):
+def record(
+    lib,
+    name,
+    poses,
+    names=("world", "torso", "foot"),
+    masses=None,
+    codec="f32s",
+    **streams,
+):
     envs = poses.shape[1]
-    with lib.record(name, scene=scene(names), dt=DT, n_envs=envs) as rec:
+    with lib.record(
+        name, scene=scene(names, masses), dt=DT, n_envs=envs, codec=codec
+    ) as rec:
         for key, (kind, data, units) in streams.items():
             rec.add_stream(key, kind, data.shape[2:], units=units)
         rec.log_frames(poses, **{k: v[1] for k, v in streams.items()})
     return lib.open(name)
-
-
-def simulate(segments, n=N, z0=0.3):
-    """Integrates the vertical motion of a root body piece by piece.
-
-    Args:
-        segments: ``(seconds, accel, ground)`` triples. In a segment with a
-            ground, arriving there stops the body dead, as a landing does.
-            A segment with ``None`` ignores the ground (a crouch, a push-off,
-            a flight over a platform). After the last segment the body keeps
-            falling onto the last ground it saw.
-        n: Frames to sample.
-        z0: Where the body starts.
-
-    Returns:
-        ``(z, touchdowns)``: the height of each frame, and the times at
-        which the body hit a ground.
-    """
-    sub = 25
-    h = DT / sub
-    z, v = z0, 0.0
-    out = np.empty(n)
-    touchdowns: list[float] = []
-    steps = []
-    for seconds, accel, ground in segments:
-        steps += [(accel, ground)] * round(seconds / h)
-    last_ground = next(g for _, _, g in reversed(segments) if g is not None)
-    steps += [(-G, last_ground)] * max(0, n * sub - len(steps))
-    for i, (accel, ground) in enumerate(steps[: n * sub]):
-        if i % sub == 0:
-            out[i // sub] = z
-        was = z
-        v += accel * h
-        z += v * h
-        if ground is not None and z <= ground and v < 0:
-            if was > ground + 1e-9:
-                touchdowns.append(i * h)
-            z, v = ground, 0.0
-    return out, touchdowns
-
-
-def jump_segments(
-    lead=1.0, crouch=0.15, push=0.10, air=1.0, tail=1.0, ground=0.3
-):
-    """Stand, crouch, push off, fly, land and stand again."""
-    return [
-        (lead, -G, ground),
-        (crouch, -6.0, None),
-        (push, 30.0, None),
-        (air, -G, ground),
-        (tail, -G, ground),
-    ]
-
-
-def tilt_quats(angle):
-    """Quaternions (xyzw) of rotations about x by ``angle`` radians."""
-    q = np.zeros((len(angle), 4), np.float32)
-    q[:, 0] = np.sin(angle / 2)
-    q[:, 3] = np.cos(angle / 2)
-    return q
-
-
-def root_run(lib, name, z, angle=None):
-    """Records a one-env run: the torso is at ``z``, tilted by ``angle``."""
-    poses = base_poses(n=len(z))
-    poses[:, 0, 1, 2] = z
-    if angle is not None:
-        poses[:, 0, 1, 3:] = tilt_quats(np.asarray(angle))
-    return record(lib, name, poses)
-
-
-def stance_contacts(n, lift, touchdown, force=80.0):
-    """Contact force of one slot: the ground pushes except in flight."""
-    t = np.arange(n) * DT
-    contacts = np.zeros((n, 1, 1, 6), np.float32)
-    contacts[:, 0, 0, 5] = np.where((t < lift) | (t >= touchdown), force, 0)
-    return contacts
 
 
 def by_kind(found):
@@ -136,6 +74,14 @@ def by_kind(found):
     for h in found:
         out.setdefault(h.kind, []).append(h)
     return out
+
+
+def test_only_two_kinds_are_built_in():
+    assert [k["key"] for k in highlights.kinds()] == ["contact", "acceleration"]
+    assert [k["label"] for k in highlights.kinds()] == [
+        "Contact force",
+        "Acceleration",
+    ]
 
 
 def test_root_body_rules():
@@ -146,189 +92,44 @@ def test_root_body_rules():
     assert highlights.root_body(scene(("world", "x", "trunk"))) == 2
 
 
-def test_jump_and_landing(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    run = root_run(lib, "jump", z)
-    found = by_kind(highlights.detect(run))
-    assert set(found) == {"jump", "landing"}
-    (jump,), (landing,) = found["jump"], found["landing"]
-    land_t = touchdowns[0]
-    assert landing.t == pytest.approx(land_t, abs=DT)
-    assert jump.t1 == pytest.approx(landing.t) and jump.frame1 == landing.frame
-    # The take-off is where the push crosses +0.5 m/s: 1.15 s + 1.4/30 s.
-    assert jump.t == pytest.approx(1.1967, abs=2 * DT)
-    assert jump.frame == pytest.approx(60, abs=1)
-    apex = float(z.max())
-    assert f"apex {apex:.2f} m" in jump.detail
-    assert jump.value == pytest.approx(jump.t1 - jump.t)
-    assert f"{jump.value:.2f} s airborne" in jump.detail
-    steps = np.diff(z)  # steps[i] is the move from frame i to i + 1
-    peak = (steps[landing.frame] - steps[landing.frame - 1]) / DT**2
-    assert landing.ratio == pytest.approx(peak / G + 1, rel=0.01)
-    assert landing.detail.startswith(f"{landing.ratio:.1f} g impact, after ")
-    assert landing.value == pytest.approx(landing.ratio * G, rel=1e-3)
-    assert landing.label == "Landing" and jump.label == "Jump"
-    assert landing.body == jump.body == 1 and landing.env == jump.env == 0
+# -- contact ----------------------------------------------------------------
 
 
-def test_push_off_is_not_a_landing(lib):
-    # Crouch at 0.9 m/s, then push to 2.1 m/s. The body is still in the air
-    # when the run ends, so there is no landing and no jump.
-    z, _ = simulate(jump_segments(air=3.0), n=75)
-    run = root_run(lib, "push", z)
-    assert highlights.detect(run) == []
-
-
-def test_hard_landing_without_a_jump(lib):
-    # A step off a ledge 0.3 m above the floor: no take-off, 2.4 m/s on
-    # arrival.
-    segments = [(0.5, 0.0, None), (3.0, -G, 0.5)]
-    z, touchdowns = simulate(segments, z0=0.8, n=100)
-    (landing,) = highlights.detect(root_run(lib, "ledge", z))
-    assert landing.kind == "landing"
-    assert landing.t == pytest.approx(touchdowns[0], abs=DT)
-    assert landing.ratio is not None and landing.ratio > 5
-    assert landing.detail.endswith("after a 0.28 m drop")
-
-
-def test_a_body_dropped_from_height_does_not_fall(lib):
-    # It starts 0.95 m up, lands and rests at 0.05 m: that is where it
-    # stands, not "below half of its first height".
-    z, touchdowns = simulate([(3.0, -G, 0.05)], z0=1.0, n=100)
-    (landing,) = highlights.detect(root_run(lib, "dropped", z))
-    assert landing.kind == "landing"
-    assert landing.t == pytest.approx(touchdowns[0], abs=DT)
-    assert landing.detail.endswith("after a 0.95 m drop")
-    stand = highlights._standing_height(z[:, None].astype(np.float32), DT)
-    assert stand[0] == pytest.approx(0.05, abs=1e-6)
-    # A robot that stands from the first frame is measured there, even if it
-    # later rests higher on a ledge.
-    ledge = np.where(np.arange(100) < 40, 0.3, 0.6)[:, None].astype(np.float32)
-    assert highlights._standing_height(ledge, DT)[0] == pytest.approx(0.3)
-
-
-def test_small_hop_is_not_a_landing(lib):
-    # Up at 0.8 m/s: 3 cm. It comes down at 0.8 m/s, a 4 g stop, but that is
-    # neither a real jump (10 cm) nor a fast fall (1 m/s).
-    segments = [(1.0, -G, 0.3), (0.04, 20.0, None), (2.0, -G, 0.3)]
-    z, touchdowns = simulate(segments, n=100)
-    assert touchdowns and z.max() - 0.3 < 0.05
-    assert highlights.detect(root_run(lib, "hop", z)) == []
-
-
-def test_landing_on_a_platform_after_a_real_jump(lib):
-    # Take off at 2.1 m/s (rise 22 cm) and land on a platform 4 cm below the
-    # apex, at 0.9 m/s: slow, but it ends a real jump.
-    segments = jump_segments()[:3]
-    apex = simulate([*segments, (2.0, -G, 0.0)], n=120)[0].max()
-    z, touchdowns = simulate([*segments, (2.0, -G, apex - 0.04)], n=120)
-    found = by_kind(highlights.detect(root_run(lib, "platform", z)))
-    (landing,) = found["landing"]
-    assert landing.t == pytest.approx(touchdowns[-1], abs=DT)
-    assert 3 < landing.ratio < 8  # 0.9 m/s stopped in a frame
-    (jump,) = found["jump"]
-    assert jump.t1 == landing.t
-
-
-def test_flipping_in_the_air_is_not_a_fall(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    t = np.arange(len(z)) * DT
-    to, land = 1.2, touchdowns[0]
-    angle = np.where(
-        (t > to) & (t < land), (t - to) / (land - to) * 2 * np.pi, 0
-    )
-    run = root_run(lib, "flip", z, angle)
-    assert {h.kind for h in highlights.detect(run)} == {"jump", "landing"}
-
-
-def test_landing_on_the_back_is_a_fall(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    t = np.arange(len(z)) * DT
-    land = touchdowns[0]
-    angle = np.where(
-        t > 1.2, math.radians(150) * np.minimum((t - 1.2) / 0.3, 1), 0
-    )
-    run = root_run(lib, "back", z, angle)
-    found = by_kind(highlights.detect(run))
-    assert set(found) == {"jump", "landing", "fall"} or set(found) == {
-        "jump",
-        "fall",
-    }
-    (fall,) = found["fall"]
-    assert fall.t == pytest.approx(land, abs=DT)  # lands tipped over
-    assert "tipped 150" in fall.detail
-    assert fall.value == pytest.approx(150, abs=1)
-    assert fall.also == ("landing",)  # the landing merged into it
-    assert "also landing" in fall.detail
-
-
-def test_tipping_over_on_the_ground(lib):
-    z = np.full(N, 0.3)
-    t = np.arange(N) * DT
-    angle = math.radians(90) * np.clip((t - 2.0) / 0.2, 0, 1)
-    run = root_run(lib, "tip", z, angle)
-    (fall,) = highlights.detect(run)
-    assert fall.kind == "fall"
-    # The posture counts from the first frame beyond 60 degrees.
-    first = int(np.argmax(np.degrees(angle) > 60))
-    assert fall.frame == first
-    seconds = (N - first) * DT
-    assert fall.detail == f"tipped 90\u00b0 and stayed down for {seconds:.1f} s"
-    assert fall.ratio is None
-    assert fall.score == pytest.approx(1.5, abs=0.05)
-    assert fall.body == 1
-
-
-def test_a_brief_tilt_is_not_a_fall(lib):
-    z = np.full(N, 0.3)
-    angle = np.zeros(N)
-    angle[100:110] = math.radians(80)  # 0.2 s
-    assert highlights.detect(root_run(lib, "wobble", z, angle)) == []
-
-
-def test_collapse_is_a_fall(lib):
-    z = np.full(N, 0.3)
-    sink = np.sin(np.linspace(0, np.pi / 2, 20)) ** 2  # a soft 0.4 s sink
-    z[100:120] = 0.3 - 0.22 * sink
-    z[120:150] = 0.08  # below half its standing height for 0.6 s
-    z[150:] = 0.3
-    (fall,) = highlights.detect(root_run(lib, "collapse", z))
-    assert fall.kind == "fall"
-    assert fall.detail == "dropped to 0.08 m and stayed flat for 0.8 s"
-    assert fall.frame >= 110 and fall.value == 0.0
-
-
-def test_tilt_is_measured_from_the_first_frame(lib):
-    # A base frame that is not z-up at rest: pitched 90 degrees from frame 0.
-    z = np.full(N, 0.3)
+def test_contact_is_the_norm_of_the_summed_forces(lib):
     poses = base_poses()
-    poses[:, 0, 1, 2] = z
-    pitch = np.array([0, np.sin(math.pi / 4), 0, np.cos(math.pi / 4)])
-    poses[:, 0, 1, 3:] = pitch
-    assert highlights.detect(record(lib, "pitched", poses)) == []
-    # It then rolls 90 degrees about the world x axis: that is a fall.
-    t = np.arange(N) * DT
-    roll = tilt_quats(math.radians(90) * np.clip((t - 2.0) / 0.2, 0, 1))
-    q = _quat_mul(roll, pitch)
-    poses[:, 0, 1, 3:] = q
-    (fall,) = highlights.detect(record(lib, "pitched_roll", poses))
-    assert fall.kind == "fall" and fall.value == pytest.approx(90, abs=1)
+    contacts = np.zeros((N, 1, 4, 6), np.float32)
+    contacts[:, 0, 1, 5] = 40.0
+    contacts[30, 0, 2, 3:6] = (300.0, 0.0, 400.0)  # |F| = 500 alone
+    # Two feet pushing against each other cancel: no net force, however hard.
+    contacts[100, 0, 0, 3:6] = (900.0, 0.0, 0.0)
+    contacts[100, 0, 3, 3:6] = (-900.0, 0.0, 0.0)
+    run = record(lib, "hit", poses, contacts=("arrows", contacts, "N"))
+    (hit,) = highlights.detect(run)
+    assert (hit.kind, hit.frame, hit.env) == ("contact", 30, 0)
+    # The vectors add: (300, 0, 400) and the 40 N of slot 1 make (300, 0, 440).
+    assert hit.value == pytest.approx(np.hypot(300, 440), rel=1e-5)
+    assert hit.body is None and hit.label == "Contact force"
+    assert hit.ratio == pytest.approx(hit.value / 40, rel=0.02)
+    assert hit.detail == f"533 N, {hit.ratio:.1f}\u00d7 typical"
+    assert hit.score > highlights.Z_THRESHOLD
 
 
-def _quat_mul(a, b):
-    """Hamilton product of xyzw quaternions, ``a`` after ``b`` (arrays)."""
-    b = np.broadcast_to(b, a.shape)
-    ax, ay, az, aw = a.T
-    bx, by, bz, bw = b.T
-    return np.stack(
-        [
-            aw * bx + ax * bw + ay * bz - az * by,
-            aw * by - ax * bz + ay * bw + az * bx,
-            aw * bz + ax * by - ay * bx + az * bw,
-            aw * bw - ax * bx - ay * by - az * bz,
-        ],
-        axis=-1,
-    ).astype(np.float32)
+def test_two_feet_add_up_where_one_would_not_stand_out(lib):
+    # Each slot peaks at 300 N, below what stands out on its own, but the
+    # feet push the same way, so the net force is 600 N against a 40 N base.
+    poses = base_poses()
+    contacts = np.zeros((N, 1, 2, 6), np.float32)
+    contacts[:, 0, 0, 5] = 20.0
+    contacts[:, 0, 1, 5] = 20.0
+    contacts[60, 0, :, 5] = 300.0
+    run = record(lib, "feet", poses, contacts=("arrows", contacts, "N"))
+    (hit,) = highlights.detect(run)
+    assert hit.frame == 60 and hit.value == pytest.approx(600.0)
+
+
+def test_a_run_without_contacts_has_no_contact_markers(lib):
+    run = record(lib, "none", base_poses())
+    assert highlights.detect(run) == []
 
 
 def test_flat_and_smooth_signals_have_no_highlights(lib):
@@ -339,49 +140,6 @@ def test_flat_and_smooth_signals_have_no_highlights(lib):
     contacts[..., 5] = 100.0  # steady load
     run = record(lib, "flat", poses, contacts=("arrows", contacts, "N"))
     assert highlights.detect(run) == []
-
-
-def test_teleport_is_not_a_landing(lib):
-    poses = base_poses()
-    poses[:150, 0, 1, 2] = 0.6
-    poses[150:, 0, 1, 0] = 7.0  # a reset: 7 m away in one frame,
-    poses[150:, 0, 1, 2] = 0.4  # and 20 cm down
-    assert highlights.detect(record(lib, "reset", poses)) == []
-
-
-def test_contact_spike_and_unit(lib):
-    poses = base_poses()
-    contacts = np.zeros((N, 1, 4, 6), np.float32)
-    contacts[:, 0, 1, 5] = 40.0
-    contacts[30, 0, 2, 3:6] = (300.0, 0.0, 400.0)  # |F| = 500
-    run = record(lib, "hit", poses, contacts=("arrows", contacts, "N"))
-    (hit,) = highlights.detect(run)
-    assert (hit.kind, hit.frame, hit.env) == ("contact_spike", 30, 0)
-    assert hit.value == pytest.approx(500.0)
-    assert hit.body is None and hit.label == "Contact spike"
-    assert hit.ratio == pytest.approx(500 / 40, rel=0.02)
-    assert hit.detail == f"500 N, {hit.ratio:.1f}\u00d7 typical"
-
-
-def test_torque_spike_uses_streams_named_torque(lib):
-    poses = base_poses()
-    torque = np.full((N, 1, 3), 0.5, np.float32)
-    torque[70, 0, 2] = -40.0
-    other = np.zeros((N, 1), np.float32)
-    other[20, 0] = 1e3  # a reward spike must not count
-    run = record(
-        lib,
-        "tq",
-        poses,
-        joint_torque=("vector", torque, "N m"),
-        reward=("scalar", other, None),
-    )
-    (hit,) = highlights.detect(run)
-    assert (hit.kind, hit.frame) == ("torque_spike", 70)
-    assert hit.value == pytest.approx(40.0)
-    assert hit.detail.startswith("40.0 N·m on joint 2, ")
-    assert hit.detail.endswith("\u00d7 typical")
-    assert hit.ratio == pytest.approx(40 / 0.5, rel=0.05)
 
 
 def test_envs_and_subset(lib):
@@ -397,7 +155,7 @@ def test_envs_and_subset(lib):
         highlights.detect(run, envs=[5])
 
 
-def test_nearby_spikes_keep_the_larger(lib):
+def test_nearby_peaks_keep_the_larger(lib):
     poses = base_poses()
     contacts = np.zeros((N, 1, 1, 6), np.float32)
     contacts[100, 0, 0, 5] = 300.0
@@ -408,7 +166,7 @@ def test_nearby_spikes_keep_the_larger(lib):
     assert frames == {103: 500.0, 150: 200.0}
 
 
-def test_plateau_yields_one_spike(lib):
+def test_plateau_yields_one_peak(lib):
     poses = base_poses()
     contacts = np.zeros((N, 1, 1, 6), np.float32)
     contacts[80:83, 0, 0, 5] = 400.0
@@ -437,205 +195,6 @@ def test_top_fifty_per_kind_across_envs(lib):
     found = highlights.detect(run)
     assert len(found) == highlights.PER_KIND
     assert {h.env for h in found} == set(range(envs - 50, envs))
-
-
-def test_markers_within_a_moment_merge(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z))
-    poses[:, 0, 1, 2] = z
-    land = round(touchdowns[0] / DT)
-    contacts = stance_contacts(len(z), 1.25, touchdowns[0])
-    contacts[land + 2, 0, 0, 5] = 700.0  # 0.04 s after the landing
-    torque = np.full((len(z), 1, 2), 1.0, np.float32)
-    torque[land + 5, 0, 1] = 30.0  # 0.10 s after it
-    streams = {
-        "contacts": ("arrows", contacts, "N"),
-        "joint_torque": ("vector", torque, "N m"),
-    }
-    found = by_kind(highlights.detect(record(lib, "merge", poses, **streams)))
-    assert set(found) == {"jump", "landing"}
-    (landing,) = found["landing"]
-    assert landing.also == ("contact_spike", "torque_spike")
-    assert "also contact spike (700 N" in landing.detail
-    assert "also torque spike (30.0 N\u00b7m on joint 1" in landing.detail
-    # Further away than 0.15 s, a spike stands alone.
-    torque[land + 5, 0, 1] = 1.0
-    contacts[land + 2, 0, 0, 5] = 80.0
-    contacts[land + 12, 0, 0, 5] = 700.0
-    found = by_kind(highlights.detect(record(lib, "alone", poses, **streams)))
-    assert found["landing"][0].also == ()
-    assert [h.frame for h in found["contact_spike"]] == [land + 12]
-
-
-def test_flight_from_contact_force(lib):
-    # With a contacts stream, the take-off is the first frame without
-    # contact: earlier than the +0.5 m/s crossing of the push.
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z))
-    poses[:, 0, 1, 2] = z
-    t = np.arange(len(z)) * DT
-    lift = 1.0 + 0.15 + 0.10  # the push ends: the feet leave the ground
-    contacts = np.zeros((len(z), 1, 1, 6), np.float32)
-    on_ground = (t < lift) | (t >= touchdowns[0])
-    contacts[:, 0, 0, 5] = np.where(on_ground, 80.0, 0.0)
-    run = record(lib, "flight", poses, contacts=("arrows", contacts, "N"))
-    found = by_kind(highlights.detect(run))
-    (jump,) = found["jump"]
-    assert jump.t == pytest.approx(lift, abs=DT)
-    assert jump.t1 == pytest.approx(touchdowns[0], abs=DT)
-
-
-def test_a_bump_in_the_air_needs_ground_contact(lib):
-    # A jerk of the root in mid-air stops the descent like an impact would.
-    # With contact force known, a landing needs the ground.
-    segments = [
-        (1.0, -G, 0.3),
-        (0.15, -6.0, None),
-        (0.10, 40.0, None),  # up at 3.1 m/s
-        (0.50, -G, None),  # over the apex, down at 1.8 m/s
-        (0.04, 60.0, None),  # the jerk: the fall stops
-        (2.0, -G, 0.3),
-    ]
-    z, touchdowns = simulate(segments, n=150)
-    poses = base_poses(n=len(z))
-    poses[:, 0, 1, 2] = z
-    plain = by_kind(highlights.detect(record(lib, "bump", poses)))
-    assert len(plain["landing"]) == 2  # z alone cannot tell
-    contacts = stance_contacts(len(z), 1.25, touchdowns[0])
-    run = record(lib, "air", poses, contacts=("arrows", contacts, "N"))
-    found = by_kind(highlights.detect(run))
-    (landing,) = found["landing"]
-    assert landing.t == pytest.approx(touchdowns[0], abs=DT)
-    assert found["jump"][0].t1 == landing.t
-
-
-def test_register_and_unregister(lib):
-    poses = base_poses()
-    run = record(lib, "custom", poses)
-
-    def mine(rollout):
-        return [
-            highlights.Highlight(0.5, 25, 0, "mine", 9.0, 1.0),
-            highlights.Highlight(0.1, 5, 0, "mine", 7.0, 2.0, detail="early"),
-        ]
-
-    highlights.register("mine", mine, label="Mine")
-    with pytest.raises(ValueError, match="already registered"):
-        highlights.register("mine", mine, label="Mine")
-    found = highlights.detect(run)
-    assert [h.frame for h in found] == [5, 25]  # sorted by time
-    assert {h.label for h in found} == {"Mine"}  # the kind's label fills in
-    doc = highlights.to_json(run, found)
-    assert doc["kinds"] == [{"key": "mine", "label": "Mine"}]
-    highlights.unregister("mine")
-    assert highlights.detect(run) == []
-
-
-def test_detector_must_return_its_own_kind(lib):
-    run = record(lib, "liar", base_poses())
-    highlights.register(
-        "a",
-        lambda r: [highlights.Highlight(0.0, 0, 0, "b", 7.0, 1.0)],
-        label="A",
-    )
-    with pytest.raises(ValueError, match="'b'"):
-        highlights.detect(run)
-
-
-def test_unregistered_builtin_kinds_are_skipped(lib):
-    z, _ = simulate(jump_segments(air=0.8))
-    run = root_run(lib, "skip", z)
-    highlights.unregister("jump")
-    assert [h.kind for h in highlights.detect(run)] == ["landing"]
-    highlights.unregister("landing")
-    assert highlights.detect(run) == []
-
-
-def test_to_json_shape_and_order(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z))
-    poses[:, 0, 1, 2] = z
-    contacts = stance_contacts(len(z), 1.25, touchdowns[0], force=60.0)
-    contacts[200, 0, 0, 5] = 900.0
-    run = record(lib, "doc", poses, contacts=("arrows", contacts, "N"))
-    doc = highlights.to_json(run, highlights.detect(run))
-    assert doc["format"] == "simscope-highlights/2"
-    assert doc["detector"] == highlights.DETECTOR_VERSION == "simscope/2.1"
-    assert doc["run_id"] == run.manifest.id
-    assert [k["key"] for k in doc["kinds"]] == [
-        "landing",
-        "jump",
-        "contact_spike",
-    ]
-    assert doc["kinds"][0] == {"key": "landing", "label": "Landing"}
-    times = [h["t"] for h in doc["highlights"]]
-    assert times == sorted(times)
-    jump = next(h for h in doc["highlights"] if h["kind"] == "jump")
-    assert set(jump) == {
-        "t",
-        "frame",
-        "t1",
-        "frame1",
-        "env",
-        "kind",
-        "label",
-        "detail",
-        "score",
-        "ratio",
-        "value",
-        "body",
-        "also",
-    }
-    assert jump["t1"] > jump["t"] and jump["ratio"] is None
-    spike = next(h for h in doc["highlights"] if h["kind"] == "contact_spike")
-    assert spike["t1"] is None and spike["frame1"] is None
-    assert spike["body"] is None and spike["also"] == []
-    json.dumps(doc)
-
-
-def test_load_or_compute_caches_and_invalidates(lib, tmp_path):
-    contacts = np.zeros((N, 1, 1, 6), np.float32)
-    contacts[30, 0, 0, 5] = 500.0
-    run = record(lib, "cache", base_poses(), contacts=("arrows", contacts, "N"))
-    cache = tmp_path / "derived" / run.manifest.id
-    doc = highlights.load_or_compute(run, cache)
-    assert len(doc["highlights"]) == 1
-    assert (cache / "highlights.json").is_file()
-
-    # A hit does not run the detectors: plant a marker in the file.
-    path = cache / "highlights.json"
-    planted = {**doc, "highlights": []}
-    path.write_text(json.dumps(planted))
-    assert highlights.load_or_compute(run, cache) == planted
-
-    # A newer manifest recomputes.
-    manifest = run.path / "rollout.json"
-    st = manifest.stat()
-    os.utime(manifest, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
-    assert highlights.load_or_compute(run, cache) == doc
-
-    # So does another registered detector.
-    path.write_text(json.dumps(planted))
-    highlights.register("x", lambda r: [], label="X")
-    assert highlights.load_or_compute(run, cache) == doc
-
-    # And a corrupt file.
-    path.write_text("not json")
-    (cache / "highlights.key").write_text(highlights.cache_key(run))
-    assert highlights.load_or_compute(run, cache) == doc
-
-
-def test_cache_key_includes_the_detector_version(lib, monkeypatch):
-    run = record(lib, "version", base_poses())
-    key = highlights.cache_key(run)
-    monkeypatch.setattr(highlights, "DETECTOR_VERSION", "simscope/3")
-    assert highlights.cache_key(run) != key
-
-
-def test_short_runs_do_not_fail(lib):
-    for n in (1, 2, 3, 4, 5):
-        run = record(lib, f"short{n}", base_poses(n=n))
-        assert highlights.detect(run) == []
 
 
 def test_non_finite_values_are_ignored(lib):
@@ -671,170 +230,511 @@ def test_many_envs_cross_the_chunk_boundary(lib):
     assert found == {0: 40, 255: 65, 256: 65, 299: 69}
 
 
-def test_landings_in_many_envs(lib):
-    envs = 300
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z), envs=envs)
-    poses[:, :, 1, 2] = z[:, None]
-    shift = np.arange(envs) % 7  # envs jump 0..6 frames apart
-    for env in range(envs):
-        poses[:, env, 1, 2] = np.roll(z, int(shift[env]))
-    run = record(lib, "landings", poses)
-    found = by_kind(highlights.detect(run))
-    assert len(found["landing"]) == highlights.PER_KIND
-    assert {h.env % 7 for h in found["landing"]} <= set(range(7))
-    first = round(touchdowns[0] / DT)
-    for h in found["landing"]:
-        assert h.frame == first + int(shift[h.env])
+# -- acceleration -----------------------------------------------------------
 
 
-def test_q16d_poses_give_the_same_landing(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z))
-    poses[:, 0, 1, 2] = z
-    with lib.record("q16", scene=scene(), dt=DT, n_envs=1, codec="q16d") as rec:
-        rec.log_frames(poses)
-    with lib.open("q16") as run:
-        assert set(run.stream("body_pose").directory["codec"].tolist()) == {2}
-        found = by_kind(highlights.detect(run))
-    assert set(found) == {"jump", "landing"}
-    assert found["landing"][0].t == pytest.approx(touchdowns[0], abs=DT)
-
-
-def test_root_body_is_the_named_torso(lib):
-    z, _ = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z))
-    poses[:, 0, 2, 2] = z  # the foot jumps, the torso does not
-    run = record(lib, "foot", poses)
-    assert highlights.detect(run) == []
-    run2 = record(lib, "nameless", poses, names=("world", "a", "b"))
-    assert highlights.detect(run2) == []  # body 1 is the first non-world
-
-
-def test_the_strongest_of_several_torque_streams_wins(lib):
+def test_acceleration_peak_at_a_velocity_step(lib):
     poses = base_poses()
-    hip = np.full((N, 1, 3), 0.5, np.float32)
-    knee = np.full((N, 1, 2), 0.5, np.float32)
-    hip[60, 0, 1] = 20.0
-    knee[60, 0, 0] = 30.0  # the larger one, in the other stream
-    run = record(
-        lib,
-        "two",
-        poses,
-        hip_torque=("vector", hip, "N m"),
-        knee_torque=("vector", knee, "N m"),
-    )
+    t = np.arange(N)
+    # The torso starts moving at 3 m/s at frame 100. The foot stays, so the
+    # centre of mass (the plain mean of the two) moves at 1.5 m/s.
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(t - 100, 0)
+    run = record(lib, "step", poses)
     (hit,) = highlights.detect(run)
-    assert hit.value == pytest.approx(30.0)
-    assert hit.detail.startswith("30.0 N·m on joint 0, ")
+    assert (hit.kind, hit.frame, hit.env) == ("acceleration", 100, 0)
+    assert hit.t == pytest.approx(100 * DT)
+    assert hit.value == pytest.approx(1.5 / DT, rel=1e-3)
+    assert hit.body is None and hit.label == "Acceleration"
+    assert hit.detail == f"{hit.value:.0f} m/s², {hit.value / G:.1f} g"
+    assert hit.score > highlights.Z_THRESHOLD and hit.ratio is not None
 
 
-def test_jumps_do_not_merge_and_kinds_list_the_merged_ones(lib):
-    z, touchdowns = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z))
+def test_the_centre_of_mass_is_weighted_by_body_mass(lib):
+    poses = base_poses()
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    heavy = record(lib, "heavy", poses, masses=[0.0, 9.0, 1.0])
+    light = record(lib, "light", poses, masses=[0.0, 1.0, 9.0])
+    (a,) = highlights.detect(heavy)
+    (b,) = highlights.detect(light)
+    assert a.value == pytest.approx(0.9 * 3 / DT, rel=1e-3)
+    assert b.value == pytest.approx(0.1 * 3 / DT, rel=1e-3)
+    # A body of unknown mass (0) is left out when the others have masses.
+    third = record(lib, "unknown", poses, masses=[0.0, 4.0, 0.0])
+    assert highlights.detect(third)[0].value == pytest.approx(3 / DT, rel=1e-3)
+
+
+def test_the_world_body_is_not_in_the_plain_mean(lib):
+    # A world body is at the origin and never moves; it must not pull the
+    # mean. With only the torso left, the centre of mass is the torso.
+    poses = base_poses(bodies=2)
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    run = record(lib, "alone", poses, names=("world", "torso"))
+    assert highlights.detect(run)[0].value == pytest.approx(3 / DT, rel=1e-3)
+
+
+def test_free_fall_is_g_and_standing_is_zero(lib):
+    n = 60
+    t = np.arange(n) * DT
+    poses = base_poses(n=n, bodies=2)
+    poses[:, 0, 1, 2] = 100 - 0.5 * G * t**2  # falling the whole run
+    fall = record(lib, "fall", poses, names=("world", "torso"))
+    com = highlights._Context(fall, None).centre_of_mass()
+    assert com is not None
+    acc, bad = highlights._acceleration_magnitude(com, DT)
+    assert acc[5:-5, 0] == pytest.approx(G, rel=2e-2)
+    assert bad[0, 0] and bad[-1, 0] and not bad[1:-1].any()
+    still = record(lib, "still", base_poses(bodies=2), names=("world", "torso"))
+    com = highlights._Context(still, None).centre_of_mass()
+    assert com is not None
+    assert not highlights._acceleration_magnitude(com, DT)[0].any()
+
+
+def test_an_impact_is_a_peak_and_a_slow_lift_is_not(lib):
+    # A body falls from 1 m, is stopped dead by the ground, rests, and is
+    # then lifted slowly. Only the stop stands out.
+    t = np.arange(N) * DT
+    z = np.maximum(0.3, 1.3 - 0.5 * G * t**2)  # hits the ground at 4.4 m/s
+    ramp = np.clip((t[120:] - t[120]) / 1.0, 0, 1)
+    z[120:] += 0.6 * (1 - np.cos(np.pi * ramp)) / 2
+    poses = base_poses(bodies=2)
     poses[:, 0, 1, 2] = z
-    land = round(touchdowns[0] / DT)
-    contacts = stance_contacts(len(z), 1.25, touchdowns[0])
-    contacts[60, 0, 0, 5] = 900.0  # a spike at the take-off, 1.2 s in
-    contacts[land + 1, 0, 0, 5] = 900.0  # and one at the landing
-    run = record(lib, "spans", poses, contacts=("arrows", contacts, "N"))
-    found = highlights.detect(run)
-    kinds = sorted(h.kind for h in found)
-    # The span stays; the spike at its start stands alone (spans never
-    # absorb); the spike at the landing folds into the landing.
-    assert kinds == ["contact_spike", "jump", "landing"]
-    doc = highlights.to_json(run, found)
-    assert {k["key"] for k in doc["kinds"]} == {
-        "contact_spike",
-        "jump",
-        "landing",
+    run = record(lib, "impact", poses, names=("world", "torso"))
+    (hit,) = highlights.detect(run)
+    assert hit.kind == "acceleration"
+    assert abs(hit.frame - round(np.sqrt(2 / G) / DT)) <= 1  # the stop
+    assert hit.value > 100  # 4.4 m/s stopped within a frame or two
+
+
+def test_teleports_are_not_accelerations(lib):
+    poses = base_poses()
+    poses[150:, 0, 1, 0] = 7.0  # a reset moves the robot 7 m in one frame
+    poses[150:, 0, 2, 0] = 7.0
+    assert highlights.detect(record(lib, "reset", poses)) == []
+
+
+def test_acceleration_of_many_envs(lib):
+    envs = 300
+    poses = base_poses(envs=envs)
+    for env in (0, 255, 256, 299):
+        poses[:, env, 1, 0] = (
+            3 * DT * np.maximum(np.arange(N) - 100 + env % 7, 0)
+        )
+    found = {h.env: h.frame for h in highlights.detect(record(lib, "m", poses))}
+    assert found == {
+        0: 100,
+        255: 100 - 255 % 7,
+        256: 100 - 256 % 7,
+        299: 100 - 299 % 7,
     }
-    landing = next(h for h in found if h.kind == "landing")
-    assert landing.also == ("contact_spike",)
-    only_also = [h for h in found if h.kind == "landing"]
-    present = highlights.to_json(run, only_also)["kinds"]
-    assert [k["key"] for k in present] == ["landing", "contact_spike"]
 
 
-def test_subset_of_envs_for_landings(lib):
-    z, _ = simulate(jump_segments(air=0.8))
-    poses = base_poses(n=len(z), envs=4)
-    for env in range(4):
-        poses[:, env, 1, 2] = z if env in (1, 3) else 0.3
-    run = record(lib, "subset", poses)
-    assert {h.env for h in highlights.detect(run)} == {1, 3}
-    found = highlights.detect(run, envs=[3, 0])
-    assert {h.env for h in found} == {3}
-    assert {h.kind for h in found} == {"jump", "landing"}
+def test_q16d_poses_give_the_same_peak(lib):
+    poses = base_poses()
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    run = record(lib, "q16", poses, codec="q16d")
+    assert set(run.stream("body_pose").directory["codec"].tolist()) == {2}
+    (hit,) = highlights.detect(run)
+    assert (hit.kind, hit.frame) == ("acceleration", 100)
+    assert hit.value == pytest.approx(1.5 / DT, rel=0.05)
 
 
-def tilted_run(lib, name, frames, *, n=N, angle=80.0, extra=None):
-    """A run that stands still, tilted by ``angle`` degrees on ``frames``."""
-    z = np.full(n, 0.3)
-    tilt = np.zeros(n)
-    tilt[frames] = math.radians(angle)
-    poses = base_poses(n=n)
-    poses[:, 0, 1, 2] = z
-    poses[:, 0, 1, 3:] = tilt_quats(tilt)
-    if extra is not None:
-        extra(poses)
-    return record(lib, name, poses)
+def test_short_runs_do_not_fail(lib):
+    for n in (1, 2, 3, 4, 7, 8):
+        run = record(lib, f"short{n}", base_poses(n=n))
+        assert highlights.detect(run) == []
 
 
-def test_rearing_and_getting_up_is_not_a_fall(lib):
-    # Tilted past 60 degrees for 0.6 s, then upright again: climbing or
-    # rolling over something, not a robot that tipped over.
-    run = tilted_run(lib, "rear", slice(100, 130))
+def test_non_finite_poses_are_ignored(lib):
+    poses = base_poses(envs=2)
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    poses[50:52, 1, 1, 2] = np.nan
+    poses[:, 1, 2, 0] = np.nan  # a body that is never there
+    run = record(lib, "nan", poses)
+    assert [(h.env, h.frame) for h in highlights.detect(run)] == [(0, 100)]
+
+
+def test_both_kinds_can_mark_one_moment(lib):
+    poses = base_poses()
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[100, 0, 0, 5] = 700.0
+    run = record(lib, "both", poses, contacts=("arrows", contacts, "N"))
+    found = by_kind(highlights.detect(run))
+    assert set(found) == {"contact", "acceleration"}
+    assert found["contact"][0].frame == found["acceleration"][0].frame == 100
+
+
+# -- custom kinds -----------------------------------------------------------
+
+
+def hard_stop(rollout):
+    """A small detector: the first frame the torso is below half a metre."""
+    poses = rollout.stream("body_pose").read(0, rollout.n_frames)
+    low = np.flatnonzero(poses[:, 0, 1, 2] < 0.5)
+    if not len(low):
+        return []
+    f = int(low[0])
+    return [
+        highlights.Highlight(
+            t=f * rollout.dt,
+            frame=f,
+            env=0,
+            kind="low_torso",
+            score=10.0,
+            value=float(poses[f, 0, 1, 2]),
+            detail=f"torso at {poses[f, 0, 1, 2]:.2f} m",
+        )
+    ]
+
+
+def test_register_a_detector_with_a_colour(lib):
+    poses = base_poses()
+    poses[120:, 0, 1, 2] = 0.3
+    run = record(lib, "custom", poses)
+    highlights.register(
+        "low_torso", hard_stop, label="Low torso", color="#d9480f"
+    )
+    (mine,) = by_kind(highlights.detect(run))["low_torso"]
+    assert (mine.kind, mine.frame, mine.label) == (
+        "low_torso",
+        120,
+        "Low torso",
+    )
+    doc = highlights.to_json(run, [mine])
+    assert doc["kinds"] == [
+        {"key": "low_torso", "label": "Low torso", "color": "#d9480f"}
+    ]
+    # The built-in kinds carry no colour; neither does a custom one without.
+    assert all("color" not in k for k in highlights.kinds()[:2])
+    highlights.register("plain", lambda r: [], label="Plain")
+    assert "color" not in highlights.kinds()[-1]
+    highlights.unregister("low_torso")
+    assert "low_torso" not in by_kind(highlights.detect(run))
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "",
+        "Jump",
+        "9lives",
+        "has space",
+        "a-b",
+        "x" * 33,
+        "contact",
+        "acceleration",
+    ],
+)
+def test_register_rejects_bad_keys(key):
+    with pytest.raises(ValueError):
+        highlights.register(key, lambda r: [], label="X")
+
+
+@pytest.mark.parametrize(
+    "color", ["red", "#12", "#12345", "d9480f", "#gggggg", 3]
+)
+def test_register_rejects_bad_colours(color):
+    with pytest.raises(ValueError, match="color"):
+        highlights.register("ok", lambda r: [], label="X", color=color)
+    assert "ok" not in highlights._REGISTRY
+
+
+def test_register_accepts_short_and_long_hex():
+    highlights.register("short", lambda r: [], label="S", color="#abc")
+    highlights.register("long", lambda r: [], label="L", color="#ABCDEF")
+
+
+def test_register_checks_labels_and_repeats():
+    with pytest.raises(ValueError, match="label"):
+        highlights.register("a", lambda r: [], label="")
+    with pytest.raises(ValueError, match="label"):
+        highlights.register("a", lambda r: [], label="x" * 41)
+    highlights.register("a", lambda r: [], label="A")
+    with pytest.raises(ValueError, match="already registered"):
+        highlights.register("a", lambda r: [], label="A")
+
+
+def make(kind="mine", **fields: Any):
+    base: dict[str, Any] = {
+        "t": 0.5,
+        "frame": 25,
+        "env": 0,
+        "score": 9.0,
+        "value": 1.0,
+    }
+    return highlights.Highlight(kind=kind, **{**base, **fields})
+
+
+def test_spans_survive_with_both_ends(lib):
+    run = record(lib, "span", base_poses())
+    highlights.register(
+        "mine",
+        lambda r: [make(t=0.5, frame=25, t1=1.0, frame1=50)],
+        label="Mine",
+    )
+    (h,) = highlights.detect(run)
+    assert (h.t1, h.frame1) == (1.0, 50)
+    entry = highlights.to_json(run, [h])["highlights"][0]
+    assert (entry["t"], entry["t1"], entry["frame1"]) == (0.5, 1.0, 50)
+
+
+@pytest.mark.parametrize(
+    ("bad", "why"),
+    [
+        (lambda: [make(kind="other")], "kind"),
+        (lambda: [make(frame=N)], "frame"),
+        (lambda: [make(frame=-1)], "frame"),
+        (lambda: [make(env=1)], "env"),
+        (lambda: [make(t=float("nan"))], "finite"),
+        (lambda: [make(t=float("inf"))], "finite"),
+        (lambda: [make(t=-1.0)], "finite"),
+        (lambda: [make(t1=1.0)], "both t1 and frame1"),
+        (lambda: [make(t1=0.1, frame1=5)], "before"),
+        (lambda: [make(t1=1.0, frame1=N + 5)], "frame"),
+        (lambda: [make(score=float("nan"))], "finite"),
+        (lambda: [{"t": 1}], "not Highlight"),
+        (lambda: "nope", "must return a list"),
+    ],
+)
+def test_invalid_results_name_the_detector_and_are_skipped(
+    lib, caplog, bad, why
+):
+    run = record(lib, "bad", base_poses())
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[60, 0, 0, 5] = 900.0
+    good = record(lib, "good", base_poses(), contacts=("arrows", contacts, "N"))
+    highlights.register("mine", lambda r: bad(), label="Mine")
+    with caplog.at_level(logging.WARNING, logger="simscope.highlights"):
+        assert highlights.detect(run) == []
+        found = highlights.detect(good)
+    assert [h.kind for h in found] == ["contact"]  # the built-ins still run
+    assert "detector 'mine'" in caplog.text and why in caplog.text
+
+
+def test_a_detector_that_raises_is_logged_and_skipped(lib, caplog):
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[60, 0, 0, 5] = 900.0
+    run = record(lib, "boom", base_poses(), contacts=("arrows", contacts, "N"))
+
+    def boom(rollout):
+        raise RuntimeError("no luck")
+
+    highlights.register("boom", boom, label="Boom")
+    highlights.register("fine", lambda r: [make(kind="fine")], label="Fine")
+    with caplog.at_level(logging.WARNING, logger="simscope.highlights"):
+        found = highlights.detect(run)
+    assert sorted(h.kind for h in found) == ["contact", "fine"]
+    assert "skipping detector 'boom': no luck" in caplog.text
+
+
+def test_custom_results_are_filtered_by_env_and_labelled(lib):
+    run = record(lib, "envs", base_poses(envs=3))
+    highlights.register(
+        "mine",
+        lambda r: [make(env=0), make(env=2, label="Own label")],
+        label="Mine",
+    )
+    assert [(h.env, h.label) for h in highlights.detect(run)] == [
+        (0, "Mine"),
+        (2, "Own label"),
+    ]
+    assert [h.env for h in highlights.detect(run, envs=[2])] == [2]
+
+
+def test_markers_of_one_kind_within_a_moment_merge(lib):
+    run = record(lib, "merge", base_poses())
+    highlights.register(
+        "mine",
+        lambda r: [
+            make(t=1.0, frame=50, score=5.0),
+            make(t=1.10, frame=55, score=9.0),  # 0.10 s later: wins
+            make(t=1.30, frame=65, score=4.0),  # 0.20 s from the winner
+            make(t=2.0, frame=100, t1=2.5, frame1=125, score=1.0),
+            make(t=2.05, frame=102, t1=2.4, frame1=120, score=1.0),
+        ],
+        label="Mine",
+    )
+    highlights.register(
+        "other", lambda r: [make("other", t=1.05, frame=52)], label="O"
+    )
+    found = highlights.detect(run)
+    points = sorted((h.kind, h.frame) for h in found if h.t1 is None)
+    assert points == [("mine", 55), ("mine", 65), ("other", 52)]
+    assert len([h for h in found if h.t1 is not None]) == 2  # spans never merge
+
+
+def test_unregistered_builtin_kinds_are_skipped(lib):
+    poses = base_poses()
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[100, 0, 0, 5] = 700.0
+    run = record(lib, "skip", poses, contacts=("arrows", contacts, "N"))
+    assert {h.kind for h in highlights.detect(run)} == {
+        "contact",
+        "acceleration",
+    }
+    highlights.unregister("acceleration")
+    assert {h.kind for h in highlights.detect(run)} == {"contact"}
+    highlights.unregister("contact")
     assert highlights.detect(run) == []
-    # Even 1.4 s down is a recovery.
-    assert highlights.detect(tilted_run(lib, "rear2", slice(100, 170))) == []
-    # Staying down for 1.6 s and then getting up is a fall.
-    (fall,) = highlights.detect(tilted_run(lib, "down", slice(100, 180)))
-    assert fall.kind == "fall" and fall.frame == 100
-    assert fall.detail == "tipped 80\u00b0 and stayed down for 1.6 s"
 
 
-def test_tipped_over_at_the_end_of_the_run_is_a_fall(lib):
-    # Down to the last frame for 0.6 s: it never got up.
-    (fall,) = highlights.detect(tilted_run(lib, "end", slice(N - 30, N)))
-    assert fall.frame == N - 30
-    assert fall.detail == "tipped 80\u00b0 and stayed down for 0.6 s"
-    # 0.4 s is too short to tell from a pose on the way to something else.
-    assert highlights.detect(tilted_run(lib, "end2", slice(N - 20, N))) == []
+def test_detector_runs_are_cached_with_the_built_ins(lib, tmp_path):
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[30, 0, 0, 5] = 500.0
+    run = record(lib, "cache", base_poses(), contacts=("arrows", contacts, "N"))
+    cache = tmp_path / "derived" / run.manifest.id
+    calls = []
+
+    def mine(rollout):
+        calls.append(1)
+        return [make()]
+
+    highlights.register("mine", mine, label="Mine", color="#112233")
+    doc = highlights.load_or_compute(run, cache)
+    assert {h["kind"] for h in doc["highlights"]} == {"contact", "mine"}
+    assert highlights.load_or_compute(run, cache) == doc
+    assert len(calls) == 1  # the second call was a cache hit
+    # Changing the colour (or label) of a kind refreshes the cache.
+    highlights.unregister("mine")
+    highlights.register("mine", mine, label="Mine", color="#445566")
+    again = highlights.load_or_compute(run, cache)
+    assert len(calls) == 2
+    assert again["kinds"][-1]["color"] == "#445566"
 
 
-def test_tipped_over_until_the_env_resets_is_a_fall(lib):
-    def reset(poses):
-        poses[130:, 0, 1, 0] = 7.0  # a reset puts it 7 m away, upright
-
-    run = tilted_run(lib, "reset", slice(100, 130), extra=reset)
-    (fall,) = highlights.detect(run)
-    assert fall.frame == 100
-    assert fall.detail == "tipped 80\u00b0 and stayed down for 0.6 s"
-    # The same posture without a reset is a recovery.
-    assert highlights.detect(tilted_run(lib, "noreset", slice(100, 130))) == []
+# -- documents --------------------------------------------------------------
 
 
-def test_a_belly_flop_is_a_fall_and_a_dip_is_not(lib):
-    sink = np.sin(np.linspace(0, np.pi / 2, 20)) ** 2  # a soft 0.4 s sink
+def test_to_json_shape_and_order(lib):
+    poses = base_poses()
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[30, 0, 0, 5] = 500.0
+    poses[:, 0, 1, 0] = 3 * DT * np.maximum(np.arange(N) - 100, 0)
+    run = record(lib, "doc", poses, contacts=("arrows", contacts, "N"))
+    doc = highlights.to_json(run, highlights.detect(run))
+    assert doc["format"] == "simscope-highlights/2"
+    assert doc["detector"] == highlights.DETECTOR_VERSION == "simscope/3"
+    assert doc["run_id"] == run.manifest.id
+    assert doc["kinds"] == [
+        {"key": "contact", "label": "Contact force"},
+        {"key": "acceleration", "label": "Acceleration"},
+    ]
+    times = [h["t"] for h in doc["highlights"]]
+    assert times == sorted(times) == [pytest.approx(0.6), pytest.approx(2.0)]
+    assert set(doc["highlights"][0]) == {
+        "t",
+        "frame",
+        "t1",
+        "frame1",
+        "env",
+        "kind",
+        "label",
+        "detail",
+        "score",
+        "ratio",
+        "value",
+        "body",
+        "also",
+    }
+    assert doc["highlights"][0]["t1"] is None
+    assert doc["highlights"][0]["also"] == []
+    json.dumps(doc)
 
-    def run_with(flat_frames):
-        z = np.full(N, 0.3)
-        z[100:120] = 0.3 - 0.25 * sink
-        z[120 : 120 + flat_frames] = 0.05
-        z[120 + flat_frames :] = 0.3
-        return root_run(lib, f"flop{flat_frames}", z)
 
-    (fall,) = highlights.detect(run_with(20))  # flat for 0.4 s
-    assert fall.detail.startswith("dropped to 0.05 m and stayed flat for ")
-    assert fall.value == 0.0 and fall.kind == "fall"
-    assert highlights.detect(run_with(2)) == []  # a dip of 0.04 s
+def test_kinds_present_only_as_also_are_listed(lib):
+    run = record(lib, "also", base_poses())
+    merged = make(kind="mine", also=("other",))
+    highlights.register("mine", lambda r: [], label="Mine")
+    highlights.register("other", lambda r: [], label="Other", color="#abcdef")
+    keys = [k["key"] for k in highlights.to_json(run, [merged])["kinds"]]
+    assert keys == ["mine", "other"]
 
 
-def test_tipped_and_flat_is_one_fall(lib):
-    z = np.full(N, 0.3)
-    z[100:] = 0.08  # lying on its side: low and tilted
-    angle = np.zeros(N)
-    angle[100:] = math.radians(90)
-    (fall,) = highlights.detect(root_run(lib, "side", z, angle))
-    assert fall.frame == 100 and fall.detail.startswith("tipped 90")
+def test_load_or_compute_caches_and_invalidates(lib, tmp_path):
+    contacts = np.zeros((N, 1, 1, 6), np.float32)
+    contacts[30, 0, 0, 5] = 500.0
+    run = record(
+        lib, "cache2", base_poses(), contacts=("arrows", contacts, "N")
+    )
+    cache = tmp_path / "derived" / run.manifest.id
+    doc = highlights.load_or_compute(run, cache)
+    assert len(doc["highlights"]) == 1
+    assert (cache / "highlights.json").is_file()
+
+    # A hit does not run the detectors: plant a marker in the file.
+    path = cache / "highlights.json"
+    planted = {**doc, "highlights": []}
+    path.write_text(json.dumps(planted))
+    assert highlights.load_or_compute(run, cache) == planted
+
+    # A newer manifest recomputes.
+    manifest = run.path / "rollout.json"
+    st = manifest.stat()
+    os.utime(manifest, ns=(st.st_atime_ns, st.st_mtime_ns + 10**9))
+    assert highlights.load_or_compute(run, cache) == doc
+
+    # So does another registered detector.
+    path.write_text(json.dumps(planted))
+    highlights.register("x", lambda r: [], label="X")
+    assert highlights.load_or_compute(run, cache) == doc
+
+    # And a corrupt file.
+    path.write_text("not json")
+    (cache / "highlights.key").write_text(highlights.cache_key(run))
+    assert highlights.load_or_compute(run, cache) == doc
+
+
+def test_cache_key_includes_the_detector_version(lib, monkeypatch):
+    run = record(lib, "version", base_poses())
+    key = highlights.cache_key(run)
+    monkeypatch.setattr(highlights, "DETECTOR_VERSION", "simscope/4")
+    assert highlights.cache_key(run) != key
+
+
+# -- the worked examples of the getting-started guide -----------------------
+
+
+def guide_blocks():
+    """The python code blocks of the "Custom markers" section."""
+    text = (
+        pathlib.Path(__file__).parents[1] / "docs" / "getting-started.md"
+    ).read_text()
+    section = text.split("## Custom markers", 1)[1].split("\n## ", 1)[0]
+    return re.findall(r"```python\n(.*?)```", section, re.S)
+
+
+def test_the_guides_computed_marker_example_runs(lib):
+    detector_code, serve_code, event_code = guide_blocks()
+    assert "server.serve" in serve_code
+    assert len(detector_code.strip().splitlines()) <= 22  # a short detector
+    exec(detector_code, {})  # registers "low"
+    z = np.full(N, 0.5)
+    z[40:80] = 0.1  # 0.8 s below 0.2 m
+    z[120:123] = 0.1  # too short to count
+    poses = base_poses()
+    poses[:, 0, 1, 2] = z
+    run = record(lib, "guide", poses)
+    (mine,) = by_kind(highlights.detect(run))["low"]
+    assert (mine.frame, mine.frame1) == (40, 79)
+    assert mine.t1 == pytest.approx(79 * DT) and mine.label == "Low"
+    assert mine.detail == "under 0.2 m for 0.8 s"
+    doc = highlights.to_json(run, [mine])
+    assert doc["kinds"] == [{"key": "low", "label": "Low", "color": "#d9480f"}]
+    assert event_code.count("add_event") == 1
+
+
+def test_the_guides_event_example_runs(lib, tmp_path):
+    _, _, event_code = guide_blocks()
+    record(lib, "walk", base_poses())
+    exec(event_code.replace("my_library", str(lib.root)), {})
+    run = library.Library(lib.root).open("walk")
+    (event,) = run.annotations.events
+    assert (event.type, event.t0, event.t1, event.label, event.env) == (
+        "slip",
+        1.2,
+        1.5,
+        "left foot slips",
+        0,
+    )
+    assert library.Library(lib.root).event_types()["slip"].color == "#e59a1c"

@@ -9,6 +9,7 @@ Conventions (format spec §1): Z-up, right-handed, metres, seconds. A pose is
 """
 
 import dataclasses
+import math
 from typing import Literal
 
 import numpy as np
@@ -131,10 +132,22 @@ class Body:
     Attributes:
         name: Body name or USD path. Not required to be unique.
         parent: Index of the parent body, or ``-1`` for a root.
+        mass: Mass in kilograms, or ``0.0`` if unknown (the world body, or
+            a simulator that does not say). Highlights weight the centre of
+            mass by it.
+
+    Raises:
+        ValueError: If ``mass`` is negative or not finite.
     """
 
     name: str
     parent: int = -1
+    mass: float = 0.0
+
+    def __post_init__(self) -> None:
+        """Checks the mass."""
+        if not (math.isfinite(self.mass) and self.mass >= 0):
+            raise ValueError(f"body mass must be finite and >= 0: {self.mass}")
 
 
 @dataclasses.dataclass(frozen=True)

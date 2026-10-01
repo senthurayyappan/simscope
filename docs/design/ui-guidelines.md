@@ -69,7 +69,7 @@ U+2212; anything else falls back to `system-ui`.
 
 - C1. **Base: shadcn `neutral` (chroma 0) tokens verbatim** — light `background` oklch(1 0 0), `foreground` oklch(0.145 0 0), `muted` oklch(0.97 0 0), `muted-foreground` oklch(0.556 0 0), `border` oklch(0.922 0 0), `ring` oklch(0.708 0 0), `sidebar` oklch(0.985 0 0); dark `background` oklch(0.145 0 0), `foreground` oklch(0.985 0 0), `card`/`sidebar` oklch(0.205 0 0), `muted` oklch(0.269 0 0), `muted-foreground` oklch(0.708 0 0), `border` oklch(1 0 0 / 10%). *Zero chroma lets data hues read as the only colour.* \[SHADCN-THEME\] \[GEIST-COLOR\]
 - C2. **Primary accent: shadcn's neutral `primary`** (oklch(0.205 0 0) light, oklch(0.922 0 0) dark) for the Play button, the Compare button and checked boxes. Pressed toggles use `bg-muted` (shadcn `nova`), focus rings the neutral `ring`, active tabs `foreground`. Override shadcn's one chromatic token, dark `sidebar-primary` oklch(0.488 0.243 264.376), to `primary`. *Every hue is spent on the eight data slots below; any chromatic accent lands within ΔE 15 of one of them (measured: indigo-600 is 9.9 from slot 6, the current teal is 11.6 from slot 3), so a coloured chrome accent would be mistaken for data.* \[DATAVIZ\] \[SHADCN-NOVA\]
-- C3. **Stars, pins and selection are neutral** (`foreground` fills, `bg-accent` rows). *Amber stars sat ΔE 6.6 from the landing colour; a rose heart 7.2 from fall red.* \[P4\]
+- C3. **Stars, pins and selection are neutral** (`foreground` fills, `bg-accent` rows). *Amber stars sat ΔE 6.6 from the acceleration colour; a rose heart 7.2 from a red kind.* \[P4\]
 - C4. **One reserved state colour: shadcn `destructive`** for errors and `Recording` only, always with its text. *State colour without a label fails for colour-blind users.* \[WCAG-141\]
 - C5. **Viewport background and ground are neutral greys**: light viewport oklch(0.97 0 0), checker oklch(0.94 0 0)/oklch(0.90 0 0); dark viewport oklch(0.18 0 0), checker oklch(0.24 0 0)/oklch(0.205 0 0). *The current dark checker (#33485f/#26384c) is a saturated blue that competes with run A.* \[P1\]
 
@@ -84,13 +84,12 @@ One fixed palette, eight slots, never cycled, never generated. Slots 1–4 are
 | 2 | Run B · pinned env 1 | `oklch(0.62 0.166 47)` #d35f10 | `oklch(0.65 0.175 47)` #e16510 |
 | 3 | Run C · pinned env 2 | `oklch(0.59 0.158 150)` #109646 | `oklch(0.62 0.165 150)` #15a04c |
 | 4 | Run D · pinned env 3 | `oklch(0.60 0.20 335)` #c344ae | `oklch(0.63 0.20 335)` #ce4eb8 |
-| 5 | Landing (impact) | `oklch(0.66 0.133 78)` #be8614 | `oklch(0.67 0.135 78)` #c28914 |
-| 6 | Contact spike | `oklch(0.54 0.20 295)` #7b4bd4 | `oklch(0.56 0.20 295)` #8151db |
-| 7 | Torque spike | `oklch(0.67 0.20 352)` #eb54a2 | `oklch(0.67 0.20 352)` #eb54a2 |
-| 8 | Fall | `oklch(0.57 0.20 25)` #d42f34 | `oklch(0.56 0.20 25)` #d02b31 |
+| 5 | Acceleration (built-in kind) | `oklch(0.66 0.133 78)` #be8614 | `oklch(0.67 0.135 78)` #c28914 |
+| 6 | Contact force (built-in kind) | `oklch(0.54 0.20 295)` #7b4bd4 | `oklch(0.56 0.20 295)` #8151db |
+| 7 | Reserved (a future built-in kind) | `oklch(0.67 0.20 352)` #eb54a2 | `oklch(0.67 0.20 352)` #eb54a2 |
+| 8 | Reserved (a future built-in kind) | `oklch(0.57 0.20 25)` #d42f34 | `oklch(0.56 0.20 25)` #d02b31 |
 
-Tokens: `--series-1` … `--series-4`, `--kind-landing`, `--kind-contact`,
-`--kind-torque`, `--kind-fall`, plus `--ink-future` oklch(0.65 0 0) light /
+Tokens: `--series-1` … `--series-4`, `--kind-acceleration`, `--kind-contact`, plus `--ink-future` oklch(0.65 0 0) light /
 oklch(0.50 0 0) dark (3.1–3.3:1) for the not-yet-played part of a trace.
 
 Validated with the `dataviz` skill's `validate_palette.js` (Machado 2009
@@ -104,7 +103,7 @@ CVD simulation, OKLab ΔE×100) on surfaces #ffffff, #fafafa, #0a0a0a, #171717:
 
 - C6. **Slots 1–4 hold one identity dimension at a time:** runs A–D in compare; in a single run, the selected env (slot 1) and up to three pinned envs (slots 2–4). Never both. *Colour follows the entity; mixing dimensions repaints survivors.* \[DATAVIZ\]
 - C7. **Runs always carry their letter A–D next to the colour** (pane header, lane label, legend, library row). *Runs sit in the CVD warn band (7.4/7.8), which is legal only with a second encoding.* \[DATAVIZ\] \[WCAG-141\]
-- C8. **Kinds always carry their glyph** (landing `arrow-down-to-line`, contact `circle-dot`, torque `rotate-cw`, fall `trending-down`); jump spans are a neutral bar ending at their landing glyph. *Shape is the primary channel, colour the fast one.* \[WCAG-141\]
+- C8. **Kinds always carry their glyph** (acceleration `gauge`, contact force `circle-dot`, any custom kind a `diamond` in the `color` its developer gave, else neutral); a span is a neutral bar ending at its glyph. *Shape is the primary channel, colour the fast one.* \[WCAG-141\]
 - C9. **The same kind colour everywhere:** lane glyph, hover-card dot, plot tick, and the viewport's contact arrows (slot 6). Collision geoms are neutral (`foreground` at 35%), not orange. *Orange is run B.* \[NN-4\]
 - C10. **Text never wears a data colour;** a dot, line key or glyph beside neutral text carries identity. *Light hues are illegible as text.* \[DATAVIZ\]
 - C11. **No new hue without re-running the validator and updating this table.** \[DATAVIZ\]
@@ -114,8 +113,9 @@ CVD simulation, OKLab ΔE×100) on surfaces #ffffff, #fafafa, #0a0a0a, #171717:
 - L1. **4 px grid; shadcn control heights:** 28 px (`sm`) in bars and toolbars, 32 px (`default`) elsewhere; list rows 32 px (`SidebarMenuButton` h-8). \[SHADCN-SIDEBAR\]
 - L2. **Sidebar 256 px default (shadcn `16rem`), 240 px minimum; right panel 320 px, 280 px minimum.** *Below 240 px run names and bars break.* \[SHADCN-SIDEBAR\]
 - L3. **Every bar is tested at its panel's minimum width: nothing wraps, nothing scrolls sideways.** Text truncates; the full text is in a tooltip. *The compare bar wrapped one word per line at 220 px.* \[NN-4\]
-- L4. **Long run names truncate in the middle, keeping the last 10 characters** (`go2-crate_climb-…T003806Z`). *Sweeps differ at the end (`seed0`, `seed1`); end-truncation made four rows identical.* \[NN-6\]
+- L4. **Long names are cut at 16 characters and end with `…`; the full name is in a tooltip (400 ms delay) and double-click renames.** *Showing the end of a name fills the row edge to edge and costs readability; the start identifies a run, the tooltip serves the rest.* \[NN-6\]
 - L5. **Panels default to their content's size;** the timeline opens at transport + ruler + lanes, with no empty band taller than 24 px. \[TUFTE-INK\]
+- L6a. **A selected row's ring is drawn above its neighbours** (inset ring on a raised row), so neighbours' hover fills and sticky headers never cut it; the first row under a sticky header keeps its full ring. *A broken selection outline reads as a bug.* \[NN-4\]
 - L6. **Group with spacing and hairlines, not cards or boxes.** *Proximity already groups; boxes add ink.* \[PROXIMITY\] \[COMMON-REGION\]
 - L7. **A toolbar has at most three groups, separated by a 1 px `border` divider.** \[APPLE-TOOLBARS\]
 - L8. **Targets are at least 28 × 28 px; the Play button is 32 px.** *Small, distant targets are slow.* \[FITTS\]
@@ -148,12 +148,12 @@ Anti-patterns (each one is a review failure):
 
 ## Timeline
 
-- TL1. **Bar order, left to right:** `Camera ▾` · spacer · `⏮ ◀ ▶ ▶ ⏭` · readout · spacer · `Loop` · `1× ▾` · `Fit` (only while zoomed) · `⌄` minimise. *Three groups: view, transport, playback.* \[APPLE-TOOLBARS\]
-- TL2. **The readout is one phrase with no caption:** `2.49 / 7.98 s`, `text-sm tabular-nums`, current time `foreground` 500, `/ 7.98 s` muted. Click to type a time; the tooltip says `Frame 124 of 400`. *Captions over values are labels of last resort.* \[RUI-LABELS\] \[FOXGLOVE-PLAYBACK\]
+- TL1. **Bar order:** `Camera ▾` at the left; transport (`⏮ ◀ ▶ ▶ ⏭`) centred on the bar's true centre; at the right, in order: readout, `Loop`, `1× ▾`, `Fit` (only while zoomed), `⌄` minimise. *Three groups: view, transport, playback; the primary control sits where the eye lands.* \[APPLE-TOOLBARS\]
+- TL2. **The readout is one small phrase with no caption:** `2.49 / 7.98 s`, `text-xs tabular-nums`, current time `foreground`, `/ 7.98 s` muted, both on one baseline; click to type a time; the tooltip says `Frame 124 of 400`. It sits at the right end of the bar, before `Loop`. *Captions over values are labels of last resort.* \[RUI-LABELS\] \[FOXGLOVE-PLAYBACK\]
 - TL3. **Camera is one `DropdownMenu` like speed:** trigger `video` icon + view name (`Iso`, `Free` after an orbit) + chevron, a crosshair dot while following; items: View radio (Iso, Front, Side, Top), `Frame` (F), `Frame all envs` (0), Follow radio (Off, Position, Pose, Heading) each with a one-line hint. \[P6\]
 - TL4. **The playhead is neutral:** a 1.5 px `foreground` line with an 8 × 10 px `foreground` handle on the ruler; no accent flag. \[FOXGLOVE-PLOT\]
 - TL5. **Lanes:** one `Highlights` lane per subject (each run in compare; the selected env plus `All envs` in a crowd run). A `Marks` lane exists only when the run has marks. \[I4\] \[RERUN-TIMELINE\]
-- TL6. **Glyphs are 14 px lucide icons in the kind colour on a 2 px surface ring, no filled discs;** clusters are a neutral pill with the count (`text-xs tabular-nums`) and a 6 px dot of the most important kind (fall, landing, contact, torque). Hit target ≥ 24 px. \[DATAVIZ\]
+- TL6. **Glyphs are 14 px lucide icons in the kind colour on a 2 px surface ring, no filled discs;** clusters are a neutral pill with the count (`text-xs tabular-nums`) and a 6 px dot of the most important kind (contact force, then acceleration, then custom). Hit target ≥ 24 px. \[DATAVIZ\]
 - TL7. **In compare, a lane label is `● A run-name` and its glyphs are in the run's colour;** the glyph shape still gives the kind. \[C7\]
 - TL8. **Hover card: kind dot + `label`, then `detail`, then `1.14 s · env 3`.** No score. \[I10\]
 - TL9. **No highlight-reel toggle in the bar;** `Highlights only` is a checkbox item in the speed menu with the hint `Plays 1 s around each highlight, skips the rest` (H). \[I5\]

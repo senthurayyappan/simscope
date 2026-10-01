@@ -15,7 +15,7 @@ This file keeps only the layout facts that are specific to the code.
 │ 256 px     │                                         │ Metadata   │
 │            │ Env 12 of 4,096 ‹ ›  (multi-env only)   │ (Envs)     │
 │ Date|Group ├─────────────────────────────────────────┤ 320 px     │
-│ sections   │ camera ▾    ⏮ ◀ ▶ ▶ ⏭  2.49 / 7.98 s  loop 1× ▾ ⌄ │            │
+│ sections   │ camera ▾      ⏮ ◀ ▶ ▶ ⏭      2.49 / 7.98 s  loop 1× ▾ ⌄ │            │
 │ of 5 + more│ ruler, one lane per subject (content)   │            │
 └────────────┴─────────────────────────────────────────┴────────────┘
 ```
@@ -28,7 +28,17 @@ This file keeps only the layout facts that are specific to the code.
   pixel width when the window resizes. Collapsed state is remembered
   (`simscope.collapsed`); the narrow-window rule (right panel under 900 px,
   library under 640 px) is not. A collapsed sidebar leaves a 40 px rail; the
-  timeline collapses to its 44 px bar.
+  timeline collapses to its 44 px bar. Expanding it always resizes to the
+  content height for the current lane count (the panel library's remembered
+  size is stale after a restored-collapsed start).
+- The timeline bar is a `1fr auto 1fr` grid: the camera menu left, the
+  transport on the bar's true centre, then the readout, loop, speed, Fit and
+  minimise on the right; below 40 rem it falls back to a plain row.
+- Library names are cut at 16 characters with `…` (full name in a tooltip).
+  The selection ring is an inset shadow so neighbours and the sticky header
+  cannot cover it. Highlight kinds: `contact` (violet, circle-dot) and
+  `acceleration` (amber, gauge); any other kind is a diamond in its own
+  validated hex colour or neutral.
 - The viewport overlay is one toolbar (top-right): Ground toggle + style
   popover, Visual, Collision, Contacts, Sync cameras (compare only), Export,
   Theme. In compare it becomes a strip above the panes so it never covers a

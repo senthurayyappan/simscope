@@ -195,3 +195,34 @@ def test_mesh_blob_is_raw_ssmh(tmp_path):
     doc = json.loads(store.get(ref, "scene"))
     blob = store.get(cas.Ref.from_json(doc["meshes"][0]))
     assert blob[:4] == b"SSMH" and blob[20] == codecs.MESH_RAW
+
+
+def test_body_mass_is_written_only_when_known(tmp_path):
+    store = cas.ContentStore(tmp_path)
+    plain = make_scene()
+    ref = scene.put_scene(store, plain)
+    doc = json.loads(store.get(ref, "scene"))
+    # No masses: the descriptor is what it was before bodies had one, so
+    # the hash of every existing scene is unchanged.
+    assert doc["bodies"][1] == {"name": "torso", "parent": 0}
+    assert all(set(b) == {"name", "parent"} for b in doc["bodies"])
+
+    heavy = core.Scene(
+        bodies=(
+            core.Body("world", -1),
+            core.Body("torso", 0, mass=9.5),
+            core.Body("arm", 1),
+        ),
+        geoms=plain.geoms,
+        materials=plain.materials,
+        meshes=plain.meshes,
+        textures=plain.textures,
+    )
+    ref2 = scene.put_scene(store, heavy)
+    assert ref2 != ref
+    doc2 = json.loads(store.get(ref2, "scene"))
+    assert doc2["bodies"][1] == {"name": "torso", "parent": 0, "mass": 9.5}
+    assert "mass" not in doc2["bodies"][2]
+    back = scene.load_scene(store, ref2)
+    assert [b.mass for b in back.bodies] == [0.0, 9.5, 0.0]
+    assert scene.put_scene(store, back) == ref2

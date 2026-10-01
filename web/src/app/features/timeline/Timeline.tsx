@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { selectEnv, seekTo } from "@/lib/commands";
 import { formatTimecode } from "@/lib/format";
 import { getPlotHover } from "@/lib/hover";
-import { kindVar, seriesVar } from "@/lib/palette";
+import { kindVar, seriesVar, validColor } from "@/lib/palette";
 import { getClock, onFrame } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
-import { snapFrame, followPlayhead } from "@/lib/timeline-math";
+import { followPlayhead, snapFrame, timelineHeight } from "@/lib/timeline-math";
+
+export { timelineHeight };
 import {
   fitTimeline,
   getTimelineView,
@@ -24,7 +26,6 @@ import { clamp } from "@/lib/utils";
 import {
   drawTimeline,
   GUTTER,
-  BOTTOM_PAD,
   hitAt,
   laneWidth,
   LANE_H,
@@ -45,14 +46,8 @@ type Drag =
   | { kind: "edge"; edge: 0 | 1 }
   | { kind: "glyph"; hit: Hit; x: number; y: number };
 
-const BAR = 44;
 const NO_LABELS: MarkEvent[] = [];
-
-/** The timeline panel's natural height for `lanes` lanes (L5: no empty band). */
-export function timelineHeight(lanes: number): number {
-  // +1 for the strip's top border.
-  return BAR + 1 + RULER_H + lanes * LANE_H + BOTTOM_PAD;
-}
+const DEBUG = new URLSearchParams(location.search).has("debug");
 
 export function TimelinePanel({
   collapsed,
@@ -98,6 +93,15 @@ function useLanes(): LaneSpec[] {
   const active = useApp((s) => s.active);
   return useMemo(() => {
     const out: LaneSpec[] = [];
+    // Custom kinds may carry a colour (contracts §9.3); only plain hex is used.
+    const colorsOf = (i: number) => {
+      const colors: Record<string, string> = {};
+      for (const k of (highlights[i]?.kinds ?? []) as { key: string; color?: string }[]) {
+        const c = validColor(k.color);
+        if (c) colors[k.key] = c;
+      }
+      return colors;
+    };
     const compare = panes.length > 1;
     panes.forEach((p, i) => {
       const items = highlights[i]?.highlights ?? [];
@@ -105,16 +109,17 @@ function useLanes(): LaneSpec[] {
       const env = envs[i] ?? 0;
       if (compare) {
         const mine = multi ? items.filter((h) => h.env === env) : items;
-        if (mine.length) out.push({ id: `run${i}`, label: p.name, slot: p.slot, letter: "ABCD"[p.slot], items: mine, pane: i });
+        if (mine.length) out.push({ id: `run${i}`, label: p.name, slot: p.slot, letter: "ABCD"[p.slot], items: mine, colors: colorsOf(i), pane: i });
       } else if (multi) {
         const mine = items.filter((h) => h.env === env);
-        if (mine.length) out.push({ id: "env", label: `Env ${env}`, slot: null, items: mine, pane: i });
-        if (items.length) out.push({ id: "all", label: "All envs", slot: null, items, pane: i });
+        if (mine.length) out.push({ id: "env", label: `Env ${env}`, slot: null, items: mine, colors: colorsOf(i), pane: i });
+        if (items.length) out.push({ id: "all", label: "All envs", slot: null, items, colors: colorsOf(i), pane: i });
       } else if (items.length) {
-        out.push({ id: "highlights", label: "Highlights", slot: null, items, pane: i });
+        out.push({ id: "highlights", label: "Highlights", slot: null, items, colors: colorsOf(i), pane: i });
       }
     });
-    const labels = events.filter((e) => e.type === "");
+    // User labels (type "") and developer markers (add_event with a type) share the lane.
+    const labels = events;
     if (labels.length) out.push({ id: "labels", label: "Labels", slot: null, items: [], labels, pane: active });
     return out;
   }, [panes, infos, envs, highlights, events, active]);
@@ -237,6 +242,8 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
         empty: !m.info || !(clock.duration > 0),
       };
       hits.current = drawTimeline(ctx, state, pal.current).hits;
+      // `?debug`: lets scripted checks compare drawn pixels with the geometry (see test/app-lib.test.mjs for the pure part).
+      if (DEBUG) (window as unknown as { __timeline: unknown }).__timeline = { hits: hits.current, view: v, width: w, height: h, dpr };
     });
   }, []);
 
@@ -408,7 +415,7 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
                 return;
               }
               const hit = hitAt(hits.current, x, y);
-              if (hit?.label && writable) useApp.setState({ labelDraft: { t: hit.label.t0, id: hit.label.id, text: hit.label.label } });
+              if (hit?.label && hit.label.type === "" && writable) useApp.setState({ labelDraft: { t: hit.label.t0, id: hit.label.id, text: hit.label.label } });
             }}
             aria-label="Timeline"
           />
@@ -449,7 +456,8 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
   if (hit.label) {
     body = (
       <>
-        <div className="font-medium">{hit.label.label || "Label"}</div>
+        <div className="font-medium">{hit.label.label || hit.label.type || "Label"}</div>
+        {hit.label.type && hit.label.label ? <div className="text-xs text-muted-foreground">{hit.label.type}</div> : null}
         <div className="num text-xs text-muted-foreground">{formatTimecode(hit.label.t0)} s</div>
       </>
     );
@@ -469,7 +477,7 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
         {list.map((h, i) => (
           <div key={i}>
             <div className="flex items-center gap-2 font-medium">
-              <span className="size-2 shrink-0 rounded-full" style={{ background: kindVar(h.kind) }} />
+              <span className="size-2 shrink-0 rounded-full" style={{ background: kindVar(h.kind, lane?.colors?.[h.kind]) }} />
               {h.label}
             </div>
             {h.detail ? <div className="text-xs text-muted-foreground">{h.detail}</div> : null}

@@ -45,6 +45,18 @@ def _fs(values: Iterable[float]) -> list[float]:
     return [_f(v) for v in values]
 
 
+def _body_json(body: core.Body) -> dict[str, Any]:
+    """Returns a body's descriptor; ``mass`` only when it is known (> 0).
+
+    A scene without masses thus keeps the bytes, and the hash, it had before
+    bodies had a mass.
+    """
+    out: dict[str, Any] = {"name": body.name, "parent": body.parent}
+    if body.mass > 0:
+        out["mass"] = _f(body.mass)
+    return out
+
+
 def scene_to_json(
     scene: core.Scene,
     mesh_refs: Sequence[cas.Ref],
@@ -70,7 +82,7 @@ def scene_to_json(
         raise ValueError("need one texture ref per texture")
     return {
         "format": SCENE_FORMAT,
-        "bodies": [{"name": b.name, "parent": b.parent} for b in scene.bodies],
+        "bodies": [_body_json(b) for b in scene.bodies],
         "geoms": [
             {
                 "body": g.body,
@@ -161,7 +173,8 @@ def scene_from_json(
     _check_format(doc)
     try:
         bodies = tuple(
-            core.Body(b["name"], int(b["parent"])) for b in doc["bodies"]
+            core.Body(b["name"], int(b["parent"]), float(b.get("mass", 0.0)))
+            for b in doc["bodies"]
         )
         geoms = tuple(
             core.Geom(

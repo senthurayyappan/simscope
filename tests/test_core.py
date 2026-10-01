@@ -42,3 +42,11 @@ def test_mesh_accepts_valid_arrays() -> None:
         uvs=np.zeros((3, 2), np.float32),
     )
     assert mesh.faces.shape == (1, 3)
+
+
+def test_body_mass_defaults_to_unknown_and_is_checked():
+    assert core.Body("torso").mass == 0.0
+    assert core.Body("torso", 0, mass=12.5).mass == 12.5
+    for bad in (-1.0, float("nan"), float("inf")):
+        with pytest.raises(ValueError, match="mass"):
+            core.Body("torso", 0, mass=bad)

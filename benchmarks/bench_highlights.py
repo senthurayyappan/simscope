@@ -4,12 +4,14 @@ Run ``uv run python benchmarks/bench_highlights.py`` (add ``--quick`` for a
 small run). Budgets (decision D12):
 
 * a single 400-frame run is scored in at most 20 ms;
-* 1,000 frames of 4,096 envs with 20 bodies, a contacts stream and a torque
-  stream are scored in at most 3 s.
+* 1,000 frames of 4,096 envs with 20 bodies and a contacts stream are
+  scored in at most 3 s.
 
-Every env walks (a bobbing root with stride-like contact forces), a quarter
-of them make one ballistic jump, and one in a hundred tips over, so landings,
-jumps and falls all have work to do. The large run is written to a
+Every env walks (a bobbing root with stride-like contact forces) and a
+quarter of them make one ballistic hop, whose touchdown is an impact of the
+centre of mass and of the contact force, so both kinds have peaks to find.
+Only the contact and acceleration signals are read (the acceleration decodes
+the position of every body). The large run is written to a
 temporary library first (not timed); the timing covers ``detect`` on a
 freshly opened rollout, which includes decoding the streams it reads.
 """
@@ -28,31 +30,28 @@ TARGET_SINGLE_MS = 20.0
 TARGET_LARGE_S = 3.0
 N_BODIES = 20
 N_CONTACTS = 4
-N_JOINTS = 12
 STAND = 0.4
 FLIGHT_S = 0.6
-TIP_S = 0.2
-JUMPERS = 0.25
-FALLERS = 0.01
+HOPPERS = 0.25
 GRAVITY = 9.81
 
 
 def make_scene(n_bodies: int) -> core.Scene:
     """Builds a scene of ``n_bodies`` bodies, the second one a torso."""
     names = ["world", "torso"] + [f"link{i}" for i in range(n_bodies - 2)]
-    bodies = tuple(
-        core.Body(n, -1 if i == 0 else 0) for i, n in enumerate(names)
+    bodies = tuple(  # masses, as the MuJoCo adapter records them
+        core.Body(n, -1 if i == 0 else 0, mass=0.0 if i == 0 else 1.0 + i / 10)
+        for i, n in enumerate(names)
     )
     return core.Scene(bodies=bodies)
 
 
 class Behaviour:
-    """What each env does: when it jumps, if it does, and when it tips.
+    """What each env does: its stride, and when it hops, if it does.
 
     Attributes:
         phase: Stride phase of each env, radians.
-        jump_at: Take-off time of each env in seconds (``inf``: never).
-        fall_at: Time each env tips over, in seconds (``inf``: never).
+        hop_at: Take-off time of each env in seconds (``inf``: never).
     """
 
     def __init__(self, envs: int, seconds: float, *, first: bool) -> None:
@@ -61,16 +60,14 @@ class Behaviour:
         Args:
             envs: Number of envs.
             seconds: Length of the run.
-            first: Make env 0 jump and tip, so a single-env run has both.
+            first: Make env 0 hop, so a single-env run has an impact.
         """
         rng = np.random.default_rng(0)
         self.phase = rng.uniform(0, 2 * np.pi, envs)
-        jumps = rng.uniform(1.0, seconds - 2.0, envs)
-        self.jump_at = np.where(rng.random(envs) < JUMPERS, jumps, np.inf)
-        tips = rng.uniform(seconds - 1.5, seconds - 0.5, envs)
-        self.fall_at = np.where(rng.random(envs) < FALLERS, tips, np.inf)
+        hops = rng.uniform(1.0, seconds - 2.0, envs)
+        self.hop_at = np.where(rng.random(envs) < HOPPERS, hops, np.inf)
         if first:
-            self.jump_at[0], self.fall_at[0] = seconds / 4, 3 * seconds / 4
+            self.hop_at[0] = seconds / 4
 
 
 def synth_chunk(
@@ -78,22 +75,18 @@ def synth_chunk(
     behaviour: Behaviour,
     t0: int,
     n: int,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Builds poses, contacts and torques for frames ``t0 .. t0 + n``."""
+) -> tuple[np.ndarray, np.ndarray]:
+    """Builds poses and contacts for frames ``t0 .. t0 + n``."""
     envs = len(behaviour.phase)
     t = ((t0 + np.arange(n)) * DT)[:, None]
     phase = behaviour.phase[None, :]
-    flight = t - behaviour.jump_at[None, :]
+    flight = t - behaviour.hop_at[None, :]
     flying = (flight >= 0) & (flight < FLIGHT_S)
     arc = np.where(flying, 0.5 * GRAVITY * flight * (FLIGHT_S - flight), 0.0)
-    tip = np.clip((t - behaviour.fall_at[None, :]) / TIP_S, 0, 1)
     poses = np.zeros((n, envs, N_BODIES, 7), np.float32)
     poses[..., 6] = 1.0
     poses[:, :, 1, 0] = 0.8 * t + 0.02 * np.sin(6 * t + phase)
-    height = STAND + 0.03 * np.sin(8 * t + phase) + arc
-    poses[:, :, 1, 2] = height - tip * (STAND - 0.1)
-    poses[:, :, 1, 3] = np.sin(tip * np.pi / 4)  # roll to 90 deg about x
-    poses[:, :, 1, 6] = np.cos(tip * np.pi / 4)
+    poses[:, :, 1, 2] = STAND + 0.03 * np.sin(8 * t + phase) + arc
     freq = rng.uniform(4, 10, (1, envs, N_BODIES - 2, 1))
     joint_phase = rng.uniform(0, 6.28, (1, envs, N_BODIES - 2, 3))
     poses[:, :, 2:, :3] = 0.2 * np.sin(
@@ -103,10 +96,7 @@ def synth_chunk(
     landed = (flight >= FLIGHT_S) & (flight < FLIGHT_S + 0.1)  # the touchdown
     stance = 60 * np.maximum(0, np.sin(8 * t + phase)) * ~flying
     contacts[..., 5] = (stance + 300 * landed)[..., None]
-    torque = 5 * np.sin(8 * t + phase)[..., None] + rng.normal(
-        0, 0.5, (n, envs, N_JOINTS)
-    )
-    return poses, contacts, torque.astype(np.float32)
+    return poses, contacts
 
 
 def record(
@@ -117,16 +107,13 @@ def record(
     behaviour = Behaviour(envs, frames * DT, first=True)
     with lib.record(name, scene=make_scene(N_BODIES), dt=DT, n_envs=envs) as r:
         r.add_stream("contacts", "arrows", (N_CONTACTS, 6), units="N")
-        r.add_stream("joint_torque", "vector", (N_JOINTS,), units="N m")
         for t0 in range(0, frames, 100):
             n = min(100, frames - t0)
-            poses, contacts, torque = synth_chunk(rng, behaviour, t0, n)
-            # One hard hit and one torque spike, so there is something to find.
+            poses, contacts = synth_chunk(rng, behaviour, t0, n)
+            # One hard hit, so there is something to find in every run.
             if t0 == 100:
-                e = min(7, envs - 1)
-                contacts[70, e, 0, 5] = 900.0
-                torque[80, e, 3] = 60.0
-            r.log_frames(poses, contacts=contacts, joint_torque=torque)
+                contacts[70, min(7, envs - 1), 0, 5] = 900.0
+            r.log_frames(poses, contacts=contacts)
     return lib.open(name)
 
 

@@ -2,6 +2,7 @@ import * as React from "react";
 import { DropdownMenu as M } from "radix-ui";
 import { Check, ChevronRight } from "lucide-react";
 
+import { markMenuClosed } from "@/lib/menu-focus";
 import { cn } from "@/lib/utils";
 
 export const DropdownMenu = M.Root;
@@ -22,7 +23,17 @@ export function DropdownMenuContent({
 }: React.ComponentProps<typeof M.Content>) {
   return (
     <M.Portal>
-      <M.Content sideOffset={sideOffset} align={align} collisionPadding={8} className={cn(menuSurface, className)} {...props} />
+      <M.Content
+        sideOffset={sideOffset}
+        align={align}
+        collisionPadding={8}
+        className={cn(menuSurface, className)}
+        {...props}
+        onCloseAutoFocus={(e) => {
+          markMenuClosed();
+          props.onCloseAutoFocus?.(e);
+        }}
+      />
     </M.Portal>
   );
 }

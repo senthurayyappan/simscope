@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Tooltip as TooltipPrimitive } from "radix-ui";
 
+import { menuJustClosed } from "@/lib/menu-focus";
 import { cn } from "@/lib/utils";
 
 export const TooltipProvider = ({ children }: { children: React.ReactNode }) => (
@@ -63,7 +64,15 @@ export function Hint({
 }) {
   return (
     <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipTrigger
+        asChild
+        // Focus coming back to the trigger after a menu closed must not open the tooltip.
+        onFocus={(e) => {
+          if (menuJustClosed()) e.preventDefault();
+        }}
+      >
+        {children}
+      </TooltipTrigger>
       <TooltipContent side={side}>
         {label}
         {keys ? <Kbd>{keys}</Kbd> : null}

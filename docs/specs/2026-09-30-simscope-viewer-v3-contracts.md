@@ -301,6 +301,11 @@ holds record-time tags only.
 
 ### 8.2 Highlights v2
 
+> **Superseded in part by §9 (2026-10-01):** the document shape below still
+> holds, but the kinds are now only `contact` and `acceleration` plus
+> developer-defined ones. Read the kind names and the `value`/`score`/
+> `ratio` notes in §8.4 as history.
+
 ```json
 {"format": "simscope-highlights/2", "detector": "simscope/2", "run_id": "01J…",
  "kinds": [{"key": "landing", "label": "Landing"}],
@@ -372,3 +377,57 @@ includes the detector version, so caches refresh.
 - Compare exports: every player has `sync="compare"` and a hex `color`
   (A #2282fb, B #d35f10, C #109646, D #c344ae); more than 4 runs is an
   error.
+
+## 9. v3.2 changes: general highlights
+
+Normative; wins over §4 and §8.2/§8.4 where they disagree. Reason: the v3.1
+kinds (landing, jump, fall, torque spike) describe the vault and roll tasks
+used to build the viewer; a general library must not hard-code a task's
+vocabulary.
+
+### 9.1 Built-in kinds
+
+Exactly two, computed from physics every simulator provides:
+
+| Kind | Signal | Label | `detail` example |
+| --- | --- | --- | --- |
+| `contact` | magnitude of the **net contact force** per frame: the norm of the sum of all force vectors of the `contacts` stream (runs without one get none) | `Contact force` | `412 N, 5.1× typical` |
+| `acceleration` | magnitude of the robot's **centre-of-mass acceleration** per frame (second difference of the COM position) | `Acceleration` | `41 m/s², 4.2 g` |
+
+- The COM is the mass-weighted mean of the body positions when the scene
+  records body masses (`Body.mass`, optional, kg; the MuJoCo adapter fills it
+  from `model.body_mass`), else the plain mean of the non-world body
+  positions. Teleports (env resets) are masked as before.
+- A peak is a local maximum within ±0.25 s whose robust score is above 6;
+  markers within 0.15 s of the same kind merge. Caps: 10 per env, 50 overall
+  per kind. `ratio` is value ÷ the run's typical peak; `value` is N or m/s²;
+  `score` is the robust z.
+- Nothing else is built in. There are no landing, jump, fall or torque kinds,
+  and no hand-tuned task thresholds.
+
+### 9.2 Custom markers (the developer API)
+
+Two paths, both shown on the timeline:
+
+1. **Computed markers:** `highlights.register(key, detector, *, label,
+   color=None)` where `detector(rollout) -> list[Highlight]`. `color` is an
+   optional CSS hex colour. A `Highlight` may be a span (`t1`, `frame1`). The
+   detector runs in the background and its results are cached with the
+   built-ins (the cache key includes the registered detectors' keys).
+2. **Explicit markers:** annotation events, `Annotations.add_event(type="", *,
+   t0, t1=None, label="", env=None, props=None)`; `.simscope/event_types.json` may give a
+   type a colour. They appear in the Labels lane (see D26), coloured by their
+   type when it has a colour, neutral otherwise.
+
+### 9.3 `simscope-highlights/2` documents
+
+Same shape as §8.2, with `kinds: [{"key", "label", "color"?}]` (the optional
+`color` only for custom kinds) and `detector: "simscope/3"`. Readers must
+treat unknown kinds generically: a diamond glyph, the kind's `color` or a
+neutral. `also` is kept for merged kinds.
+
+### 9.4 Scene bodies
+
+`Body` gains optional `mass: float = 0.0` (kg; 0 means unknown). The scene
+descriptor writes `"mass"` for a body only when it is above 0, so scenes
+without masses keep their hashes. Format spec §4 documents it.

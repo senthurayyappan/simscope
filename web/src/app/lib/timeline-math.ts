@@ -92,8 +92,8 @@ export function followPlayhead(view: View, t: number, duration: number, minSpan:
   return clampView({ t0: t - span * 0.1, t1: t - span * 0.1 + span }, duration, minSpan);
 }
 
-/** Importance when a cluster shows one dot: fall, landing, contact spike, torque spike (TL6). */
-const RANK: Record<string, number> = { fall: 4, landing: 3, contact_spike: 2, torque_spike: 1 };
+/** Importance when a cluster shows one glyph: net contact force, then acceleration, then custom kinds. */
+const RANK: Record<string, number> = { contact: 2, acceleration: 1 };
 export function kindRank(kind: string): number {
   return RANK[kind] ?? 0;
 }
@@ -102,15 +102,17 @@ const stronger = (a: Highlight, b: Highlight) =>
   kindRank(b.kind) > kindRank(a.kind) || (kindRank(b.kind) === kindRank(a.kind) && b.score > a.score) ? b : a;
 
 export interface Cluster {
-  /** Pixel x of the glyph (of the best item). */
+  /** Pixel x of the cluster's first member, from the lane's left edge (the gutter's right edge). */
   x: number;
   items: Highlight[];
+  /** The member that names the cluster (the most important kind, then the highest score). */
   best: Highlight;
 }
 
 /**
  * Groups highlights whose glyphs would be closer than `minGapPx`, so dense
- * auto-highlights stay legible. Items must be sorted by time.
+ * markers stay legible. Items must be sorted by time. A cluster sits where its
+ * first member is, so a single glyph is always exactly at `time -> x`.
  */
 export function clusterHighlights(items: readonly Highlight[], view: View, widthPx: number, minGapPx = 6): Cluster[] {
   const span = view.t1 - view.t0;
@@ -121,16 +123,14 @@ export function clusterHighlights(items: readonly Highlight[], view: View, width
   let lastX = -Infinity;
   const flush = () => {
     if (cur.length === 0) return;
-    const best = cur.reduce(stronger);
-    out.push({ x: (best.t - view.t0) * pxPerSec, items: cur, best });
+    out.push({ x: (cur[0].t - view.t0) * pxPerSec, items: cur, best: cur.reduce(stronger) });
     cur = [];
   };
   for (const h of items) {
-    if (h.t < view.t0 - 1 / pxPerSec * 12 || h.t > view.t1 + 1 / pxPerSec * 12) continue;
+    if (h.t < view.t0 - (1 / pxPerSec) * 12 || h.t > view.t1 + (1 / pxPerSec) * 12) continue;
     const x = (h.t - view.t0) * pxPerSec;
-    if (cur.length > 0 && x - lastX < minGapPx) {
-      cur.push(h);
-    } else {
+    if (cur.length > 0 && x - lastX < minGapPx) cur.push(h);
+    else {
       flush();
       cur = [h];
     }
@@ -138,6 +138,43 @@ export function clusterHighlights(items: readonly Highlight[], view: View, width
   }
   flush();
   return out;
+}
+
+// ---- strip geometry (shared by the canvas, the hit tests and the tests) ----
+
+/** Width of the lane-label gutter, px. */
+export const GUTTER = 88;
+export const RIGHT_PAD = 14;
+export const RULER_H = 30;
+export const LANE_H = 28;
+/** Space under the last lane so glyphs never sit on the window edge. */
+export const BOTTOM_PAD = 8;
+/** Height of the transport bar above the strip. */
+export const BAR_H = 44;
+
+/** Pixel x (canvas CSS px) of time `t`: the one mapping the ruler, glyphs, spans, loop and playhead share. */
+export function timeToX(t: number, view: View, width: number): number {
+  return GUTTER + ((t - view.t0) / (view.t1 - view.t0)) * (width - GUTTER - RIGHT_PAD);
+}
+
+/** Inverse of `timeToX`. */
+export function xToTime(x: number, view: View, width: number): number {
+  return view.t0 + ((x - GUTTER) / (width - GUTTER - RIGHT_PAD)) * (view.t1 - view.t0);
+}
+
+/** Top of lane `i`. */
+export function laneTop(i: number): number {
+  return RULER_H + i * LANE_H;
+}
+
+/** The y that glyphs in lane `i` are centred on. */
+export function laneCenterY(i: number): number {
+  return laneTop(i) + LANE_H / 2;
+}
+
+/** The timeline panel's natural height for `lanes` lanes: bar, the strip's 1 px border, ruler, lanes, padding (L5). */
+export function timelineHeight(lanes: number): number {
+  return BAR_H + 1 + RULER_H + lanes * LANE_H + BOTTOM_PAD;
 }
 
 /** Snaps a time to the nearest frame. */

@@ -55,11 +55,12 @@ uv run simscope export runs drop -o drop.html              # lean: <simscope-pla
 uv run simscope export runs drop -o drop.html --ui full    # the whole app, offline
 ```
 
-In the app, press K to play, F to follow a robot, H to play only the
-highlights, C to toggle contacts, and `[` / `]` to step through envs. Highlights
-(hard landings, torque spikes, falls) are found automatically
-(`simscope.highlights`); marks you want to place yourself come from
-`simscope.annotations`. Lean exports are what mkdeck embeds.
+In the app, press K to play, F to follow a robot, C to toggle contacts, and
+`[` / `]` to step through envs. Peaks in net contact force and in the centre
+of mass acceleration are marked on the timeline automatically
+(`simscope.highlights`); you can register your own kinds of marker, and place
+single marks yourself with `simscope.annotations`. Lean exports are small,
+self-contained HTML pages.
 
 The design is in `docs/specs/`; start with the
 [viewer v3 spec](docs/specs/2026-09-30-simscope-viewer-v3.md).

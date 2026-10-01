@@ -112,9 +112,10 @@ a name at a moment, made by pressing M or from the ruler's context menu. A
 label is an untyped event, `type` `""`, with `t0 == t1`, and the viewer draws
 labels in a Labels lane that exists only for runs that have some.
 
-The automatic highlights (landings, jumps, falls, contact and torque spikes)
-are a separate, derived file, `highlights.json` (see the [viewer v3
-contracts](2026-09-30-simscope-viewer-v3-contracts.md) 8.2); they are never
+The automatic highlights (peaks of the net contact force and of the
+centre-of-mass acceleration, and any kinds a developer registers) are a
+separate, derived file, `highlights.json` (see the [viewer v3
+contracts](2026-09-30-simscope-viewer-v3-contracts.md) 9); they are never
 written into `annotations.json`, and a pack carries them as
 `derived/<run>/highlights.json`.
 

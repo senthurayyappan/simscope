@@ -2,18 +2,29 @@
 // respect to React: it takes a snapshot of everything it shows and returns
 // the hit targets it drew.
 
-import { clusterHighlights, tickLabel, ticks, niceStep, type Cluster, type View } from "@/lib/timeline-math";
+import { validColor } from "@/lib/palette";
+import {
+  BOTTOM_PAD,
+  clusterHighlights,
+  GUTTER,
+  LANE_H,
+  laneTop,
+  niceStep,
+  RIGHT_PAD,
+  RULER_H,
+  tickLabel,
+  ticks,
+  timeToX,
+  xToTime,
+  type Cluster,
+  type View,
+} from "@/lib/timeline-math";
 import type { Highlight, MarkEvent } from "@/lib/types";
 import { formatTimecode } from "@/lib/format";
 
 import { kindIcon } from "./icons";
 
-export const GUTTER = 88;
-export const RULER_H = 30;
-export const LANE_H = 28;
-/** Space under the last lane so glyphs never sit on the window edge. */
-export const BOTTOM_PAD = 8;
-export const RIGHT_PAD = 14;
+export { BOTTOM_PAD, GUTTER, LANE_H, RIGHT_PAD, RULER_H };
 export const GLYPH = 14;
 
 export interface Palette {
@@ -35,6 +46,8 @@ export interface LaneSpec {
   slot: number | null;
   letter?: string;
   items: Highlight[];
+  /** Custom kinds' colours (validated hex), by kind key. */
+  colors?: Record<string, string>;
   labels?: MarkEvent[];
   /** Which pane owns the lane (compare). */
   pane: number;
@@ -66,7 +79,7 @@ export interface Hit {
   label?: MarkEvent;
 }
 
-export const laneTop = (i: number) => RULER_H + i * LANE_H;
+export { laneTop };
 
 export function readPalette(): Palette {
   const cs = getComputedStyle(document.documentElement);
@@ -80,31 +93,31 @@ export function readPalette(): Palette {
     secondary: v("--secondary"),
     series: [1, 2, 3, 4].map((i) => v(`--series-${i}`)),
     kinds: {
-      landing: v("--kind-landing"),
-      contact_spike: v("--kind-contact"),
-      torque_spike: v("--kind-torque"),
-      fall: v("--kind-fall"),
+      contact: v("--kind-contact"),
+      acceleration: v("--kind-acceleration"),
     },
     sans: v("--font-sans") || "system-ui, sans-serif",
   };
 }
 
-const xOf = (t: number, s: Pick<DrawState, "view" | "width">) =>
-  GUTTER + ((t - s.view.t0) / (s.view.t1 - s.view.t0)) * (s.width - GUTTER - RIGHT_PAD);
+const xOf = (t: number, s: Pick<DrawState, "view" | "width">) => timeToX(t, s.view, s.width);
 
 export function timeAt(x: number, s: Pick<DrawState, "view" | "width">): number {
-  return s.view.t0 + ((x - GUTTER) / (s.width - GUTTER - RIGHT_PAD)) * (s.view.t1 - s.view.t0);
+  return xToTime(x, s.view, s.width);
 }
 
 export function laneWidth(width: number): number {
   return width - GUTTER - RIGHT_PAD;
 }
 
-/** The colour a glyph is drawn in: the run's slot in compare (TL7), else the kind's. */
+/** The colour a glyph is drawn in: the run's slot in compare (TL7), else the kind's: a palette slot for the built-ins, a custom hex, or neutral. */
 function glyphColor(h: Highlight, lane: LaneSpec, pal: Palette): string {
   if (lane.slot !== null) return pal.series[lane.slot % 4];
-  return pal.kinds[h.kind] ?? pal.muted;
+  return pal.kinds[h.kind] ?? validColor(lane.colors?.[h.kind]) ?? pal.muted;
 }
+
+/** Glyph shape for a kind: built-ins have their own, everything else is a diamond. */
+const shapeOf = (kind: string) => (kind === "contact" || kind === "acceleration" ? kind : "custom");
 
 export function drawTimeline(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette): { hits: Hit[] } {
   const { width: W, height: H, dpr } = s;
@@ -211,9 +224,10 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, s: DrawState, pal: P
       ctx.stroke();
     }
     drawLaneLabel(ctx, lane, y, pal);
+    // The clip is vertical only (plus a glyph radius either side), so a marker at t = 0 or at the end is not cut in half.
     ctx.save();
     ctx.beginPath();
-    ctx.rect(GUTTER, y, lw, LANE_H);
+    ctx.rect(GUTTER - GLYPH, y, lw + 2 * GLYPH, LANE_H);
     ctx.clip();
     drawLane(ctx, s, pal, lane, y, hits);
     ctx.restore();
@@ -312,9 +326,9 @@ function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: numb
 
 function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lane: LaneSpec, y: number, hits: Hit[]) {
   const lw = laneWidth(s.width);
-  const cy = y + LANE_H / 2;
+  const cy = y + LANE_H / 2; // = laneCenterY(lane index)
 
-  // Jump spans: a neutral bar ending at its landing glyph.
+  // Spans (`t1`): a neutral bar ending at the kind's glyph.
   for (const h of lane.items) {
     if (h.t1 === null || h.t1 === undefined) continue;
     const x0 = xOf(h.t, s);
@@ -364,16 +378,16 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
         ctx.arc(cx, cy, 11, 0, Math.PI * 2);
         ctx.fill();
       }
-      glyph(ctx, c.best.kind, cx, cy, glyphColor(c.best, lane, pal), pal.bg);
+      glyph(ctx, shapeOf(c.best.kind), cx, cy, glyphColor(c.best, lane, pal), pal.bg);
       hits.push({ lane: lane.id, pane: lane.pane, x: cx, y: cy, r: 12, cluster: c });
     }
   }
 
-  // Span ends: the landing glyph in neutral, clickable like a moment.
+  // Span ends: the kind's glyph, clickable like a moment.
   for (const h of spans) {
     const cx = xOf(h.t1 as number, s);
     if (cx < GUTTER - 12 || cx > s.width - RIGHT_PAD + 12) continue;
-    glyph(ctx, "landing", cx, cy, pal.muted, pal.bg);
+    glyph(ctx, shapeOf(h.kind), cx, cy, glyphColor(h, lane, pal), pal.bg);
     hits.push({
       lane: lane.id,
       pane: lane.pane,
@@ -388,13 +402,23 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
   for (const m of lane.labels ?? []) {
     const cx = xOf(m.t0, s);
     if (cx < GUTTER - 12 || cx > s.width + 12) continue;
+    if (m.t1 > m.t0) {
+      const x1 = xOf(m.t1, s);
+      ctx.fillStyle = pal.muted;
+      ctx.globalAlpha = 0.45;
+      ctx.beginPath();
+      ctx.roundRect(cx, cy - 2, Math.max(2, x1 - cx), 4, 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     glyph(ctx, "label", cx, cy, pal.fg, pal.bg);
     ctx.fillStyle = pal.fg;
     ctx.font = `11px ${pal.sans}`;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     const room = s.width - RIGHT_PAD - (cx + 10);
-    if (m.label && room > 30) ctx.fillText(fit(ctx, m.label, Math.min(room, 140)), cx + 10, cy + 0.5);
+    const text = m.label || m.type;
+    if (text && room > 30) ctx.fillText(fit(ctx, text, Math.min(room, 140)), cx + 10, cy + 0.5);
     hits.push({ lane: lane.id, pane: lane.pane, x: cx, y: cy, r: 12, label: m });
   }
 }

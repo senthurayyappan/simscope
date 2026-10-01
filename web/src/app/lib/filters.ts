@@ -137,8 +137,16 @@ export function stepRun(rows: readonly RunRow[], from: string | null, delta: num
   return rows[j];
 }
 
-/** Splits a run name for middle truncation: the head may be clipped, the last 10 characters never are (L4). */
-export function splitName(name: string, tail = 10): [string, string] {
-  if (name.length <= tail + 4) return [name, ""];
-  return [name.slice(0, name.length - tail), name.slice(name.length - tail)];
+/** Longest name shown in the library before it is cut (L4). */
+export const NAME_LIMIT = 16;
+
+/**
+ * A name cut at `limit` characters with a trailing `…`; the full name belongs
+ * in a tooltip. Counts code points, so an emoji or other surrogate pair is
+ * never split.
+ */
+export function shortName(name: string, limit = NAME_LIMIT): { text: string; cut: boolean } {
+  const chars = Array.from(name);
+  if (chars.length <= limit) return { text: name, cut: false };
+  return { text: `${chars.slice(0, limit).join("")}…`, cut: true };
 }

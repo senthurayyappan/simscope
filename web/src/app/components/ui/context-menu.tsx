@@ -2,6 +2,7 @@ import * as React from "react";
 import { ContextMenu as M } from "radix-ui";
 import { ChevronRight } from "lucide-react";
 
+import { markMenuClosed } from "@/lib/menu-focus";
 import { cn } from "@/lib/utils";
 
 import { menuItem, menuSurface } from "./dropdown-menu";
@@ -13,7 +14,15 @@ export const ContextMenuSub = M.Sub;
 export function ContextMenuContent({ className, ...props }: React.ComponentProps<typeof M.Content>) {
   return (
     <M.Portal>
-      <M.Content collisionPadding={8} className={cn(menuSurface, "min-w-48", className)} {...props} />
+      <M.Content
+        collisionPadding={8}
+        className={cn(menuSurface, "min-w-48", className)}
+        {...props}
+        onCloseAutoFocus={(e) => {
+          markMenuClosed();
+          props.onCloseAutoFocus?.(e);
+        }}
+      />
     </M.Portal>
   );
 }

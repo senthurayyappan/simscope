@@ -612,9 +612,9 @@ def test_pack_carries_highlights(tmp_path):
         assert reader.runs() == ["spiky"]
     assert doc["format"] == "simscope-highlights/2"
     assert [(h["env"], h["frame"], h["kind"]) for h in doc["highlights"]] == [
-        (e, 20 + 10 * e, "contact_spike") for e in range(4)
+        (e, 20 + 10 * e, "contact") for e in range(4)
     ]
-    assert doc["kinds"] == [{"key": "contact_spike", "label": "Contact spike"}]
+    assert doc["kinds"] == [{"key": "contact", "label": "Contact force"}]
     assert doc["run_id"] == manifest.read_manifest(root / "runs" / "spiky").id
     off = export.build_pack(root, ["spiky"], derived=False)
     assert _pack_minor(off) == 0
@@ -639,7 +639,7 @@ def test_highlights_follow_the_env_subset(tmp_path):
         (1, 30),
         (0, 50),
     ]
-    assert [k["key"] for k in doc["kinds"]] == ["contact_spike"]
+    assert [k["key"] for k in doc["kinds"]] == ["contact"]
     assert frames[50, 0, 0, 5] == 503.0 and frames[30, 1, 0, 5] == 501.0
 
 

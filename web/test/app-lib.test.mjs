@@ -2,12 +2,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildSections, dateBucket, flatOrder, matchesQuery, nextUnrated, splitName, stepRun, SECTION_LIMIT } from "../src/app/lib/filters.ts";
+import { buildSections, dateBucket, flatOrder, matchesQuery, nextUnrated, shortName, stepRun, SECTION_LIMIT } from "../src/app/lib/filters.ts";
+import { kindVar, validColor } from "../src/app/lib/palette.ts";
 import { formatCount, formatDuration, formatTimecode, formatValue, lastFrameTime, parseTime } from "../src/app/lib/format.ts";
 import { isTypingTarget, resolveKey } from "../src/app/lib/keys.ts";
 import {
+  BOTTOM_PAD,
+  BAR_H,
+  GUTTER,
+  LANE_H,
+  RIGHT_PAD,
+  RULER_H,
   clampView,
   clusterHighlights,
+  laneCenterY,
+  laneTop,
+  timeToX,
+  timelineHeight,
+  xToTime,
   followPlayhead,
   kindRank,
   niceStep,
@@ -71,18 +83,57 @@ test("view: clamp, zoom keeps the anchor, pan, follow", () => {
   assert.equal(snapFrame(0.113, 0.02), 0.12);
 });
 
-test("clusters: glyphs closer than the gap merge; the most important kind represents them", () => {
+test("clusters: close markers merge, sit at their first member; contact then acceleration then custom names them", () => {
   const h = (t, kind, score = 7) => ({ t, frame: 0, t1: null, frame1: null, env: 0, kind, label: kind, detail: "", score, ratio: null, value: 1, body: null, also: [], signal: kind });
-  const items = [h(1.0, "contact_spike", 20), h(1.01, "landing", 7), h(1.02, "torque_spike", 30), h(4.0, "fall", 9)];
+  const items = [h(1.0, "acceleration", 20), h(1.01, "contact", 7), h(1.02, "my_kind", 30), h(4.0, "acceleration", 9)];
   const view = { t0: 0, t1: 8 };
   const c = clusterHighlights(items, view, 800, 6);
   assert.equal(c.length, 2);
   assert.equal(c[0].items.length, 3);
-  assert.equal(c[0].best.kind, "landing");
+  assert.equal(c[0].best.kind, "contact");
+  assert.equal(c[0].x, 100, "a cluster is where its first member is");
   assert.equal(c[1].items.length, 1);
-  assert.ok(kindRank("fall") > kindRank("landing") && kindRank("landing") > kindRank("contact_spike") && kindRank("contact_spike") > kindRank("torque_spike"));
+  assert.ok(kindRank("contact") > kindRank("acceleration") && kindRank("acceleration") > kindRank("my_kind"));
   assert.equal(clusterHighlights(items, { t0: 0.99, t1: 1.03 }, 800, 6).length, 3);
   assert.equal(clusterHighlights(items, { t0: 3, t1: 5 }, 800, 6).length, 1);
+});
+
+test("strip geometry: one time-to-pixel mapping for ruler, glyphs and pointer", () => {
+  const W = 1000;
+  const lane = W - GUTTER - RIGHT_PAD;
+  for (const view of [{ t0: 0, t1: 8 }, { t0: 2.5, t1: 3.5 }, { t0: 0, t1: 0.2 }]) {
+    assert.equal(timeToX(view.t0, view, W), GUTTER, "the view's start is the gutter's right edge");
+    assert.ok(Math.abs(timeToX(view.t1, view, W) - (GUTTER + lane)) < 1e-9, "the view's end is the lane's right edge");
+    for (const t of [view.t0, (view.t0 + view.t1) / 2, view.t1]) assert.ok(Math.abs(xToTime(timeToX(t, view, W), view, W) - t) < 1e-9);
+  }
+  // A glyph for a marker at t is drawn at timeToX(t) and the cluster that holds it reports the same pixel from the lane edge.
+  const view = { t0: 1, t1: 3 };
+  const mk = { t: 2.25, frame: 0, t1: null, frame1: null, env: 0, kind: "contact", label: "", detail: "", score: 9, ratio: null, value: 1, body: null, also: [], signal: "contact" };
+  const [c] = clusterHighlights([mk], view, lane, 14);
+  assert.ok(Math.abs(GUTTER + c.x - timeToX(2.25, view, W)) < 1e-9);
+  // Lanes tile the strip below the ruler; glyphs sit on a lane's centre.
+  assert.equal(laneTop(0), RULER_H);
+  assert.equal(laneTop(2), RULER_H + 2 * LANE_H);
+  assert.equal(laneCenterY(1), RULER_H + LANE_H + LANE_H / 2);
+  assert.ok(LANE_H >= 24, "glyph hit targets stay at least 24 px");
+});
+
+test("timeline height: bar, border, ruler, lanes, padding", () => {
+  assert.equal(timelineHeight(0), BAR_H + 1 + RULER_H + BOTTOM_PAD);
+  for (let n = 1; n <= 5; n++) assert.equal(timelineHeight(n) - timelineHeight(n - 1), LANE_H);
+  assert.equal(timelineHeight(1), 111);
+});
+
+test("highlight kinds: built-ins have palette slots, custom kinds a validated hex or neutral", () => {
+  assert.equal(kindVar("contact"), "var(--kind-contact)");
+  assert.equal(kindVar("acceleration"), "var(--kind-acceleration)");
+  assert.equal(kindVar("my_kind", "#c8102e"), "#c8102e");
+  assert.equal(kindVar("my_kind", "red; background:url(x)"), "var(--muted-foreground)");
+  assert.equal(kindVar("my_kind"), "var(--muted-foreground)");
+  assert.equal(validColor("#abc"), "#abc");
+  assert.equal(validColor("#12345"), null);
+  assert.equal(validColor("rgb(0,0,0)"), null);
+  assert.equal(validColor(undefined), null);
 });
 
 test("keys: the v3 map, modifiers ignored, typing suppressed", () => {
@@ -206,14 +257,18 @@ test("library sections: by group follows the library order, extras after, Ungrou
   assert.ok(matchesQuery(row("x", { group: "Vault" }), "vault"));
 });
 
-test("library: next unrated, stepping, middle truncation keeps the tail", () => {
+test("library: next unrated, stepping, names cut at 16 characters", () => {
   const rows = [row("a", { rating: 3 }), row("b"), row("c")];
   assert.equal(nextUnrated(rows, "a").name, "b");
   assert.equal(nextUnrated(rows, "c").name, "b");
   assert.equal(stepRun(rows, "a", 1).name, "b");
   assert.equal(stepRun(rows, "c", 1).name, "c");
-  assert.deepEqual(splitName("go2-crate_climb-upstream-20260910T003806Z"), ["go2-crate_climb-upstream-202609", "10T003806Z"]);
-  assert.deepEqual(splitName("short"), ["short", ""]);
+  assert.deepEqual(shortName("go2-crate_climb-upstream-20260910T003806Z"), { text: "go2-crate_climb-…", cut: true });
+  assert.deepEqual(shortName("0123456789abcdef"), { text: "0123456789abcdef", cut: false }, "16 characters fit");
+  assert.deepEqual(shortName("0123456789abcdefg"), { text: "0123456789abcdef…", cut: true });
+  // Cut at a character, never inside a surrogate pair.
+  const emoji = "😀".repeat(20);
+  assert.equal(shortName(emoji).text, "😀".repeat(16) + "…");
 });
 
 import { baseName, streamSummary } from "../src/app/lib/metadata.ts";

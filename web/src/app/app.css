@@ -42,10 +42,8 @@
   --series-2: oklch(0.62 0.166 47);
   --series-3: oklch(0.59 0.158 150);
   --series-4: oklch(0.6 0.2 335);
-  --kind-landing: oklch(0.66 0.133 78);
+  --kind-acceleration: oklch(0.66 0.133 78);
   --kind-contact: oklch(0.54 0.2 295);
-  --kind-torque: oklch(0.67 0.2 352);
-  --kind-fall: oklch(0.57 0.2 25);
   --ink-future: oklch(0.65 0 0);
 
   /* Hex on purpose: handed to the player as its background. */
@@ -85,10 +83,8 @@
   --series-2: oklch(0.65 0.175 47);
   --series-3: oklch(0.62 0.165 150);
   --series-4: oklch(0.63 0.2 335);
-  --kind-landing: oklch(0.67 0.135 78);
+  --kind-acceleration: oklch(0.67 0.135 78);
   --kind-contact: oklch(0.56 0.2 295);
-  --kind-torque: oklch(0.67 0.2 352);
-  --kind-fall: oklch(0.56 0.2 25);
   --ink-future: oklch(0.5 0 0);
 
   --viewport: #2e2e2e;
@@ -127,10 +123,8 @@
   --color-series-2: var(--series-2);
   --color-series-3: var(--series-3);
   --color-series-4: var(--series-4);
-  --color-kind-landing: var(--kind-landing);
+  --color-kind-acceleration: var(--kind-acceleration);
   --color-kind-contact: var(--kind-contact);
-  --color-kind-torque: var(--kind-torque);
-  --color-kind-fall: var(--kind-fall);
   --color-ink-future: var(--ink-future);
   --color-viewport: var(--viewport);
 

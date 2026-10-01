@@ -153,7 +153,7 @@ def test_highlights_route(client):
     assert r.status_code == 200
     doc = r.json()
     assert doc["format"] == "simscope-highlights/2"
-    assert doc["detector"] == "simscope/2.1" and "kinds" in doc
+    assert doc["detector"] == "simscope/3" and "kinds" in doc
     assert "signals" not in doc
 
 

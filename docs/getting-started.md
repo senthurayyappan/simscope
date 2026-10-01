@@ -27,12 +27,78 @@ collapses. Keys: K play or pause, J and L step (Shift for 10 frames), F
 follow, C contacts, M label the moment, `[` and `]` step envs, N and P step
 runs, 1 to 5 rate, V pin, T theme.
 
-Highlights are named moments found by `simscope.highlights`: landings, jumps,
-falls, contact spikes and torque spikes, each with a plain description such
-as "4.1 g impact, after 0.38 s airborne". They are cached under
-`.simscope/derived/` in the library and travel inside exports. Register your
-own detector with `simscope.highlights.register`. Marks from code use
-`simscope.annotations`.
+Highlights are the markers on the timeline. Two kinds are built in, and they
+mean the same for any robot: **Contact force** (the net force of the
+`contacts` stream, such as "412 N, 5.1x typical") and **Acceleration** (the
+acceleration of the centre of mass, such as "41 m/s², 4.2 g"). A peak is a
+moment that stands out from the run's usual level. They are cached under
+`.simscope/derived/` in the library and travel inside exports. Anything more
+specific to your robot or task, such as a jump or a slip, is yours to add; see
+the next section.
+
+## Custom markers
+
+There are two ways to put your own markers on the timeline.
+
+**1. Compute them.** Write a function that takes the run and returns a list
+of `highlights.Highlight`, and register it. Each `Highlight` has a time `t`
+in seconds, a `frame`, an `env`, your kind's key, a `score` (higher is more
+notable) and a `value`. Give `t1` and `frame1` as well to mark a span. This
+one marks every stretch of at least 0.2 s where the root sits below 0.2 m:
+
+```python
+import numpy as np
+from simscope import highlights
+
+def low_stretches(rollout):
+    poses = rollout.stream("body_pose").read(0, rollout.n_frames)  # [T, E, B, 7]
+    z = poses[:, :, highlights.root_body(rollout.scene), 2]       # root height
+    found = []
+    for env in range(rollout.n_envs):
+        low = np.r_[False, z[:, env] < 0.2, False]
+        edges = np.flatnonzero(np.diff(low.astype(int)))          # starts, ends
+        for start, end in zip(edges[::2], edges[1::2], strict=True):
+            if (end - start) * rollout.dt >= 0.2:
+                found.append(highlights.Highlight(
+                    t=start * rollout.dt, frame=int(start),
+                    t1=(end - 1) * rollout.dt, frame1=int(end - 1),
+                    env=env, kind="low", score=float(end - start),
+                    value=float(z[start:end, env].min()),
+                    detail=f"under 0.2 m for {(end - start) * rollout.dt:.1f} s"))
+    return found
+
+highlights.register("low", low_stretches, label="Low", color="#d9480f")
+```
+
+The key is lower case letters, digits and `_`. The colour is optional (a CSS
+hex colour). The detector runs once per run, in the background, and its
+markers are cached with the built-in ones; changing the detector's label or
+colour, or adding another detector, refreshes the cache. A detector that
+raises, or returns a marker with a frame or env outside the run or a time
+that is not finite, is logged with its name and skipped, and the other kinds
+still show. Register before you serve or export, in the same process:
+
+```python
+from simscope import server
+server.serve("my_library")      # the same as `simscope serve`, with your kinds
+```
+
+**2. Add them by hand.** An event is a marker you place yourself, with a time
+or a span, a label and, if you like, a type with a colour. Events are saved
+next to the run (`annotations.json`) and show in the Labels lane:
+
+```python
+from simscope import annotations, library
+
+lib = library.Library("my_library")
+lib.set_event_types([annotations.EventType(type_id="slip", name="Slip", color="#e59a1c")])
+with lib.open("walk") as run:
+    run.annotations.add_event("slip", t0=1.2, t1=1.5, label="left foot slips", env=0)
+    run.annotations.save()
+```
+
+Use computed markers for something you can find from the data in every run,
+and events for something you noticed.
 
 ## Development
 

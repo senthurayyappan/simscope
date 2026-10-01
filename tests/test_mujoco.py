@@ -146,6 +146,14 @@ def test_bodies(model: mujoco.MjModel) -> None:
     ]
 
 
+def test_body_masses_come_from_the_model(model: mujoco.MjModel) -> None:
+    scene = smj.scene_from_model(model)
+    assert scene.bodies[0].mass == 0.0  # the world has no mass
+    got = [b.mass for b in scene.bodies[1:]]
+    assert got == pytest.approx(model.body_mass[1:].tolist())
+    assert all(m > 0 for m in got)  # every body here owns a geom
+
+
 def test_golden_world_poses(model: mujoco.MjModel) -> None:
     """Exported body poses composed with local geom poses match MuJoCo."""
     scene = smj.scene_from_model(model)

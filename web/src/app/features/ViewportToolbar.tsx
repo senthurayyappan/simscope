@@ -196,9 +196,9 @@ function ExportMenu() {
           </DropdownMenuTrigger>
         </span>
       </Hint>
-      <DropdownMenuContent align="end" className="w-64">
-        {item("lean", "Player page (.html)", "Light, for decks and sharing", FileCode2)}
-        {item("full", "Full viewer (.html)", "This app, offline", Download)}
+      <DropdownMenuContent align="end" className="w-72">
+        {item("lean", "Player page", runs.length > 1 ? `A small HTML file that plays these ${runs.length} runs side by side. Works offline.` : "A small HTML file that plays this run. Works offline.", FileCode2)}
+        {item("full", "Full viewer", runs.length > 1 ? `The complete viewer in one HTML file, with these ${runs.length} runs. Works offline.` : "The complete viewer in one HTML file. Works offline.", Download)}
       </DropdownMenuContent>
     </DropdownMenu>
   );

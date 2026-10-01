@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePanelRef } from "react-resizable-panels";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
@@ -11,7 +11,8 @@ import { ErrorToast } from "./features/ErrorToast";
 import { Inspector } from "./features/inspector/Inspector";
 import { Library } from "./features/library/Library";
 import { InspectorRail, LibraryRail } from "./features/Rail";
-import { TimelinePanel, timelineHeight } from "./features/timeline/Timeline";
+import { TimelinePanel } from "./features/timeline/Timeline";
+import { timelineHeight } from "@/lib/timeline-math";
 import { Viewport } from "./features/Viewport";
 
 // Panel sizes are kept in pixels, not the percentages react-resizable-panels
@@ -119,7 +120,9 @@ export function App() {
   }, []);
 
   // The timeline opens at its content height (L5) and follows the lane count.
+  const lanes = useRef(0);
   const onLanes = useCallback((count: number) => {
+    lanes.current = count;
     const panel = bottom.current;
     if (panel && !panel.isCollapsed()) panel.resize(`${timelineHeight(count)}px`);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -129,7 +132,12 @@ export function App() {
     if (!panel) return;
     const collapse = !panel.isCollapsed();
     if (collapse) panel.collapse();
-    else panel.expand();
+    else if (key === "timeline") {
+      // expand() would restore a remembered size, which is stale after a restore-collapsed start or a lane change
+      // (the timeline then opens half hidden); always open at the content height for the current lanes.
+      panel.expand();
+      panel.resize(`${timelineHeight(lanes.current)}px`);
+    } else panel.expand();
     writeCollapsed({ ...readCollapsed(), [key]: collapse });
   };
 
