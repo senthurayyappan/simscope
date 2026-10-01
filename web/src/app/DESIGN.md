@@ -63,3 +63,5 @@ This file keeps only the layout facts that are specific to the code.
   and only when the server answers 404.
 
 Library rename (contracts §11.1): double-click a run name or use Rename in the row menu; the field is `InlineName` (`features/library/InlineName.tsx`), the refusal shows as one red line under it, and `renameRun` in the store re-keys rows, panes, picks, cursor and `#run=`. Name rules and re-keying helpers live in `lib/rename.ts`. Pack exports hide Rename. Highlight hover card fields come from `readout` in `lib/format.ts` (§11.2).
+
+Reload persistence (guideline P7): `lib/hash.ts` (URL: `#run=a` or `#runs=a,b&arrange=stack`, `t`, `tab`), `lib/persist.ts` (versioned blobs: `simscope.prefs` in localStorage, `simscope.session` in sessionStorage), `lib/plan.ts` (what this page load must restore), `lib/restore.ts` (applies cameras, time, loop, timeline span as panes load), `lib/sync.ts` (writes all three while the app runs; flushes on `pagehide`). `?debug&nostorage` simulates blocked storage. Library sections are spread along the list height by `lib/distribute.ts` (`space-between`; minimum gap 14 px, the extra goes into the header items' sizes).

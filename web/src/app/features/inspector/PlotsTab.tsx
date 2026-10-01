@@ -23,6 +23,7 @@ import { cssVar, seriesVar, SLOT_LETTERS, withAlpha } from "@/lib/palette";
 import { getClock, onFrame, playerAt } from "@/lib/runtime";
 import { useApp, type PlotWindow } from "@/lib/store";
 import type { EnvelopeDoc } from "@/lib/types";
+import { useScrollMemory } from "@/lib/use-scroll-memory";
 import { clamp, cn } from "@/lib/utils";
 
 const PLOT_H = 120;
@@ -71,6 +72,7 @@ export function PlotsTab() {
   const win = useApp((s) => s.plotWindow);
   const theme = useApp((s) => s.resolvedTheme);
   const specs = useSeriesSpecs();
+  const scroller = useRef<HTMLDivElement>(null);
 
   const channels = useMemo(() => {
     if (manifest) return buildChannels(manifest.streams);
@@ -83,6 +85,8 @@ export function PlotsTab() {
     setSelected(defaultChannelIds(channels));
   }, [run, channels.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useScrollMemory(scroller, "plots", !!info);
+
   if (!info) {
     return <p className="px-4 py-6 text-sm text-muted-foreground">Open a run to plot its signals.</p>;
   }
@@ -94,12 +98,12 @@ export function PlotsTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-1 px-2">
+      <div className="@container flex h-10 shrink-0 items-center gap-1 overflow-hidden px-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="gap-1.5 px-2">
+            <Button variant="ghost" size="sm" className="gap-1.5 px-2" aria-label="Channels">
               <ListChecks />
-              Channels
+              <span className="@max-[20rem]:hidden">Channels</span>
               <span className="num text-muted-foreground">{selected.length}</span>
               <ChevronDown className="size-3.5 text-muted-foreground" />
             </Button>
@@ -132,14 +136,7 @@ export function PlotsTab() {
           <DropdownMenuContent>
             <DropdownMenuRadioGroup
               value={win}
-              onValueChange={(v) => {
-                try {
-                  localStorage.setItem("simscope.plotwindow", v);
-                } catch {
-                  /* not remembered */
-                }
-                useApp.setState({ plotWindow: v as PlotWindow });
-              }}
+              onValueChange={(v) => useApp.setState({ plotWindow: v as PlotWindow })}
             >
               <DropdownMenuRadioItem value="all">Whole run</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="5">Last 5 s</DropdownMenuRadioItem>
@@ -149,7 +146,7 @@ export function PlotsTab() {
         </DropdownMenu>
       </div>
       <Legend specs={specs} />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto pb-4">
         {shown.map((c, i) => (
           <ChannelPlot
             key={c.id}

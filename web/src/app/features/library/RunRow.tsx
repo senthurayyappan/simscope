@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { shortName } from "@/lib/filters";
 import { formatDuration, lastFrameTime } from "@/lib/format";
 import { MAX_COMPARE, useApp } from "@/lib/store";
+import { setRenameText } from "@/lib/sync";
 import { seriesVar, SLOT_LETTERS } from "@/lib/palette";
 import type { RunRow as Row } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -107,12 +108,16 @@ function RunEditor({ name }: { name: string }) {
   const { renameRun, cancelRename, setRenameError } = useApp.getState();
   return (
     <InlineName
-      initial={name}
+      initial={useApp.getState().renaming?.text ?? name}
+      restored={useApp.getState().renaming?.text !== undefined}
       label={`Name of ${name}`}
       maxLength={128}
       className="text-sm"
       error={error}
-      onChange={() => setRenameError(null)}
+      onChange={(text) => {
+        setRenameError(null);
+        setRenameText(text);
+      }}
       onCancel={cancelRename}
       onSave={(value) => {
         const next = value.trim();

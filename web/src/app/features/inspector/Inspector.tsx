@@ -1,9 +1,11 @@
+import { useRef } from "react";
 import { PanelRightClose } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Hint } from "@/components/ui/tooltip";
 import { useApp, type InspectorTab } from "@/lib/store";
+import { useScrollMemory } from "@/lib/use-scroll-memory";
 
 import { EnvsTab } from "./EnvsTab";
 import { MetadataTab } from "./MetadataTab";
@@ -15,6 +17,9 @@ export function Inspector({ onCollapse }: { onCollapse(): void }) {
   const envs = useApp((s) => s.infos[s.active]?.envs ?? 1);
   const hasEnvs = envs > 1;
   const value: InspectorTab = tab === "envs" && !hasEnvs ? "plots" : tab;
+  const manifestReady = useApp((s) => s.manifest !== null);
+  const metaScroll = useRef<HTMLDivElement>(null);
+  useScrollMemory(metaScroll, "metadata", value === "metadata" && manifestReady);
 
   return (
     <Tabs value={value} onValueChange={(v) => useApp.setState({ tab: v as InspectorTab })} className="flex h-full min-h-0 flex-col bg-background">
@@ -35,7 +40,7 @@ export function Inspector({ onCollapse }: { onCollapse(): void }) {
       <TabsContent value="plots">
         <PlotsTab />
       </TabsContent>
-      <TabsContent value="metadata" className="overflow-y-auto overflow-x-hidden">
+      <TabsContent value="metadata" ref={metaScroll} className="overflow-y-auto overflow-x-hidden">
         <MetadataTab />
       </TabsContent>
       {hasEnvs ? (

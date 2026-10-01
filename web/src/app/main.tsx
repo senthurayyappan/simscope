@@ -8,6 +8,7 @@ import { createApi, readBoot } from "@/lib/api";
 import { coreReady, startLoop } from "@/lib/core";
 import * as runtime from "@/lib/runtime";
 import { applyThemeClass, useApp } from "@/lib/store";
+import { enableSync, startSync } from "@/lib/sync";
 
 import "./app.css";
 
@@ -39,7 +40,11 @@ async function boot() {
     startLoop();
     // `?debug` exposes the store for scripted checks (Playwright flows, screenshots).
     if (new URLSearchParams(location.search).has("debug")) Object.assign(window, { __simscope: useApp, __runtime: runtime });
-    void useApp.getState().init(api, { runs: boot.runs, layout: boot.layout, arrange: boot.arrange });
+    startSync();
+    void useApp
+      .getState()
+      .init(api, { runs: boot.runs, layout: boot.layout, arrange: boot.arrange })
+      .finally(enableSync);
     createRoot(root).render(<App />);
   } catch (e) {
     fatal(root, `simscope could not start: ${(e as Error).message}`);

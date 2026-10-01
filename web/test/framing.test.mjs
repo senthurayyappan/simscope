@@ -199,6 +199,30 @@ test("a zoom by hand is respected: the extent arriving does not undo it, an expl
   assert.equal(p.rig.userZoomed, false);
 });
 
+test("a restored camera state with keep is final: the extent arriving does not undo it", async () => {
+  const g = gate();
+  const p = new Player(null, { renderer: nullRenderer, clock: new Clock() });
+  p.resize(W, H, 1);
+  await p.load(gated(JUMPER, g), "jump");
+  const state = { ...p.cameraState(), zoom: p.cameraState().zoom * 3 };
+  p.setCameraState(state, { animate: false, keep: true });
+  settle([p], 0.5);
+  const h = p.rig.targetHeight;
+  g.open();
+  await p._extentJob;
+  settle([p], 1);
+  assert.equal(p.rig.targetHeight, h, "the saved zoom survives the one-time fit");
+});
+
+test("a synced camera state without keep still lets the receiver fit", async () => {
+  const g = gate();
+  const p = new Player(null, { renderer: nullRenderer, clock: new Clock() });
+  p.resize(W, H, 1);
+  await p.load(gated(JUMPER, g), "jump");
+  p.setCameraState(p.cameraState(), { animate: false });
+  assert.equal(p.rig.userZoomed, false);
+});
+
 test("choosing a view refits the height for it, unless the user zoomed", async () => {
   const p = await mk(JUMPER, new Clock());
   p.setView("side", { animate: false });

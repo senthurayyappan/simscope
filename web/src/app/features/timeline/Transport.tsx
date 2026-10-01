@@ -76,7 +76,7 @@ export function Transport({
       <div className="flex min-w-0 items-center justify-self-end gap-0.5">
         <Readout hasRun={hasRun} dt={info?.dt ?? 0.02} frames={info?.frames ?? 0} />
         <Hint label="Loop">
-          <Toggle size="icon-sm" pressed={snap.loop} disabled={!hasRun} onPressedChange={(v) => (clock.loop = v)} aria-label="Loop">
+          <Toggle className="@max-[28rem]:hidden" size="icon-sm" pressed={snap.loop} disabled={!hasRun} onPressedChange={(v) => (clock.loop = v)} aria-label="Loop">
             <Repeat />
           </Toggle>
         </Hint>
@@ -144,10 +144,11 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
   };
 
   // The button and the field share one box, so nothing moves when editing starts.
-  const box = "num mr-1 h-7 w-28 shrink-0 rounded-md px-2 text-xs";
+  // Narrow bars show only the current time, in a shorter box (the total is in the tooltip).
+  const box = "num mr-1 h-7 w-28 shrink-0 rounded-md px-2 text-xs @max-[36rem]:w-14";
   if (editing) return <EditField className={box} initial={formatTimecode(getClock().time)} onCommit={commit} onCancel={() => setEditing(false)} />;
   return (
-    <Tooltip onOpenChange={(o) => o && setTip(`Frame ${formatCount(Math.round(getClock().time / dt))} of ${formatCount(frames)}`)}>
+    <Tooltip onOpenChange={(o) => o && setTip(`Frame ${formatCount(Math.round(getClock().time / dt))} of ${formatCount(frames)}, ${formatTimecode(getClock().duration)} s long`)}>
       <TooltipTrigger asChild>
         <button
           type="button"
@@ -157,7 +158,7 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
           aria-label="Current time, click to type a time"
         >
           <span ref={timeEl} className="font-medium" />
-          <span className="text-muted-foreground">
+          <span className="text-muted-foreground @max-[36rem]:hidden">
             {" / "}
             <span ref={totalEl} />
           </span>

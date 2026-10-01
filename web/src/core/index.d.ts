@@ -295,7 +295,7 @@ export class Player extends EventTarget {
   follow(): { mode: FollowMode; env: number; body: number };
   cameraState(): CameraState;
   /** Apply a state from `cameraState()` (the orbit, zoom and pan; the target only for a state without a pan, and only when not following). */
-  setCameraState(state: unknown, opts?: { animate?: boolean }): void;
+  setCameraState(state: unknown, opts?: { animate?: boolean; keep?: boolean }): void;
 
   // Display.
   setTheme(theme: Theme, background?: string): void;

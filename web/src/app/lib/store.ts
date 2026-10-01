@@ -7,11 +7,13 @@ import { create } from "zustand";
 import type { Api } from "./api";
 import type { FollowMode, RunInfo, ViewName } from "./core";
 import { buildSections, flatOrder, nextUnrated, stepRun, type LibraryView, type SortKey } from "./filters";
+import { missingNotice, resolveRuns } from "./hash";
 import { carryPaneState, isArrangement, type Arrangement } from "./panes";
+import { prefs, quietly, type Prefs } from "./persist";
+import { armRestore, clearPending, plan } from "./plan";
 import { MAX_SLOTS } from "./palette";
 import { renameIn, renameKey, validateRunName } from "./rename";
 import { EMPTY_ANNOTATIONS, rowWithAnnotations } from "./rows";
-import { readStore, writeStore } from "./utils";
 import type { AnnotationOp, Annotations, GroupOp, GroupsDoc, HighlightsDoc, LibraryInfo, Manifest, RunRow } from "./types";
 
 export type ThemePref = "light" | "dark" | "system";
@@ -47,7 +49,7 @@ export interface AppState {
   folded: string[];
   cursor: string | null;
   /** The run whose name is being edited in the library, with the server's or the name rule's complaint. */
-  renaming: { name: string; error: string | null } | null;
+  renaming: { name: string; error: string | null; /** Text restored after a reload. */ text?: string } | null;
 
   panes: PaneRef[];
   active: number;
@@ -129,19 +131,18 @@ export interface AppActions {
   poll(): Promise<void>;
 }
 
-const lsKey = (k: string) => `simscope.${k}`;
+const saved = prefs.read();
 
 function systemTheme(): "light" | "dark" {
   return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-function pick<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
-  const v = readStore(lsKey(key));
-  return (allowed as readonly string[]).includes(v ?? "") ? (v as T) : fallback;
+function pref<K extends keyof Prefs>(key: K, fallback: NonNullable<Prefs[K]>): NonNullable<Prefs[K]> {
+  return (saved[key] ?? fallback) as NonNullable<Prefs[K]>;
 }
 
-const themePref = pick<ThemePref>("theme", ["light", "dark", "system"], "system");
-const follow = pick<FollowMode>("follow", ["off", "position", "pose", "heading"], "position");
+const themePref = pref("theme", "system") as ThemePref;
+const follow = pref("follow", "position") as FollowMode;
 
 /** Puts the theme class on <html> now, so anything reading CSS tokens in the same commit sees it. */
 export function applyThemeClass(resolved: "light" | "dark"): void {
@@ -172,14 +173,6 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     }
   }
 
-  function writeHash(name: string | null) {
-    try {
-      history.replaceState(null, "", name ? `#run=${encodeURIComponent(name)}` : location.pathname + location.search);
-    } catch {
-      /* file:// in some browsers */
-    }
-  }
-
   function enterRuns(panes: PaneRef[], active = 0) {
     const s = get();
     set({
@@ -193,7 +186,6 @@ export const useApp = create<AppState & AppActions>((set, get) => {
       pinned: [],
       labelDraft: null,
     });
-    writeHash(panes[active]?.name ?? null);
     void loadRunData(panes[active]?.name);
   }
 
@@ -216,11 +208,11 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     live: {},
     groups: null,
 
-    libraryView: pick<LibraryView>("view", ["date", "group"], "date"),
-    query: "",
-    sort: pick<SortKey>("sort", ["newest", "name", "longest"], "newest"),
-    expanded: [],
-    folded: [],
+    libraryView: pref("view", "date") as LibraryView,
+    query: plan.session.query,
+    sort: pref("sort", "newest") as SortKey,
+    expanded: plan.session.expanded,
+    folded: pref("folded", []),
     cursor: null,
     renaming: null,
 
@@ -240,17 +232,17 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     resolvedTheme: themePref === "system" ? systemTheme() : themePref,
     camView: "iso",
     follow,
-    followChosen: readStore(lsKey("follow")) !== null,
+    followChosen: saved.follow !== undefined,
     lastFollow: follow === "off" ? "position" : follow,
-    groundOn: readStore(lsKey("ground")) !== "off",
-    groundKind: pick<GroundKind>("groundkind", ["checker", "grid"], "checker"),
-    visual: true,
-    collision: false,
-    contacts: false,
-    cameraSync: true,
-    arrange: ((v) => (isArrangement(v) ? v : null))(readStore(lsKey("arrange"))),
-    tab: "plots",
-    plotWindow: pick<PlotWindow>("plotwindow", ["all", "5", "2"], "all"),
+    groundOn: pref("groundOn", true),
+    groundKind: pref("groundKind", "checker") as GroundKind,
+    visual: pref("visual", true),
+    collision: pref("collision", false),
+    contacts: pref("contacts", false),
+    cameraSync: pref("cameraSync", true),
+    arrange: saved.arrange ?? null,
+    tab: plan.hash.tab ?? "plots",
+    plotWindow: pref("plotWindow", "all") as PlotWindow,
     followLive: true,
     labelDraft: null,
     leftCollapsed: false,
@@ -260,7 +252,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     async init(api, layout) {
       set({ api });
       // A full export boots with the arrangement it was made with (not remembered as the user's choice).
-      if (isArrangement(layout?.arrange)) set({ arrange: layout.arrange });
+      if (isArrangement(layout?.arrange)) quietly(() => set({ arrange: layout.arrange as Arrangement }));
       try {
         const [library] = await Promise.all([api.library(), get().refreshRows()]);
         set({ library });
@@ -270,18 +262,32 @@ export const useApp = create<AppState & AppActions>((set, get) => {
         return;
       }
       const rows = get().rows;
-      const hashRun = /[#&]run=([^&]+)/.exec(location.hash)?.[1];
-      const want = hashRun ? decodeURIComponent(hashRun) : null;
       const names = new Set(rows.map((r) => r.name));
-      if (layout?.layout && layout.layout !== "single" && layout.runs?.length) {
-        const picks = layout.runs.filter((n) => names.has(n)).slice(0, MAX_COMPARE);
-        if (picks.length > 1) {
-          enterRuns(picks.map((name, slot) => ({ name, slot })));
-          return;
-        }
+      const saved = plan.session;
+      // What to open: the URL first, then a full export's own layout, then this tab's last workspace.
+      let wanted = plan.hash.runs;
+      let arrange = plan.hash.arrange;
+      if (wanted.length === 0 && layout?.layout && layout.layout !== "single" && layout.runs?.length) {
+        wanted = layout.runs.slice(0, MAX_COMPARE);
+        arrange = isArrangement(layout.arrange) ? layout.arrange : null;
       }
-      if (want && names.has(want)) enterRuns([{ name: want, slot: 0 }]);
-      else if (api.mode === "pack" && rows.length > 0) enterRuns([{ name: rows[0].name, slot: 0 }]);
+      if (wanted.length === 0) wanted = saved.runs;
+      const { kept, missing } = resolveRuns(wanted, names);
+      const notice = missingNotice(missing);
+      if (notice) set({ error: notice });
+      if (kept.length > 1 && arrange) quietly(() => set({ arrange }));
+      // Selection and the open rename editor belong to this tab's workspace.
+      const picks = saved.picks.filter((p) => names.has(p.name));
+      if (picks.length) set({ picks });
+      if (saved.rename && names.has(saved.rename.name) && api.writable) set({ renaming: { name: saved.rename.name, error: null, text: saved.rename.text } });
+      if (kept.length > 0) {
+        armRestore(kept, plan.hash.t);
+        const active = Math.min(saved.runs.join() === kept.join() ? saved.active : 0, kept.length - 1);
+        enterRuns(kept.map((name, slot) => ({ name, slot })), active);
+        if (saved.runs.join() === kept.join()) set({ pinned: saved.pinned });
+      } else if (api.mode === "pack" && rows.length > 0) {
+        enterRuns([{ name: rows[0].name, slot: 0 }]);
+      }
     },
 
     async refreshRows() {
@@ -303,11 +309,9 @@ export const useApp = create<AppState & AppActions>((set, get) => {
 
     setQuery: (query) => set({ query }),
     setSort(sort) {
-      writeStore(lsKey("sort"), sort);
       set({ sort });
     },
     setLibraryView(libraryView) {
-      writeStore(lsKey("view"), libraryView);
       set({ libraryView });
     },
     expandSection: (id) => set({ expanded: get().expanded.includes(id) ? get().expanded : [...get().expanded, id] }),
@@ -320,12 +324,14 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     openRun(name) {
       const { panes } = get();
       if (panes.length === 1 && panes[0].name === name) return;
+      clearPending();
       enterRuns([{ name, slot: 0 }]);
     },
 
     openCompare() {
       const picks = [...get().picks].sort((a, b) => a.slot - b.slot);
       if (picks.length < 2) return;
+      clearPending();
       enterRuns(picks);
       set({ picks: [] });
     },
@@ -334,6 +340,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
       const { panes, active } = get();
       if (panes.length <= 1) return;
       const next = panes.filter((_, i) => i !== index);
+      clearPending();
       enterRuns(next, Math.min(active === index ? 0 : active > index ? active - 1 : active, next.length - 1));
     },
 
@@ -341,7 +348,6 @@ export const useApp = create<AppState & AppActions>((set, get) => {
       const { panes, active } = get();
       if (index === active || index >= panes.length) return;
       set({ active: index, cursor: panes[index].name, pinned: [], labelDraft: null });
-      writeHash(panes[index].name);
       void loadRunData(panes[index].name);
     },
 
@@ -437,8 +443,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
       }
       // The run keeps its place in every list and stays open; only its name changes.
       const s = get();
-      const wasActive = s.panes[s.active]?.name === name;
-      set({
+            set({
         rows: renameIn(s.rows, name, to),
         panes: renameIn(s.panes, name, to),
         picks: renameIn(s.picks, name, to),
@@ -448,7 +453,6 @@ export const useApp = create<AppState & AppActions>((set, get) => {
         live: renameKey(s.live, name, to),
         renaming: null,
       });
-      if (wasActive) writeHash(to);
       return true;
     },
 
@@ -480,7 +484,6 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     set: (patch) => set(patch),
 
     setTheme(pref) {
-      writeStore(lsKey("theme"), pref);
       const resolvedTheme = pref === "system" ? systemTheme() : pref;
       applyThemeClass(resolvedTheme);
       set({ themePref: pref, resolvedTheme });
@@ -492,17 +495,14 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     },
 
     setFollowMode(mode) {
-      writeStore(lsKey("follow"), mode);
       set({ followChosen: true, follow: mode, lastFollow: mode === "off" ? get().lastFollow : mode });
     },
 
     setArrange(arrange) {
-      writeStore(lsKey("arrange"), arrange);
       set({ arrange });
     },
 
     setGroundKind(kind) {
-      writeStore(lsKey("groundkind"), kind);
       set({ groundKind: kind });
     },
 

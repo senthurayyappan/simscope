@@ -17,6 +17,7 @@ import { formatCount, formatValue } from "@/lib/format";
 import { activePlayer } from "@/lib/runtime";
 import { MAX_PINNED, useApp } from "@/lib/store";
 import type { SummariesDoc } from "@/lib/types";
+import { useScrollMemory } from "@/lib/use-scroll-memory";
 import { cn } from "@/lib/utils";
 
 const ROW = 32;
@@ -97,6 +98,7 @@ export function EnvsTab() {
   }, [values]);
 
   const scroller = useRef<HTMLDivElement>(null);
+  useScrollMemory(scroller, "envs", order.length > 0);
   const virt = useVirtualizer({ count: order.length, getScrollElement: () => scroller.current, estimateSize: () => ROW, overscan: 12 });
 
   // Bring the selected env into view when it changes by key or click elsewhere.

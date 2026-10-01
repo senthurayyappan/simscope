@@ -4,7 +4,7 @@ import { usePanelRef } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useApp } from "@/lib/store";
-import { readStore, writeStore } from "@/lib/utils";
+import { prefs } from "@/lib/persist";
 
 import { Drivers } from "./features/Drivers";
 import { ErrorToast } from "./features/ErrorToast";
@@ -28,11 +28,7 @@ interface Sizes {
 }
 
 function readSizes(): Sizes {
-  try {
-    return JSON.parse(readStore("simscope.sizes") ?? "{}") as Sizes;
-  } catch {
-    return {};
-  }
+  return prefs.read().sizes ?? {};
 }
 
 const clampPx = (v: number | undefined, r: { def: number; min: number; max: number }) =>
@@ -55,15 +51,11 @@ function initialSizes(): { left: number; right: number; timeline: number } {
 type Collapsed = { left?: boolean; right?: boolean; timeline?: boolean };
 
 function readCollapsed(): Collapsed {
-  try {
-    return JSON.parse(readStore("simscope.collapsed") ?? "{}") as Collapsed;
-  } catch {
-    return {};
-  }
+  return prefs.read().collapsed ?? {};
 }
 
 function writeCollapsed(c: Collapsed) {
-  writeStore("simscope.collapsed", JSON.stringify(c));
+  prefs.patch({ collapsed: c });
 }
 
 const RAIL = 40;
@@ -85,7 +77,7 @@ export function App() {
     const next: Sizes = { ...readSizes() };
     if (left.current && !left.current.isCollapsed()) next.left = clampPx(left.current.getSize().inPixels, LIBRARY);
     if (right.current && !right.current.isCollapsed()) next.right = clampPx(right.current.getSize().inPixels, INSPECTOR);
-    writeStore("simscope.sizes", JSON.stringify(next));
+    prefs.patch({ sizes: next });
   };
 
   // Collapsed panels are remembered (only by the user's own toggles; the

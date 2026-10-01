@@ -7,8 +7,10 @@ import { applyDisplay, applyFollow, stepEnv } from "@/lib/commands";
 import { createPlayer, type PlayerLike, type RunInfo } from "@/lib/core";
 import { formatCount } from "@/lib/format";
 import { cssVar, seriesVar, SLOT_LETTERS } from "@/lib/palette";
+import { restoreCamera, restoreEnv, settlePane } from "@/lib/restore";
 import { getClock, registerPlayer } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
+import { scheduleSession } from "@/lib/sync";
 
 /** The viewport background comes from the same tokens as the chrome. */
 export function viewportColor(): string {
@@ -50,6 +52,8 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
       follow: s.follow,
     });
     player.current = p;
+    // A reload puts the saved camera back before the first frame is drawn.
+    restoreCamera(index, run, p);
     const unregister = registerPlayer(index, p);
 
     const on = <T,>(type: string, fn: (detail: T) => void) =>
@@ -59,6 +63,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
     // A user orbit leaves the preset behind; the camera menu then reads "Free".
     on<unknown>("camera", () => {
       if (useApp.getState().camView !== null) useApp.setState({ camView: null });
+      scheduleSession();
     });
     on<{ frames: number }>("live", (d) => {
       const st = useApp.getState();
@@ -100,7 +105,10 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
         // Crowd runs start un-followed unless the user chose a mode before.
         if (!st.followChosen && loaded.envs > 1 && st.follow !== "off") st.set({ follow: "off" });
         applyFollow(p, useApp.getState().follow);
+        restoreCamera(index, run, p);
+        restoreEnv(index, run, p, loaded.envs);
         setLoading(false);
+        settlePane(index, run);
         void p.highlights?.().then((doc) => {
           if (!stale) useApp.getState().setHighlights(index, doc);
         });
@@ -109,6 +117,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
         if (stale) return;
         setLoading(false);
         setError(String((e as Error)?.message ?? e));
+        settlePane(index, run);
       });
     return () => {
       stale = true;

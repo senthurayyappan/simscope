@@ -16,6 +16,7 @@ either fixes it or edits this file in the same commit with the reason.
 - P3. **Use the stock shadcn component and its default look; deviate only with a reason written here.** *Users bring expectations from tools they know; shadcn is the house style.* \[JAKOB\] \[NN-4\]
 - P4. **Colour means identity (which run, which kind of moment) or one reserved state; never decoration.** *If everything is coloured, nothing is.* \[RUI-COLOR\] \[WCAG-141\]
 - P5. **Show each fact once per screen.** *A value repeated in a row, a header and a badge is redundant ink.* \[TUFTE-INK\]
+- P7. **A reload never loses the user's place.** What identifies the view (which items are open, the arrangement, the time) lives in the URL, so it can be shared and survives a reload; this tab's workspace (camera, zoom, selection, filters, draft text) lives in `sessionStorage`; preferences (theme, view modes, toggles) live in `localStorage`. All three are read inside `try/catch` and a missing or stale value falls back to the default, never to an error. *An accidental reload or a crash should cost one second, not the session.* \[NN-3\] \[NN-5\]
 - P6. **Frequent controls are visible; rare ones live one click away in a menu.** *Choice count drives decision time; rare options hide behind progressive disclosure.* \[HICK\] \[NN-PD\]
 
 ## Information

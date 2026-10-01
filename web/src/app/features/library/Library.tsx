@@ -1,4 +1,4 @@
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer, type Range } from "@tanstack/react-virtual";
 import { ArrowUpDown, ChevronDown, ChevronRight, Ellipsis, FolderPlus, PanelLeftClose, Search, SearchX, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
@@ -27,7 +27,10 @@ import {
   type Section,
   type SortKey,
 } from "@/lib/filters";
+import { itemSizes } from "@/lib/distribute";
 import { MAX_COMPARE, useApp } from "@/lib/store";
+import { savedScroll } from "@/lib/sync";
+import { useScrollMemory } from "@/lib/use-scroll-memory";
 import type { RunRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +52,8 @@ type Item =
 const HEIGHT = { header: 32, row: 34, more: 28, empty: 28, "new-group": 36 } as const;
 /** Extra space above every section header but the first, so groups read as separate. */
 const SECTION_GAP = 14;
+/** Space kept under the last section when the sections are spread to the bottom. */
+const BOTTOM_PAD = 8;
 
 export function Library({ onCollapse }: { onCollapse(): void }) {
   const s = useApp(
@@ -110,12 +115,34 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
 
   // Virtual list with a sticky section header (TanStack's sticky recipe).
   const scroller = useRef<HTMLDivElement>(null);
+  useScrollMemory(scroller, "library", s.loaded && items.length > 0);
   const stickyIdx = useRef(0);
   const headerIdx = useMemo(() => items.flatMap((it, i) => (it.kind === "header" ? [i] : [])), [items]);
+  // Sections are spread along the list's height like `space-between`: leftover room goes into the gaps (D-lib).
+  const [room, setRoom] = useState(0);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const read = () => setRoom(Math.floor(el.clientHeight));
+    read();
+    const ro = new ResizeObserver(read);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const sizes = useMemo(
+    () =>
+      itemSizes(
+        items.map((it) => HEIGHT[it.kind]),
+        items.map((it) => it.kind === "header" || it.kind === "new-group"),
+        room - BOTTOM_PAD,
+        SECTION_GAP,
+      ),
+    [items, room],
+  );
   const virt = useVirtualizer({
     count: items.length,
     getScrollElement: () => scroller.current,
-    estimateSize: (i) => HEIGHT[items[i].kind] + (items[i].kind === "header" && i > 0 ? SECTION_GAP : 0),
+    estimateSize: (i) => sizes[i] ?? HEIGHT[items[i].kind],
     overscan: 10,
     rangeExtractor: useCallback(
       (range: Range) => {
@@ -128,9 +155,22 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
     ),
   });
 
+  // The sizes are estimates the virtualiser caches: tell it when they change.
+  const sizeKey = sizes.join(",");
+  useLayoutEffect(() => {
+    virt.measure();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sizeKey]);
+
   // Keep the open run in view when it changes by key (N, P, U).
+  // After a reload the saved scroll position wins over scrolling to the open run.
+  const keepScroll = useRef(savedScroll("library") > 0);
   useEffect(() => {
     if (!activeName) return;
+    if (keepScroll.current) {
+      keepScroll.current = false;
+      return;
+    }
     const i = items.findIndex((it) => it.kind === "row" && it.run.name === activeName && it.section.kind !== "pinned");
     if (i >= 0) virt.scrollToIndex(i, { align: "auto" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -345,14 +385,16 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
                   ) : it.kind === "empty" ? (
                     <div className="flex h-7 items-center px-2 text-sm text-muted-foreground">No runs in this group</div>
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => setDialog({ names: [] })}
-                      className="mt-1 flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                    >
-                      <FolderPlus className="size-4" />
-                      New group
-                    </button>
+                    <div className="flex h-full items-end pb-1">
+                      <button
+                        type="button"
+                        onClick={() => setDialog({ names: [] })}
+                        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      >
+                        <FolderPlus className="size-4" />
+                        New group
+                      </button>
+                    </div>
                   )}
                 </div>
               );

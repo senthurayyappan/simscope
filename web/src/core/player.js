@@ -1334,6 +1334,8 @@ export class Player extends EventTarget {
     if (!state) return;
     const animate = opts.animate === true;
     this.rig.apply(state, animate, false);
+    // A restored view is the user's own: the automatic fit must not undo it.
+    if (opts.keep === true) this.rig.userZoomed = true;
     const pan = state.pan;
     if (Array.isArray(pan) && Number.isFinite(pan[0]) && Number.isFinite(pan[1])) {
       this.pan.a = pan[0];

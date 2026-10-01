@@ -9,10 +9,12 @@ import { getPlotHover } from "@/lib/hover";
 import { validColor } from "@/lib/palette";
 import { getClock, onFrame } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
+import { setLabelText } from "@/lib/sync";
 import { followPlayhead, snapFrame, timelineHeight } from "@/lib/timeline-math";
 
 export { timelineHeight };
 import {
+  applyArmedView,
   fitTimeline,
   getTimelineView,
   panTimeline,
@@ -195,6 +197,7 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
         const wasFit = v.t0 <= 1e-6 && Math.abs(v.t1 - seen.duration) < 1e-3;
         if (wasFit || !(seen.duration > 0)) fitTimeline();
       }
+      applyArmedView();
       if (m.playing && !drag.current) {
         const v = getTimelineView();
         const next = followPlayhead(v, clock.time, clock.duration, 0.05);
@@ -427,12 +430,14 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
                 placeholder={`Label at ${formatTimecode(draft.t)} s`}
                 className="h-6 w-44 bg-background text-sm"
                 aria-label="Label name"
+                onChange={(e) => setLabelText(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") commitLabel(e.currentTarget.value);
                   else if (e.key === "Escape") useApp.setState({ labelDraft: null });
                   e.stopPropagation();
                 }}
-                onBlur={() => useApp.setState({ labelDraft: null })}
+                // Leaving the window is not leaving the field: the text stays for when the user is back.
+                onBlur={() => document.hasFocus() && useApp.setState({ labelDraft: null })}
               />
             </div>
           ) : null}

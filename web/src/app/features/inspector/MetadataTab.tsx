@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { baseName, streamSummary } from "@/lib/metadata";
 import { Textarea } from "@/components/ui/input";
+import { noteDraft, setNoteDraft } from "@/lib/sync";
 import { formatCount, formatDuration, formatRate, formatRecorded, formatValue, lastFrameTime } from "@/lib/format";
 import { meanRating } from "@/lib/rows";
 import { useApp } from "@/lib/store";
@@ -242,7 +243,18 @@ export function MetadataTab() {
 function Notes({ writable }: { writable: boolean }) {
   const notes = useApp((s) => s.annotations?.notes ?? NO_NOTES);
   const annotate = useApp((s) => s.annotate);
-  const [draft, setDraft] = useState("");
+  const run = useApp((s) => s.panes[s.active]?.name ?? null);
+  // An unsent note survives a reload, per run (guideline P7).
+  const [draft, setDraftState] = useState(() => noteDraft(run));
+  const [draftRun, setDraftRun] = useState(run);
+  if (draftRun !== run) {
+    setDraftRun(run);
+    setDraftState(noteDraft(run));
+  }
+  const setDraft = (text: string) => {
+    setDraftState(text);
+    setNoteDraft(run, text);
+  };
   const submit = () => {
     const text = draft.trim();
     if (!text) return;
