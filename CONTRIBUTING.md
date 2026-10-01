@@ -1,45 +1,102 @@
-# Maintaining the template
+# Contributing
 
-This guide is for changing the template itself. To use the template, see
-[README.md](README.md).
+1. Create a branch from `main` and run `make install`.
+2. Add tests for your changes. Ruff requires Google-style docstrings outside `tests/`, so
+   document public modules, classes, and functions.
+3. Run `make check`, `make test`, and `make docs-test`.
+4. Open a pull request with a title such as `fix: handle empty input`.
+5. Squash merge the pull request so Release Please can use its title. In
+   Settings → General → Pull Requests, set the squash merge message to
+   **Pull request title**. You can also require the CI checks to pass
+   before merging.
 
-Files for every preset live in `.template/common/`. `library` and `app` also
-get `.template/packaged/` (docs, releases, commit checks), and each preset adds
-its own folder: `.template/library/`, `.template/app/`, or `.template/bare/`.
-`configure.py` fills in `{{placeholders}}`, such as project names and
-settings. When `library` and `app` differ only slightly, keep one file and
-add a placeholder. When `bare` differs a lot, give it its own file.
+The Makefile contains the uv commands for each task. You can also run those
+commands directly on Windows. If a Git hook changes a file, review and stage
+the change before you commit again. In a new repository, `make docs-test`
+needs at least one commit.
 
-After editing the template, update its file hashes and run the checks:
+Use `uv add` for project dependencies and `uv add --dev` for development tools.
+Commit `pyproject.toml` and `uv.lock` together. When you change the supported
+Python versions, update `.python-version`, `requires-python`, Ruff's target,
+and the Python versions in CI.
 
-```bash
-uv sync
-uv run ruff check .
-uv run ruff format --check .
-uv run ty check
-uv run --no-project python .template/update_manifest.py
-uv run pytest --cov --cov-report=term-missing
-```
+## Workflows
 
-To create a test project in a separate directory:
+CI runs on pushes to main and on pull requests. The `quality` and `tests`
+jobs cover the Python side. The `web` job (Node 26) runs the browser tests,
+type-checks `web/`, rebuilds the bundles, and fails if the committed
+`src/simscope/_assets/` or `web/src/core/decode_worker.generated.js` differ
+from the fresh build.
 
-```bash
-uv run --no-project python configure.py --kind app --name my-cli \
-  --owner your-name --output ../my-cli
-```
+## Publish the docs
 
-The output directory must be empty. GitHub Actions tests all three presets,
-including installation, Git hooks, docs, package builds, and release updates.
+The docs use the **mkdocs-shadcn** theme and a generated API reference. Run `make docs-test` to check them.
+To publish them:
 
-Use Conventional Commits for changes to this template. CI uses `uv sync --locked`
-to check that the lockfile is up to date. Local commands use uv's defaults.
+1. Set `DEPLOY_DOCS=true` in Settings → Secrets and variables → Actions → Variables.
+2. Run the **Docs** workflow once, or push to `main`.
+3. In Settings → Pages, select **Deploy from a branch**, `gh-pages`, `/ (root)`.
 
-Action pins live in `.github/workflows/ci.yml`. Dependabot updates that file.
-Generated workflows copy those pins, so do not paste action SHAs into
-`.template/`.
+For a private repository, check that your GitHub plan supports Pages.
+A private repository can have a public docs site, so check the Pages visibility
+before publishing. You can publish docs without publishing a Python package.
 
-Tool versions live in the `pyproject.toml.in` files and the hook version in
-the `.pre-commit-config.yaml.in` files. Dependabot cannot update these template
-files here, although it does update generated projects. Check them now and
-then. Add each new Python release to `PYTHONS` in `configure.py`
-and to the CI matrix in `.github/workflows/ci.yml`.
+## Releases
+
+Use [Conventional Commits](https://www.conventionalcommits.org/), such as
+`feat: add export` or `fix: handle empty input`. Add `!` after the commit type
+for a breaking change, as in `feat!: change the API`.
+The Git hook checks commit messages. CI checks titles when it runs on pull requests.
+
+Release Please opens a pull request with the new version and changelog.
+It updates the version in both `pyproject.toml` and `uv.lock`. After that pull
+request is merged, its next run creates the GitHub release and version tag.
+
+In Settings → Actions → General, enable **Allow GitHub Actions to create and approve
+pull requests**. With automatic CI enabled, add a
+`RELEASE_PLEASE_TOKEN` secret to run checks on release pull requests. Use a
+fine-grained personal access token with
+read and write access to Contents, Pull requests, and Issues for this repository.
+
+Without that secret, Release Please uses `GITHUB_TOKEN`. GitHub does not start
+CI for pull requests created with that token. Run **CI** on the release branch
+before merging those pull requests.
+
+### Publish to PyPI
+
+To publish releases to PyPI:
+
+1. On PyPI, add a [pending publisher][pending] for this repository. It is
+   "pending" because the first release creates the project. Use workflow
+   `release-please.yml` and environment `pypi`.
+2. Create the `pypi` environment in GitHub. Consider adding required
+   reviewers, so a person approves each publish.
+3. Set the repository variable `PUBLISH_PYPI=true`.
+
+Check that the package name is available on PyPI before the first release.
+The workflow builds and tests the release tag, then publishes the package.
+It uses GitHub's identity to sign in to PyPI, so you do not need a PyPI
+API token.
+
+If publishing fails after the GitHub release is created, open the workflow run
+in the Actions tab and choose **Re-run failed jobs**. Running Release Please
+again does not publish an existing release.
+
+[pending]: https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/
+
+## Project notes
+
+- Do not add `tests/io/__init__.py`. Pytest runs with `--import-mode=importlib`,
+  so that file would register a top-level `io` package that shadows the
+  standard library.
+- The browser code in `web/` (player core, `<simscope-player>` element, and
+  the React app shell) builds into `src/simscope/_assets/` (`simscope-player.js`,
+  `simscope-app.js`, `simscope-app.css`, `simscope-web.LICENSES.txt`), which
+  are committed. After changing `web/src/`, run
+  `cd web && npm ci && npm run build && npm test`, and commit the rebuilt
+  assets. Builds are byte-reproducible.
+- The viewer is our own frontend (viewer v3); the old viser viewer is gone.
+  `simscope serve` needs the `viewer` extra (starlette, uvicorn, watchfiles).
+  The browser tests run with `cd web && npm test`; Node 26 is what CI uses.
+- Design decisions live in the decision log of
+  `docs/specs/2026-09-30-simscope-proposal.md`. Change a decision there first.

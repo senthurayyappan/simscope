@@ -1,0 +1,237 @@
+@import "tailwindcss" source(none);
+@source "./";
+@import "./font.css";
+@import "uplot/dist/uPlot.min.css" layer(components);
+
+/* Tokens: shadcn `neutral` verbatim (UI guidelines C1-C5), plus the eight
+   data colours of the validated palette and the viewport greys. Colour is
+   data only: runs A-D / pinned envs (series), highlight kinds (kind). */
+
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  /* Palette slots 1-8 (guidelines C-table). Runs A-D, then highlight kinds. */
+  --series-1: oklch(0.62 0.2 257);
+  --series-2: oklch(0.62 0.166 47);
+  --series-3: oklch(0.59 0.158 150);
+  --series-4: oklch(0.6 0.2 335);
+  --kind-landing: oklch(0.66 0.133 78);
+  --kind-contact: oklch(0.54 0.2 295);
+  --kind-torque: oklch(0.67 0.2 352);
+  --kind-fall: oklch(0.57 0.2 25);
+  --ink-future: oklch(0.65 0 0);
+
+  /* Hex on purpose: handed to the player as its background. */
+  --viewport: #f4f4f4;
+  color-scheme: light;
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.922 0 0);
+  --sidebar-primary-foreground: oklch(0.205 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+
+  --series-1: oklch(0.66 0.177 257);
+  --series-2: oklch(0.65 0.175 47);
+  --series-3: oklch(0.62 0.165 150);
+  --series-4: oklch(0.63 0.2 335);
+  --kind-landing: oklch(0.67 0.135 78);
+  --kind-contact: oklch(0.56 0.2 295);
+  --kind-torque: oklch(0.67 0.2 352);
+  --kind-fall: oklch(0.56 0.2 25);
+  --ink-future: oklch(0.5 0 0);
+
+  --viewport: #2e2e2e;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Geist Variable", system-ui, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-kind-landing: var(--kind-landing);
+  --color-kind-contact: var(--kind-contact);
+  --color-kind-torque: var(--kind-torque);
+  --color-kind-fall: var(--kind-fall);
+  --color-ink-future: var(--ink-future);
+  --color-viewport: var(--viewport);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@theme {
+  /* Only the Recording dot loops (M3). */
+  --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
+  /* shadcn's enter/exit (fade + 95% zoom, 100 ms) without tw-animate-css, which is not pinned. */
+  --animate-pop-in: pop-in 100ms ease-out;
+  --animate-pop-out: pop-out 100ms ease-in forwards;
+
+  @keyframes pop-in {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop-out {
+    to { opacity: 0; transform: scale(0.95); }
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: color-mix(in oklab, var(--ring) 50%, transparent);
+  }
+  html, body, #app {
+    height: 100%;
+    margin: 0;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  button, input, textarea, select {
+    font: inherit;
+    color: inherit;
+  }
+  button { cursor: default; }
+  :focus-visible { outline: 2px solid color-mix(in oklab, var(--ring) 50%, transparent); outline-offset: 1px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--foreground) 16%, transparent);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in oklab, var(--foreground) 28%, transparent); background-clip: content-box; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; }
+  }
+}
+
+@layer components {
+  /* Numbers that change in place or align in a column (T8). */
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Panel resize handles: a hairline that darkens on hover. */
+  [data-separator] {
+    position: relative;
+    background: var(--border);
+    transition: background-color 100ms;
+    flex: none;
+  }
+  [data-separator][aria-orientation="vertical"] { width: 1px; }
+  [data-separator][aria-orientation="horizontal"] { height: 1px; }
+  [data-separator]::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--ring);
+    opacity: 0;
+    transition: opacity 100ms;
+  }
+  [data-separator][aria-orientation="vertical"]::after { left: -1px; right: -1px; }
+  [data-separator][aria-orientation="horizontal"]::after { top: -1px; bottom: -1px; }
+  [data-separator]:hover::after, [data-separator][data-separator="active"]::after,
+  [data-separator]:focus-visible::after { opacity: 0.7; }
+  [data-separator]:focus-visible { outline: none; }
+
+  /* uPlot: a shared crosshair as a foreground 20% hairline (PL3); no legend or selection UI. */
+  .uplot { width: 100%; font-family: inherit; }
+  .uplot .u-cursor-x { border-right: 1px solid color-mix(in oklab, var(--foreground) 20%, transparent) !important; }
+  .u-legend, .u-select { display: none; }
+}

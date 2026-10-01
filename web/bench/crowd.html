@@ -1,0 +1,92 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>crowd bench</title>
+<style>
+  body { margin: 0; font: 12px ui-monospace, monospace; background: #222; color: #ddd; }
+  canvas { display: block; width: 960px; height: 540px; }
+  pre { margin: 8px; }
+</style>
+<canvas id="c"></canvas>
+<pre id="out">running…</pre>
+<script src="../../src/simscope/_assets/simscope-player.js"></script>
+<script>
+// Frame-time benchmark of the focus + crowd tiers against a real library
+// over HTTP (see devserver.py). Budgets (viewer v3 §15): <= 4 ms main-thread
+// JS per frame, <= 2 MB of GPU upload per frame, no main-thread decode.
+//
+//   crowd.html?run=big_4096&seconds=14&direct=1
+const S = SimscopePlayer;
+const q = new URLSearchParams(location.search);
+const run = q.get("run") || "big_4096";
+const seconds = +(q.get("seconds") || 14);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const stats = (a) => {
+  const s = a.slice().sort((x, y) => x - y);
+  return { mean: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(3), p95: +s[Math.floor(s.length * 0.95)].toFixed(3), max: +s[s.length - 1].toFixed(3) };
+};
+
+async function main() {
+  const canvas = document.getElementById("c");
+  const P = new S.Player(canvas, { direct: q.get("direct") !== "0" });
+  P.resize(960, 540, devicePixelRatio);
+  const info = await P.load(new S.HttpSource(""), run);
+  while (info.tiered && P.r.crowdState === "pending") await sleep(100);
+  await sleep(1500);
+  P.frame("focus", { animate: false });
+
+  // Decode one un-cached crowd window.
+  let windowMs = null;
+  if (P.r.root) {
+    const t0 = performance.now();
+    await P.r.store.requestWindow(P.r.root.stream, 7);
+    windowMs = Math.round(performance.now() - t0);
+  }
+
+  const longtasks = [];
+  new PerformanceObserver((l) => l.getEntries().forEach((e) => longtasks.push(Math.round(e.duration)))).observe({ entryTypes: ["longtask"] });
+  const meshes = [];
+  P.scene.traverse((o) => o.isInstancedMesh && meshes.push(o));
+  const v0 = meshes.map((m) => m.instanceMatrix.version);
+  const uploaded = () => meshes.reduce((s, m, i) => s + (m.instanceMatrix.version - v0[i]) * m.instanceMatrix.array.byteLength, 0);
+
+  // Play in real time at 60 Hz, driving the loop by hand so the page's own rAF stays out of it.
+  const raf = window.requestAnimationFrame;
+  window.requestAnimationFrame = () => 0;
+  P.clock.seek(0);
+  P.clock.play();
+  const frames = [];
+  let stalled = 0;
+  const t0 = performance.now();
+  let next = t0;
+  while (performance.now() - t0 < seconds * 1000) {
+    const a = performance.now();
+    S.stepLoop(a);
+    frames.push(performance.now() - a);
+    if (P.clock._holds.size) stalled++;
+    next += 1000 / 60;
+    await sleep(Math.max(0, next - performance.now()));
+  }
+  P.clock.pause();
+  window.requestAnimationFrame = raf;
+
+  const s = P.stats();
+  const result = {
+    run, envs: info.envs, tiered: info.tiered, focusEnvs: s.focusEnvs, frames: frames.length,
+    simSeconds: +P.clock.time.toFixed(2), wallSeconds: seconds,
+    msPerFrame: stats(frames), budgetMsPerFrame: 4,
+    uploadMBPerFrame: +(uploaded() / frames.length / 1e6).toFixed(3), budgetUploadMB: 2,
+    stalledFrames: stalled, longTasksMs: longtasks, decodeInWorker: s.threaded,
+    drawCalls: s.drawCalls, triangles: s.triangles, cachedMB: +(s.cachedBytes / 1e6).toFixed(1),
+    crowdWindowDecodeMs: windowMs,
+  };
+  result.pass = result.msPerFrame.mean <= 4 && result.uploadMBPerFrame <= 2 && result.decodeInWorker && stalled === 0 && longtasks.length === 0;
+  window.result = result;
+  document.getElementById("out").textContent = JSON.stringify(result, null, 2);
+  document.title = "done";
+}
+main().catch((e) => {
+  window.result = { error: String(e && e.stack || e) };
+  document.getElementById("out").textContent = String(e && e.stack || e);
+  document.title = "error";
+});
+</script>

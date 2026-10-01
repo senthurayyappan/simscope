@@ -1,44 +1,59 @@
 [project]
-name = "python-template"
+name = "simscope"
 version = "0.1.0"
-description = "A uv-first Python repository template"
+description = "Record, browse, curate, and ship robot simulation rollouts."
+readme = "README.md"
+authors = [{ name = "senthurayyappan" }]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = ["numpy>=2.2"]
+
+[project.scripts]
+simscope = "simscope.cli:main"
+
+[project.optional-dependencies]
+viewer = [
+    "starlette==1.7.0",
+    "uvicorn==0.54.0",
+    "watchfiles>=1.1",
+]
+mujoco = ["mujoco>=3.14"]
+
+[project.urls]
+Repository = "https://github.com/senthurayyappan/simscope"
+Documentation = "https://senthurayyappan.github.io/simscope/"
+
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "simscope[viewer,mujoco]",
     "pytest>=8",
     "pytest-cov>=6",
-    "ruff>=0.15",
+    "pre-commit>=4",
+    "ruff>=0.15.17",
     "ty>=0.0.72",
-    "pyyaml>=6",
+    "deptry>=0.24",
+    "usd-core>=26.8",
+    "httpx>=0.28.1",
 ]
-
-[tool.uv]
-package = false
+docs = [
+    "mkdocs>=1.6.1,<2",
+    "mkdocs-shadcn>=0.12,<0.13",
+    "mkdocstrings[python]>=1,<2",
+    "pymdown-extensions>=10",
+]
 
 [tool.ruff]
 line-length = 80
 target-version = "py312"
+src = ["src"]
+# Code blocks in design docs are illustrative, not source.
+extend-exclude = ["docs"]
 
 [tool.ruff.lint]
-select = [
-    "E",
-    "F",
-    "W",
-    "I",
-    "UP",
-    "B",
-    "C4",
-    "SIM",
-    "RUF",
-    "N",
-    "A",
-    "G",
-    "T10",
-    "PGH",
-    "D",
-]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF", "N", "A", "G", "T10", "PGH", "D"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -51,12 +66,20 @@ quote-style = "double"
 docstring-code-format = true
 
 [tool.ty.src]
+include = ["src", "tests", "benchmarks", "examples", ".github/scripts"]
+
+# The mujoco wheel ships no type stubs, so ty cannot see its compiled
+# attributes. Scope the relaxation to the files that touch mujoco.
+[[tool.ty.overrides]]
 include = [
-    "configure.py",
-    "tests",
-    ".template/smoke.py",
-    ".template/update_manifest.py",
+    "src/simscope/mujoco.py",
+    "src/simscope/_mjviser.py",
+    "tests/test_mujoco.py",
+    "benchmarks/bench_mujoco.py",
 ]
+
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -64,8 +87,12 @@ addopts = ["--strict-config", "--strict-markers", "--import-mode=importlib"]
 
 [tool.coverage.run]
 branch = true
-include = ["configure.py"]
+source = ["src"]
+omit = ["tests/*"]
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 100
+skip_empty = true
+
+[tool.deptry]
+known_first_party = ["simscope"]

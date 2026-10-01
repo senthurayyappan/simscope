@@ -8,6 +8,7 @@ __pycache__/
 coverage.xml
 htmlcov/
 build/
+!web/build/
 dist/
 *.egg-info/
 site/
@@ -16,3 +17,4 @@ site/
 !.env.example
 .ipynb_checkpoints/
 .DS_Store
+.local/

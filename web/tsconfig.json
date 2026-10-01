@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "lib": ["es2022", "dom", "dom.iterable", "webworker"],
+    "paths": { "@/*": ["./src/app/*"], "@core/*": ["./src/core/*"] }
+  },
+  "include": ["src"]
+}
