@@ -129,3 +129,26 @@ test("the /1 fields the app read before it knew `kind` are still filled in, and 
   const p = await load();
   assert.equal(await p.highlights(), null, "a run without derived/highlights.json");
 });
+
+test("loading another run while playing keeps playing", async () => {
+  const { Clock } = await import("../src/core/clock.js");
+  const { stepLoop } = await import("../src/core/loop.js");
+  const clock = new Clock();
+  const p = new Player(null, { renderer: nullRenderer, clock });
+  p.resize(320, 240, 1);
+  await p.load(new PackSource(makeWalkerPack({ run: "a" })), "a");
+  let now = 1000;
+  const frames = (n) => {
+    for (let i = 0; i < n; i++) stepLoop((now += 1000 / 60));
+  };
+  frames(3);
+  clock.play();
+  frames(20);
+  const loading = p.load(new PackSource(makeWalkerPack({ run: "b" })), "b");
+  frames(3);
+  await loading;
+  frames(30);
+  assert.equal(clock.playing, true);
+  assert.ok(clock.time > 0.2, `the new run advanced (t=${clock.time})`);
+  p.destroy();
+});

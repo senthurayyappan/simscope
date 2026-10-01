@@ -181,6 +181,11 @@ export class Clock extends EventTarget {
     const prev = this._last;
     this._last = nowMs;
     if (!this._playing) return;
+    // Nothing loaded (a run is being swapped for another): stay in the playing state, so the new run plays on.
+    if (this._duration <= 0) {
+      this._timer.reset();
+      return;
+    }
     if (this._holds.size) {
       this._timer.reset(); // stalled for data: the wait is not played back later
       return;

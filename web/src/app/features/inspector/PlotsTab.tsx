@@ -209,7 +209,7 @@ function ChannelPlot(props: {
   const host = useRef<HTMLDivElement>(null);
   const valueEl = useRef<HTMLSpanElement>(null);
   const plot = useRef<uPlot | null>(null);
-  const overlay = useRef<{ line: HTMLDivElement; dots: HTMLDivElement[] } | null>(null);
+  const overlay = useRef<{ line: HTMLDivElement; dots: HTMLDivElement[]; data: PlotData } | null>(null);
   const hoverIdx = useRef<number | null>(null);
   const cur = useRef<{ data: PlotData | null; win: PlotWindow }>({ data: null, win });
   const [data, setData] = useState<PlotData | null>(null);
@@ -353,7 +353,7 @@ function ChannelPlot(props: {
       u.over.appendChild(d);
       return d;
     });
-    overlay.current = { line, dots };
+    overlay.current = { line, dots, data };
     u.over.style.cursor = "col-resize";
     let down = false;
     const seekAt = (e: PointerEvent) => {
@@ -398,7 +398,8 @@ function ChannelPlot(props: {
       const u = plot.current;
       const { data: d, win: wv } = cur.current;
       const ov = overlay.current;
-      if (!u || !d || !ov) return;
+      // The plot is rebuilt in an effect after the data changes; until then its dots belong to the old run.
+      if (!u || !d || !ov || ov.data !== d) return;
       const t = getClock().time;
       const w = u.over.clientWidth;
       const idx = hoverIdx.current;

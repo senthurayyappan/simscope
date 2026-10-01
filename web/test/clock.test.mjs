@@ -270,3 +270,19 @@ test("a live claim waits at the end for more frames instead of ending, and plays
   assert.equal(c.playing, false);
   assert.equal(ended, 1);
 });
+
+test("a playing clock with nothing loaded waits instead of ending", () => {
+  const c = new Clock();
+  c.claim("a", 2);
+  c.play();
+  let ended = 0;
+  c.addEventListener("ended", () => ended++);
+  c.release("a"); // the run is being swapped for another
+  for (let i = 1; i <= 5; i++) c.tick(i * 16);
+  assert.equal(c.playing, true);
+  assert.equal(ended, 0);
+  c.claim("b", 2);
+  for (let i = 6; i <= 20; i++) c.tick(i * 16);
+  assert.equal(c.playing, true, "the new run plays on");
+  assert.ok(c.time > 0);
+});
