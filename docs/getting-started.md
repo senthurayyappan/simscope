@@ -19,6 +19,35 @@ The README has a complete MuJoCo recording example. `simscope serve` shows
 runs that are still recording, and `simscope import` brings in `.rbundle`
 files and Brax HTML viewers.
 
+## Exports
+
+`simscope export` writes one HTML file that works offline. A lean export
+(the default) shows the run in a plain page: the player fills the window and a
+single control bar sits under it. A full export (`--ui full`) is the whole app
+with the same runs loaded.
+
+To compare runs, export them with `--layout compare`. The file looks like the
+app's compare view: the panes fill the page, each titled with its run name,
+and one control bar at the bottom plays, steps and scrubs all of them
+together. Pick how the panes sit with `--arrange`:
+
+| `--arrange` | Panes |
+| --- | --- |
+| `side` | Side by side, left to right. The default for two runs. |
+| `stack` | One above the other, top to bottom. |
+| `grid` | Two by two; with three runs one cell stays empty. The default for three or four runs. |
+
+```bash
+uv run simscope export demo_lib run_a run_b -o compare.html --layout compare
+uv run simscope export demo_lib run_a run_b run_c -o compare.html \
+    --layout compare --arrange stack
+```
+
+Compare takes up to four runs, and `--arrange` only applies with
+`--layout compare`. In Python, pass `layout="compare"` and `arrange="stack"`
+to `simscope.export.export_html`. The viewer's Export button sends the
+arrangement you are looking at.
+
 ## In the app
 
 The library is on the left (by date or by group, five runs per section), the
@@ -32,7 +61,8 @@ mean the same for any robot: **Contact force** (the net force of the
 `contacts` stream, such as "412 N, 5.1x typical") and **Acceleration** (the
 acceleration of the centre of mass, such as "41 m/s², 4.2 g"). A peak is a
 moment that stands out from the run's usual level. They are cached under
-`.simscope/derived/` in the library and travel inside exports. Anything more
+`.simscope/derived/` in the library and travel inside full exports (the lean
+player does not draw them). Anything more
 specific to your robot or task, such as a jump or a slip, is yours to add; see
 the next section.
 

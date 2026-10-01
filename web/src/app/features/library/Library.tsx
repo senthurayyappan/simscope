@@ -28,10 +28,10 @@ import {
   type SortKey,
 } from "@/lib/filters";
 import { MAX_COMPARE, useApp } from "@/lib/store";
-import { seriesVar, SLOT_LETTERS } from "@/lib/palette";
 import type { RunRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { ArrangeToggle } from "../ArrangeToggle";
 import { Logo } from "../Logo";
 import { NameDialog } from "./NameDialog";
 import { RunContextMenu } from "./RunMenu";
@@ -317,7 +317,6 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
                             cursor={it.run.name === s.cursor && it.section.kind !== "pinned"}
                             slot={slotOf(it.run.name)}
                             picked={s.picks.some((p) => p.name === it.run.name)}
-                            pickMode={s.picks.length > 0}
                             liveFrames={s.live[it.run.name]}
                             onOpen={onOpen}
                             onPick={onPick}
@@ -477,31 +476,23 @@ function InlineName({ initial, onSave, onCancel }: { initial: string; onSave(v: 
   );
 }
 
-/** One line: slot dots, a count, Clear, Compare (L3: nothing wraps at 240 px). */
+/** One line: clear, the arrangement, Compare with the count (L3: nothing wraps at 240 px). The picked runs carry their A-D dots on their rows. */
 function PickBar() {
   const picks = useApp((s) => s.picks);
   const { clearPicks, openCompare } = useApp.getState();
-  const sorted = [...picks].sort((a, b) => a.slot - b.slot);
   return (
-    <div className="flex h-8 items-center gap-2">
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden text-xs text-muted-foreground" title={`${picks.length} runs`}>
-        {sorted.map((p) => (
-          <span key={p.name} className="flex shrink-0 items-center gap-1" title={p.name}>
-            <span className="size-2 rounded-full" style={{ background: seriesVar(p.slot) }} />
-            {SLOT_LETTERS[p.slot]}
-          </span>
-        ))}
-      </div>
+    <div className="flex h-8 items-center gap-1.5">
       <Hint label="Clear selection">
-        <Button variant="ghost" size="icon-sm" onClick={clearPicks} aria-label="Clear selection">
+        <Button variant="ghost" size="icon-sm" className="size-6 shrink-0" onClick={clearPicks} aria-label="Clear selection">
           <X />
         </Button>
       </Hint>
+      <ArrangeToggle count={Math.max(2, picks.length)} />
       {picks.length < 2 ? (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span>
-              <Button size="sm" disabled>
+            <span className="min-w-0 flex-1">
+              <Button size="sm" className="w-full px-2" disabled>
                 Compare
               </Button>
             </span>
@@ -509,8 +500,8 @@ function PickBar() {
           <TooltipContent side="top">Pick at least two runs. Compare takes up to {MAX_COMPARE}.</TooltipContent>
         </Tooltip>
       ) : (
-        <Button size="sm" onClick={openCompare}>
-          Compare
+        <Button size="sm" className="min-w-0 flex-1 px-2" onClick={openCompare}>
+          Compare <span className="num opacity-70">{picks.length}</span>
         </Button>
       )}
     </div>

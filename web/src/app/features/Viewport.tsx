@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { linkCameras } from "@/lib/core";
 import { allPlayers } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
-import { cn } from "@/lib/utils";
+import { arrangementGrid, effectiveArrangement } from "@/lib/panes";
 
 import { Logo } from "./Logo";
 import { Pane } from "./Pane";
@@ -12,20 +12,21 @@ import { ViewportToolbar } from "./ViewportToolbar";
 export function Viewport() {
   const panes = useApp((s) => s.panes);
   const ready = useApp((s) => s.rowsLoaded);
-  const loaded = useApp((s) => Object.keys(s.infos).filter((k) => s.infos[Number(k)]).length);
   const sync = useApp((s) => s.cameraSync);
+  const choice = useApp((s) => s.arrange);
   const count = panes.length;
 
-  // Compare: link the panes' cameras once every pane has loaded (core keeps ground planes aligned).
+  // Compare: link the panes' cameras as soon as their players exist (before the runs load), so the core
+  // frames the group together and keeps ground planes aligned (it refits once each run is decoded).
   useEffect(() => {
-    if (count < 2 || !sync || loaded < count) return;
+    if (count < 2 || !sync) return;
     const players = allPlayers();
     if (players.length < count) return;
     return linkCameras(players);
-  }, [count, sync, loaded]);
+  }, [count, sync]);
 
-  // Three panes sit in a 2 x 2 grid with an empty fourth cell, so none is a sliver.
-  const grid = count <= 1 ? "grid-cols-1" : count === 2 ? "grid-cols-2" : "grid-cols-2 grid-rows-2";
+  // Panes fill the viewport in the chosen arrangement; every row and column is equal, so panes keep equal pixel sizes (ground alignment).
+  const { cols, rows } = arrangementGrid(count, effectiveArrangement(count, choice));
 
   return (
     <div className="flex size-full flex-col overflow-hidden bg-viewport">
@@ -41,7 +42,7 @@ export function Viewport() {
           <p className="text-sm text-muted-foreground">{ready ? "Choose a run from the library, or press N." : "Loading the library."}</p>
         </div>
       ) : (
-        <div className={cn("grid size-full gap-px bg-border", grid)}>
+        <div className="grid size-full gap-px bg-border" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))` }}>
           {panes.map((p, i) => (
             <Pane key={`${count > 1 ? "m" : "s"}${i}`} index={i} run={p.name} slot={p.slot} count={count} />
           ))}

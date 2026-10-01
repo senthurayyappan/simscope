@@ -148,7 +148,7 @@ test("until the series is decoded the frame-0 fit holds; then one animation of a
   assert.equal(p.rig.targetHeight, goal);
 });
 
-test("an extent that arrives while the clock plays waits for the next pause", async () => {
+test("the first fit of a run happens at once even if the clock is playing; a later one waits for a pause", async () => {
   const g = gate();
   const p = new Player(null, { renderer: nullRenderer, clock: new Clock() });
   p.resize(W, H, 1);
@@ -159,11 +159,24 @@ test("an extent that arrives while the clock plays waits for the next pause", as
   assert.equal(p.clock.playing, true);
   g.open();
   await p._extentJob;
+  assert.ok(p.rig.targetHeight > h0 * 1.3, "the frame-0 view does not stay just because play was pressed first");
+  const fitted = p.rig.targetHeight;
   settle([p], 1);
-  assert.equal(p.rig.targetHeight, h0, "not while playing");
-  p.clock.pause();
-  settle([p], 1);
-  assert.ok(p.rig.targetHeight > h0 * 1.3, "at the pause it fits");
+  assert.equal(p.rig.targetHeight, fitted, "and it is one fit");
+
+  // A second env's range arriving during playback waits.
+  const batch = new Player(null, { renderer: nullRenderer, clock: new Clock() });
+  batch.resize(W, H, 1);
+  await batch.load(new PackSource(makeWalkerPack({ ...JUMPER, envs: 3 })), "jump");
+  await batch._extentJob;
+  batch.setFollow({ mode: "position" });
+  assert.equal(batch._fitted, true);
+  batch.clock.play();
+  batch.selectEnv(1);
+  await batch._extentJob;
+  assert.equal(batch._fitPending, true, "waits while playing");
+  batch.clock.pause();
+  assert.equal(batch._fitPending, false, "and fits at the pause");
 });
 
 test("a zoom by hand is respected: the extent arriving does not undo it, an explicit frame() does", async () => {

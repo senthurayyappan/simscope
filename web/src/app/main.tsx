@@ -39,7 +39,7 @@ async function boot() {
     startLoop();
     // `?debug` exposes the store for scripted checks (Playwright flows, screenshots).
     if (new URLSearchParams(location.search).has("debug")) Object.assign(window, { __simscope: useApp, __runtime: runtime });
-    void useApp.getState().init(api, { runs: boot.runs, layout: boot.layout });
+    void useApp.getState().init(api, { runs: boot.runs, layout: boot.layout, arrange: boot.arrange });
     createRoot(root).render(<App />);
   } catch (e) {
     fatal(root, `simscope could not start: ${(e as Error).message}`);

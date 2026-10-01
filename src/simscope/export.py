@@ -21,10 +21,16 @@ to leave them out.
 
 ``ui="full"`` swaps the lean ``<simscope-player>`` page for the whole app
 (``simscope-app.js`` and ``.css``) started from a boot block that points at the
-same inline pack (viewer contracts 6). Either way the pack also carries the
-run's derived data under ``derived/<run>/`` (highlights always; the crowd
-root-pose stream and per-env summaries for more than 64 envs), and
-``envs=[...]`` exports only those envs.
+same inline pack (viewer contracts 6). The pack also carries each
+run's derived data under ``derived/<run>/``: the highlights (full exports
+only, because the lean player does not draw them) and, for more than 64 envs,
+the crowd root-pose stream and per-env summaries. ``envs=[...]`` exports only
+those envs.
+
+The lean page is deliberately bare (viewer contracts 10): a dark/light
+neutral background and the ``<simscope-player>`` elements, nothing else. The
+runtime lays out a ``compare`` page itself, in the arrangement named by
+``data-arrange``, and adds the one shared control bar.
 """
 
 import base64
@@ -46,6 +52,7 @@ from simscope.io import cas, manifest, pack
 logger = logging.getLogger(__name__)
 
 Layout = Literal["single", "grid", "compare"]
+Arrange = Literal["side", "stack", "grid"]
 Ui = Literal["lean", "full"]
 
 RUNTIME_ASSET = "simscope-player.js"
@@ -59,18 +66,12 @@ CROWD_ENVS = 64
 """Runs exported with more envs than this carry the crowd-tier files."""
 COMPARE_SYNC = "compare"
 """Name of the shared clock of a compare page."""
-COMPARE_SLOTS = (
-    ("A", "#2282fb"),
-    ("B", "#d35f10"),
-    ("C", "#109646"),
-    ("D", "#c344ae"),
-)
-"""The compare slots in page order: a letter and a colour each.
-
-The colours are the app's categorical palette, ``oklch(0.62 0.20 257)``,
-``oklch(0.62 0.166 47)``, ``oklch(0.59 0.158 150)`` and ``oklch(0.60 0.20
-335)``, written as sRGB hex so the page does not depend on ``oklch()``
-support. Compare takes up to four runs."""
+COMPARE_MAX = 4
+"""A compare page takes up to this many runs."""
+ARRANGEMENTS = ("side", "stack", "grid")
+"""How a compare page lays out its panes: side by side (a horizontal split),
+stacked (a vertical split), or a 2 x 2 grid (one cell empty for three
+runs)."""
 GZIP_LEVEL = 9
 _WRAP = 4096  # base64 line length; whitespace is ignored by both decoders
 _LAYOUTS = ("single", "grid", "compare")
@@ -113,12 +114,43 @@ def _check_layout(layout: str, names: list[str]) -> list[str]:
         raise ValueError(
             f'layout="single" needs exactly one run, got {len(names)}'
         )
-    if layout == "compare" and len(names) > len(COMPARE_SLOTS):
+    if layout == "compare" and len(names) > COMPARE_MAX:
         raise ValueError(
-            f'layout="compare" takes up to {len(COMPARE_SLOTS)} runs, '
-            f"got {len(names)}"
+            f'layout="compare" takes up to {COMPARE_MAX} runs, got {len(names)}'
         )
     return names
+
+
+def _arrangement(
+    layout: str, arrange: str | None, n_runs: int
+) -> Arrange | None:
+    """Resolves the arrangement of a page.
+
+    Args:
+        layout: The page layout.
+        arrange: The requested arrangement, or ``None`` for the default.
+        n_runs: How many runs the page shows.
+
+    Returns:
+        ``None`` unless the layout is ``"compare"``; otherwise the
+        arrangement, which defaults to ``"side"`` for up to two runs and to
+        ``"grid"`` for three or four.
+
+    Raises:
+        ValueError: For an unknown arrangement, or one given to a layout
+            other than ``"compare"``.
+    """
+    if arrange is not None and arrange not in ARRANGEMENTS:
+        raise ValueError(
+            f"arrange must be one of {ARRANGEMENTS}, got {arrange!r}"
+        )
+    if layout != "compare":
+        if arrange is not None:
+            raise ValueError('arrange needs layout="compare"')
+        return None
+    if arrange is not None:
+        return arrange
+    return "side" if n_runs <= 2 else "grid"
 
 
 def _derived_module() -> Any:
@@ -209,10 +241,12 @@ def derived_entries(
     scratch: pathlib.Path,
     *,
     envs: Sequence[int] | None = None,
+    with_highlights: bool = True,
 ) -> dict[str, pack.Source]:
     """Collects the ``derived/<run>/`` pack entries of runs.
 
-    Highlights are included for every run whose highlights can be computed.
+    Highlights are included for every run whose highlights can be computed,
+    unless ``with_highlights`` is false.
     A run that still has more than 64 envs after ``envs`` also gets its
     crowd-tier ``root_pose.blk`` and ``summaries.json``, when
     :mod:`simscope.derived` is present. Nothing is computed for a run that
@@ -225,6 +259,8 @@ def derived_entries(
         scratch: A folder for files made on the way; it must outlive the
             pack write.
         envs: The env subset of the export, if any.
+        with_highlights: Whether to include ``highlights.json``. Lean HTML
+            exports leave it out: the player does not draw highlights.
 
     Returns:
         Entries by pack path, ready for ``write_pack(derived=...)``.
@@ -250,12 +286,13 @@ def derived_entries(
             )
             n_out = run.n_envs if ids is None else len(ids)
             prefix = f"{pack.DERIVED_PREFIX}{name}/"
-            try:
-                entries[prefix + highlights.FILE_NAME] = _run_highlights(
-                    run, derived, root, scratch, ids
-                )
-            except Exception:  # isolation point: optional data must not fail
-                logger.warning("no highlights for %s", name, exc_info=True)
+            if with_highlights:
+                try:
+                    entries[prefix + highlights.FILE_NAME] = _run_highlights(
+                        run, derived, root, scratch, ids
+                    )
+                except Exception:  # isolation point: optional data
+                    logger.warning("no highlights for %s", name, exc_info=True)
             if derived is None or n_out <= CROWD_ENVS:
                 continue
             try:
@@ -275,6 +312,7 @@ def build_pack(
     annotations: bool = True,
     envs: Sequence[int] | None = None,
     derived: bool = True,
+    with_highlights: bool = True,
 ) -> bytes:
     """Builds one pack holding all runs.
 
@@ -292,6 +330,8 @@ def build_pack(
         derived: Whether to add the ``derived/<run>/`` entries of
             :func:`derived_entries`. Computing them caches files under the
             library's ``.simscope/derived``.
+        with_highlights: Whether those entries include ``highlights.json``
+            (``derived`` must be true for it to matter).
 
     Returns:
         The pack bytes.
@@ -306,7 +346,15 @@ def build_pack(
     with tempfile.TemporaryDirectory(prefix="simscope-export-") as tmp:
         scratch = pathlib.Path(tmp)
         extra = (
-            derived_entries(root, names, scratch, envs=envs) if derived else {}
+            derived_entries(
+                root,
+                names,
+                scratch,
+                envs=envs,
+                with_highlights=with_highlights,
+            )
+            if derived
+            else {}
         )
         out = scratch / "export.simscope"
         pack.write_pack(
@@ -394,42 +442,18 @@ def gzip_runtime(runtime: bytes) -> bytes:
     return gzip.compress(runtime, compresslevel=GZIP_LEVEL, mtime=0)
 
 
+# The whole page style of a lean export (viewer contracts 10): the runtime
+# lays out and styles everything else. The background only stops a flash of
+# the wrong colour before the runtime has started; the greys are the app's
+# oklch(0.97 0 0) and oklch(0.18 0 0).
 _CSS = """\
-:root{color-scheme:light dark;--bg:#fbfaf7;--fg:#1d1d1b;--muted:#6b6a64;\
---line:#d9d6cc;--panel:#f0eee7;--accent:#3b6ea5;--mark:#d1495b}
-@media (prefers-color-scheme:dark){:root{--bg:#161615;--fg:#ebeae5;\
---muted:#9a988f;--line:#3a3935;--panel:#222220;--accent:#7aa7d8}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);\
-font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1200px;margin:0 auto;padding:24px 16px}
-h1{font-size:1.4rem;font-weight:600;margin:0 0 16px}
-.players{display:grid;gap:16px;\
-grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
-.single .players{grid-template-columns:minmax(0,960px)}
-figure{margin:0;min-width:0}
-figcaption{margin-top:6px;font-size:13px;color:var(--muted)}
-.slot{margin-right:6px;font-weight:600;color:var(--fg)}
-simscope-player{border:1px solid var(--line);border-radius:6px}
-.error{color:#b3261e;margin:0 0 16px}
-.master{display:flex;align-items:center;gap:12px;margin:0 0 16px;\
-padding:8px 12px;background:var(--panel);border:1px solid var(--line);\
-border-radius:6px}
-.master[hidden]{display:none}
-.master button,.master select{font:inherit;color:inherit;background:none;\
-border:1px solid var(--line);border-radius:4px;padding:2px 10px;\
-cursor:pointer}
-.master button:disabled{opacity:.5;cursor:default}
-.track{position:relative;flex:1;min-width:60px;height:28px}
-.marks{position:absolute;left:0;right:0;top:2px;height:6px}
-.marks i{position:absolute;top:0;height:6px;min-width:3px;\
-background:var(--mark);border-radius:1px;opacity:.85;cursor:pointer}
-.scrub{position:absolute;left:0;right:0;bottom:0;width:100%;height:18px;\
-margin:0;accent-color:var(--accent)}
-.time{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:13px}
-@media (max-width:520px){.master{flex-wrap:wrap}.track{flex-basis:100%;\
-order:3}}
+:root{color-scheme:light dark}
+html,body{margin:0;height:100%;background:#f5f5f5}
+@media (prefers-color-scheme:dark){html,body{background:#121212}}
 """
+_ERROR_STYLE = (
+    "margin:0;padding:16px;font:14px/1.5 system-ui,sans-serif;color:#b3261e"
+)
 
 # Classic script: gunzip the runtime and run it from a blob: URL. Nothing
 # here touches the network.
@@ -465,9 +489,8 @@ _BOOTSTRAP = """\
 """.replace("%(runtime)s", RUNTIME_ID)
 
 # Starts the shared control of layout="compare" once the runtime has defined
-# the element (the global SimscopePlayer is set when its script ends). The
-# control itself, play button, scrubber, run rows of highlight markers and the
-# colour dots of the captions, is attachMaster in the runtime.
+# the element (the global SimscopePlayer is set when its script ends).
+# attachMaster builds the arrangement, the titles and the one control bar.
 _MASTER = """\
 customElements.whenDefined("simscope-player").then(function () {
   SimscopePlayer.attachMaster(
@@ -476,55 +499,49 @@ customElements.whenDefined("simscope-player").then(function () {
 """.replace("%(sync)s", COMPARE_SYNC)
 
 
-def _player_tag(
-    run: str, layout: Layout, autoplay: bool, loop: bool, slot: int = 0
-) -> str:
-    """Returns the ``<figure>`` markup of one player.
+def _player(run: str, extra: str = "") -> str:
+    """Returns a ``<simscope-player>`` element for a run.
 
     Args:
         run: Run name.
-        layout: The page layout.
-        autoplay: Whether the player starts by itself (not in ``compare``).
-        loop: Whether the player restarts at its end (not in ``compare``).
-        slot: Position of the run in a ``compare`` page, 0 for A.
+        extra: Further attributes, such as ``sync="compare"``.
     """
-    attrs = [f'src="#{PACK_ID}"', f'run="{html.escape(run, quote=True)}"']
-    name = html.escape(run)
-    caption = ""
-    if layout == "compare":
-        letter, color = COMPARE_SLOTS[slot]
-        # nocontrols: the master control drives playback; sync and color
-        # make the player read its clock and tint its markers.
-        attrs += ["nocontrols", f'sync="{COMPARE_SYNC}"', f'color="{color}"']
-        caption = (
-            f'<figcaption><span class="slot">{letter}</span>{name}</figcaption>'
-        )
-    else:
-        attrs += ["autoplay"] * autoplay + ["loop"] * loop
-        if layout != "single":
-            caption = f"<figcaption>{name}</figcaption>"
+    attrs = f'src="#{PACK_ID}" run="{html.escape(run, quote=True)}"'
+    if extra:
+        attrs += f" {extra}"
+    return f"<simscope-player {attrs}></simscope-player>"
+
+
+def _figure(run: str, extra: str = "") -> str:
+    """Returns a ``<figure>``: the run name as its title, then the player."""
     return (
-        f"<figure><simscope-player {' '.join(attrs)}></simscope-player>"
-        f"{caption}</figure>"
+        f"<figure><figcaption>{html.escape(run)}</figcaption>"
+        f"{_player(run, extra)}</figure>"
     )
 
 
-def _master_tag(autoplay: bool, loop: bool) -> str:
-    """Returns the markup of the shared control of ``layout="compare"``."""
-    speeds = "".join(
-        f'<option value="{s}"{" selected" if s == "1" else ""}>{s}x</option>'
-        for s in ("0.25", "0.5", "1", "2", "4")
-    )
+def _content(
+    names: Sequence[str],
+    layout: Layout,
+    arrange: Arrange | None,
+    autoplay: bool,
+    loop: bool,
+) -> str:
+    """Returns the body markup of a lean page, below the error boxes.
+
+    ``single`` is one bare player. ``grid`` is a titled player per run.
+    ``compare`` is the box the runtime turns into the shared layout.
+    """
+    flags = " ".join(["autoplay"] * autoplay + ["loop"] * loop)
+    if layout == "single":
+        return _player(names[0], flags)
+    if layout == "grid":
+        return "\n".join(_figure(n, flags) for n in names)
+    figures = "\n".join(_figure(n, f'sync="{COMPARE_SYNC}"') for n in names)
     return (
-        f'<div class="master" id="ss-master" hidden '
-        f'data-autoplay="{int(autoplay)}" data-loop="{int(loop)}">'
-        '<button type="button" id="ss-play" aria-label="Play" disabled>'
-        "Play</button>"
-        '<div class="track"><div class="marks" id="ss-marks"></div>'
-        '<input class="scrub" id="ss-scrub" type="range" min="0" max="1000" '
-        'value="0" step="1" aria-label="Seek all runs" disabled></div>'
-        '<span class="time" id="ss-time">0.00s / 0.00s</span>'
-        f'<select id="ss-speed" aria-label="Speed">{speeds}</select></div>'
+        f'<div id="ss-master" data-arrange="{arrange}" '
+        f'data-autoplay="{int(autoplay)}" data-loop="{int(loop)}">\n'
+        f"{figures}\n</div>"
     )
 
 
@@ -534,15 +551,22 @@ def _licences() -> str:
     return text.replace("--", "- -")  # keep the comment well-formed
 
 
-def _boot_block(names: Sequence[str], layout: Layout) -> str:
-    """Returns the ``simscope-boot`` JSON script of a full export."""
-    boot = {
+def _boot_block(
+    names: Sequence[str], layout: Layout, arrange: Arrange | None = None
+) -> str:
+    """Returns the ``simscope-boot`` JSON script of a full export.
+
+    ``arrange`` is written (as ``"arrange"``) for compare layouts only.
+    """
+    boot: dict[str, Any] = {
         "mode": "pack",
         "pack": f"#{PACK_ID}",
         "runs": list(names),
         "layout": layout,
         "writable": False,
     }
+    if arrange is not None:
+        boot["arrange"] = arrange
     text = json.dumps(boot, sort_keys=True, ensure_ascii=True)
     text = text.replace("<", "\\u003c")  # no </script> or <!-- in the block
     return f'<script id="{BOOT_ID}" type="application/json">{text}</script>'
@@ -555,7 +579,11 @@ _FULL_CSS = (
 
 
 def _full_page(
-    pack_bytes: bytes, names: Sequence[str], heading: str, layout: Layout
+    pack_bytes: bytes,
+    names: Sequence[str],
+    heading: str,
+    layout: Layout,
+    arrange: Arrange | None,
 ) -> bytes:
     """Builds the page of ``ui="full"``: the app, a boot block, the pack."""
     css = read_asset(APP_CSS_ASSET).decode("utf-8")
@@ -577,7 +605,7 @@ def _full_page(
         '<div id="app"></div>',
         '<p id="simscope-error" role="alert" hidden></p>',
         "<noscript>This page needs JavaScript.</noscript>",
-        _boot_block(names, layout),
+        _boot_block(names, layout, arrange),
         f'<script type="text/plain" id="{RUNTIME_ID}">\n'
         f"{_b64_block(runtime)}\n</script>",
         f'<script type="text/plain" id="{PACK_ID}">\n'
@@ -597,6 +625,7 @@ def build_html(
     *,
     title: str | None = None,
     layout: Layout = "grid",
+    arrange: Arrange | None = None,
     autoplay: bool = True,
     loop: bool = True,
     ui: Ui = "lean",
@@ -609,7 +638,10 @@ def build_html(
         title: Page title; defaults to the run name for a single run and to
             ``"simscope export"`` otherwise.
         layout: ``"single"`` (exactly one run), ``"grid"`` (independent
-            players), or ``"compare"`` (players driven by one shared control).
+            players), or ``"compare"`` (panes driven by one shared control).
+        arrange: For ``layout="compare"``, how the panes sit: ``"side"``,
+            ``"stack"`` or ``"grid"``. ``None`` picks ``"side"`` for one or
+            two runs and ``"grid"`` for three or four.
         autoplay: Whether playback starts once the players are ready
             (``ui="lean"`` only; the app has its own controls).
         loop: Whether playback restarts at the end (``ui="lean"`` only).
@@ -620,7 +652,8 @@ def build_html(
         The UTF-8 page.
 
     Raises:
-        ValueError: On an unknown layout or ``ui``, an empty run list,
+        ValueError: On an unknown layout, ``ui`` or ``arrange``, an
+            ``arrange`` without ``layout="compare"``, an empty run list,
             several runs with ``layout="single"``, or more than four with
             ``layout="compare"``.
     """
@@ -629,19 +662,16 @@ def build_html(
     if layout not in _LAYOUTS:
         raise ValueError(f"layout must be one of {_LAYOUTS}, got {layout!r}")
     names = _check_layout(layout, _check_runs(runs))
+    where = _arrangement(layout, arrange, len(names))
     heading = (
         title
         if title is not None
         else (names[0] if layout == "single" else "simscope export")
     )
     if ui == "full":
-        return _full_page(pack_bytes, names, heading, layout)
+        return _full_page(pack_bytes, names, heading, layout, where)
     runtime = gzip_runtime(read_asset(RUNTIME_ASSET))
     licenses = _licences()
-    players = "\n".join(
-        _player_tag(n, layout, autoplay, loop, slot)
-        for slot, n in enumerate(names)
-    )
     parts = [
         "<!doctype html>",
         '<html lang="en">',
@@ -652,14 +682,12 @@ def build_html(
         f"<title>{html.escape(heading)}</title>",
         f"<style>\n{_CSS}</style>",
         "</head>",
-        f'<body class="{layout}">',
-        "<main>",
-        f"<h1>{html.escape(heading)}</h1>",
-        '<p class="error" id="simscope-error" role="alert" hidden></p>',
-        '<noscript><p class="error">This page needs JavaScript.</p></noscript>',
-        _master_tag(autoplay, loop) if layout == "compare" else "",
-        f'<div class="players">\n{players}\n</div>',
-        "</main>",
+        "<body>",
+        f'<p id="simscope-error" role="alert" hidden style="{_ERROR_STYLE}">'
+        "</p>",
+        f'<noscript><p style="{_ERROR_STYLE}">This page needs JavaScript.</p>'
+        "</noscript>",
+        _content(names, layout, where, autoplay, loop),
         f'<script type="text/plain" id="{RUNTIME_ID}">\n'
         f"{_b64_block(runtime)}\n</script>",
         f'<script type="text/plain" id="{PACK_ID}">\n'
@@ -681,6 +709,7 @@ def export_html(
     *,
     title: str | None = None,
     layout: Layout = "grid",
+    arrange: Arrange | None = None,
     transcode: bool = True,
     annotations: bool = True,
     autoplay: bool = True,
@@ -694,9 +723,14 @@ def export_html(
     ``ui="lean"`` runs appear as ``<simscope-player>`` elements in the order
     given; with ``ui="full"`` the page is the whole app, started on the same
     pack. One pack holds all runs, so scenes and meshes shared between runs
-    are stored once, and it carries each run's derived data (highlights, and
-    for more than 64 envs the crowd root-pose stream and summaries). Output
-    is deterministic for equal inputs.
+    are stored once. A full export's pack also carries each run's
+    highlights; for more than 64 envs, either kind carries the crowd root-pose
+    stream and summaries. Output is deterministic for equal inputs.
+
+    A lean page is bare: the players fill the window and the runtime adds one
+    control bar (viewer contracts 10). A ``compare`` page looks like the
+    app's compare view: the panes fill the page, each with its run name as a
+    title and nothing else, and one control bar below them drives every pane.
 
     A pack is inlined as base64 in a string, which Chrome caps at 512 MiB, so
     very large runs need ``envs`` to pick a subset.
@@ -709,10 +743,14 @@ def export_html(
             ``"simscope export"`` otherwise.
         layout: ``"single"`` for exactly one run, ``"grid"`` for independent
             players, or ``"compare"`` for up to four players driven in
-            lockstep by a shared play/pause button, scrubber and speed
-            control, each in its own colour and lettered A to D, with its
-            highlights on the shared timeline. Runs of different durations
+            lockstep by one shared control bar (play and pause, step, a
+            scrubber, the time, loop and speed). Runs of different durations
             stop at their own ends.
+        arrange: For ``layout="compare"``, how the panes sit: ``"side"``
+            (side by side), ``"stack"`` (one above the other) or ``"grid"``
+            (two by two). The default is ``"side"`` for one or two runs and
+            ``"grid"`` for three or four. In a full export it is the
+            arrangement the app opens with.
         transcode: Whether to shrink the pack (q16d poses, q16 meshes).
         annotations: Whether to include each run's ``annotations.json``, so
             events show as timeline markers.
@@ -729,27 +767,31 @@ def export_html(
         The output path.
 
     Raises:
-        ValueError: On an unknown layout or ``ui``, an empty or duplicate run
-            list, an invalid run name, several runs with ``layout="single"``,
-            more than four with ``layout="compare"``, a run that is still
-            recording, or an invalid ``envs``.
+        ValueError: On an unknown layout, ``ui`` or ``arrange``, an
+            ``arrange`` without ``layout="compare"``, an empty or duplicate
+            run list, an invalid run name, several runs with
+            ``layout="single"``, more than four with ``layout="compare"``, a
+            run that is still recording, or an invalid ``envs``.
         FileNotFoundError: If a run or a file it references is missing.
     """
     if ui not in _UIS:
         raise ValueError(f"ui must be one of {_UIS}, got {ui!r}")
     names = _check_layout(layout, _check_runs(runs))
+    _arrangement(layout, arrange, len(names))  # refuse before packing
     data = build_pack(
         library_root,
         names,
         transcode=transcode,
         annotations=annotations,
         envs=envs,
+        with_highlights=ui == "full",
     )
     page = build_html(
         data,
         names,
         title=title,
         layout=layout,
+        arrange=arrange,
         autoplay=autoplay,
         loop=loop,
         ui=ui,

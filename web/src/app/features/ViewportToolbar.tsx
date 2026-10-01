@@ -10,10 +10,12 @@ import {
   DropdownMenuTrigger,
   MenuHint,
 } from "@/components/ui/dropdown-menu";
+import { ArrangeToggle } from "./ArrangeToggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Toggle } from "@/components/ui/toggle";
 import { Hint } from "@/components/ui/tooltip";
 import { setDisplay } from "@/lib/commands";
+import { effectiveArrangement } from "@/lib/panes";
 
 import { useApp, type GroundKind, type ThemePref } from "@/lib/store";
 
@@ -49,7 +51,8 @@ function OverlayToggle({
 /** Blender-style overlay buttons, then Export and Theme (V1). Camera controls live in the timeline bar. */
 export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   const info = useApp((s) => s.infos[s.active]);
-  const compare = useApp((s) => s.panes.length > 1);
+  const panes = useApp((s) => s.panes.length);
+  const compare = panes > 1;
   const hasRun = useApp((s) => s.panes.length > 0);
   const groundOn = useApp((s) => s.groundOn);
   const visual = useApp((s) => s.visual);
@@ -93,6 +96,7 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
         {compare ? (
           <>
             <Divider />
+            <ArrangeToggle count={panes} />
             <Hint label="Sync cameras">
               <Toggle size="icon-sm" pressed={cameraSync} onPressedChange={(v) => useApp.setState({ cameraSync: v })} aria-label="Sync cameras">
                 <Link2 />
@@ -167,12 +171,13 @@ function DropdownMenuRadioGroupShim({ value, onChange }: { value: GroundKind; on
 function ExportMenu() {
   const api = useApp((s) => s.api);
   const panes = useApp((s) => s.panes);
+  const arrange = useApp((s) => s.arrange);
   const disabled = panes.length === 0;
   const runs = panes.map((p) => p.name);
   const layout = runs.length > 1 ? "compare" : "single";
   const item = (ui: "lean" | "full", title: string, hint: string, Icon: typeof Download) => (
     <DropdownMenuItem asChild>
-      <a href={api?.exportUrl({ runs, layout, ui }) ?? "#"} download className="flex-col items-start gap-0">
+      <a href={api?.exportUrl({ runs, layout, ui, arrange: effectiveArrangement(runs.length, arrange) }) ?? "#"} download className="flex-col items-start gap-0">
         <span className="flex items-center gap-2">
           <Icon />
           {title}

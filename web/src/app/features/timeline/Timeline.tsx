@@ -4,9 +4,9 @@ import { createPortal } from "react-dom";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { selectEnv, seekTo } from "@/lib/commands";
-import { formatTimecode } from "@/lib/format";
+import { formatTimecode, readout } from "@/lib/format";
 import { getPlotHover } from "@/lib/hover";
-import { kindVar, seriesVar, validColor } from "@/lib/palette";
+import { validColor } from "@/lib/palette";
 import { getClock, onFrame } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
 import { followPlayhead, snapFrame, timelineHeight } from "@/lib/timeline-math";
@@ -109,13 +109,13 @@ function useLanes(): LaneSpec[] {
       const env = envs[i] ?? 0;
       if (compare) {
         const mine = multi ? items.filter((h) => h.env === env) : items;
-        if (mine.length) out.push({ id: `run${i}`, label: p.name, slot: p.slot, letter: "ABCD"[p.slot], items: mine, colors: colorsOf(i), pane: i });
+        if (mine.length) out.push({ id: `run${i}`, label: p.name, slot: p.slot, items: mine, colors: colorsOf(i), pane: i });
       } else if (multi) {
         const mine = items.filter((h) => h.env === env);
         if (mine.length) out.push({ id: "env", label: `Env ${env}`, slot: null, items: mine, colors: colorsOf(i), pane: i });
         if (items.length) out.push({ id: "all", label: "All envs", slot: null, items, colors: colorsOf(i), pane: i });
       } else if (items.length) {
-        out.push({ id: "highlights", label: "Highlights", slot: null, items, colors: colorsOf(i), pane: i });
+        out.push({ id: "highlights", label: "", slot: null, items, colors: colorsOf(i), pane: i });
       }
     });
     // User labels (type "") and developer markers (add_event with a type) share the lane.
@@ -450,52 +450,54 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
   );
 }
 
-/** Hover card (TL8): kind dot + label, the detector's detail, then time and env. No score. */
+/** Hover card: the readouts first, then the kind's name and the time in muted text. No dot, no bold title. */
 function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec | undefined; left: number; top: number; multiEnv: boolean }) {
+  const run = lane?.slot !== null && lane?.slot !== undefined ? lane.label : null;
   let body: React.ReactNode;
   if (hit.label) {
     body = (
       <>
         <div className="font-medium">{hit.label.label || hit.label.type || "Label"}</div>
-        {hit.label.type && hit.label.label ? <div className="text-xs text-muted-foreground">{hit.label.type}</div> : null}
-        <div className="num text-xs text-muted-foreground">{formatTimecode(hit.label.t0)} s</div>
+        <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+          <span>{hit.label.type || "Label"}</span>
+          <span className="num">{formatTimecode(hit.label.t0)} s</span>
+        </div>
       </>
     );
   } else {
     const c = hit.cluster!;
-    const list = [...c.items].sort((a, b) => b.score - a.score).slice(0, 3);
+    const list = [...c.items].sort((a, b) => a.t - b.t).slice(0, 3);
     body = (
-      <div className="space-y-2">
-        {lane?.slot !== null && lane?.slot !== undefined ? (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="size-2 shrink-0 rounded-full" style={{ background: seriesVar(lane.slot) }} />
-            <span className="shrink-0">{lane.letter}</span>
-            <span className="truncate">{lane.label}</span>
-          </div>
-        ) : null}
+      <div className="space-y-1.5">
         {c.items.length > 1 ? <div className="text-xs text-muted-foreground">{c.items.length} highlights, click to zoom in</div> : null}
-        {list.map((h, i) => (
-          <div key={i}>
-            <div className="flex items-center gap-2 font-medium">
-              <span className="size-2 shrink-0 rounded-full" style={{ background: kindVar(h.kind, lane?.colors?.[h.kind]) }} />
-              {h.label}
+        {list.map((h, i) => {
+          const r = readout(h);
+          return (
+            <div key={i}>
+              <div className="num flex items-baseline gap-2 font-medium">
+                {r.main}
+                {r.sub ? <span className="font-normal text-muted-foreground">{r.sub}</span> : null}
+              </div>
+              <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+                <span>
+                  {h.label}
+                  {multiEnv ? ` env ${h.env}` : ""}
+                </span>
+                <span className="num">{formatTimecode(h.t)} s</span>
+              </div>
             </div>
-            {h.detail ? <div className="text-xs text-muted-foreground">{h.detail}</div> : null}
-            <div className="num flex gap-3 text-xs text-muted-foreground">
-              <span>{formatTimecode(h.t)} s</span>
-              {multiEnv ? <span>env {h.env}</span> : null}
-            </div>
-          </div>
-        ))}
+          );
+        })}
         {c.items.length > list.length ? <div className="text-xs text-muted-foreground">and {c.items.length - list.length} more</div> : null}
       </div>
     );
   }
   return (
     <div
-      className="pointer-events-none fixed z-50 w-60 -translate-x-1/2 -translate-y-full rounded-md border bg-popover p-3 text-sm text-popover-foreground shadow-md"
+      className="pointer-events-none fixed z-50 w-max min-w-36 max-w-60 -translate-x-1/2 -translate-y-full rounded-md border bg-popover px-2.5 py-2 text-sm text-popover-foreground shadow-md"
       style={{ left: clamp(left, 128, window.innerWidth - 128), top }}
     >
+      {run ? <div className="mb-1 truncate text-xs text-muted-foreground">{run}</div> : null}
       {body}
     </div>
   );

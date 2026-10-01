@@ -21,7 +21,6 @@ export interface RunRowProps {
   /** Compare slot (A-D) while picked or open in a compare pane; else -1. */
   slot: number;
   picked: boolean;
-  pickMode: boolean;
   liveFrames: number | undefined;
   onOpen(run: Row, e: React.MouseEvent): void;
   onPick(run: Row): void;
@@ -38,7 +37,6 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
   const live = run.status === "recording";
   const frames = live ? (p.liveFrames ?? run.n_frames) : run.n_frames;
   const { text, cut } = shortName(run.name);
-  const showSlot = p.slot >= 0 || p.pickMode;
   const name = <span className="min-w-0 flex-1 truncate">{text}</span>;
   return (
     <div
@@ -48,22 +46,14 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
       data-cursor={p.cursor || undefined}
       onClick={(e) => p.onOpen(run, e)}
       className={cn(
-        "group/row relative my-px flex h-8 w-full items-center gap-2 rounded-md pl-2 pr-1.5 text-sm transition-colors hover:bg-sidebar-accent data-[active]:z-10 data-[active]:bg-sidebar-accent data-[active]:font-medium",
+        "group/row relative my-px flex h-8 w-full items-center gap-2 rounded-md pl-1.5 pr-1.5 text-sm transition-colors hover:bg-sidebar-accent data-[active]:z-10 data-[active]:bg-sidebar-accent data-[active]:font-medium",
         "group-focus-within/list:data-[cursor]:z-10 group-focus-within/list:data-[cursor]:shadow-[inset_0_0_0_2px_color-mix(in_oklab,var(--sidebar-ring)_70%,transparent)]",
       )}
     >
-      {showSlot ? (
-        <div className="flex w-[18px] shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
-          {p.slot >= 0 ? (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground" title={`Run ${SLOT_LETTERS[p.slot]}`}>
-              <span className="size-2 rounded-full" style={{ background: seriesVar(p.slot) }} />
-              {SLOT_LETTERS[p.slot]}
-            </span>
-          ) : (
-            <PickBox run={run} picked={p.picked} onPick={p.onPick} />
-          )}
-        </div>
-      ) : null}
+      {/* The pick box is always the first thing on the row, at the same x on every row, so picking never moves a name. */}
+      <div className="flex w-4 shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
+        <PickBox run={run} picked={p.picked} onPick={p.onPick} />
+      </div>
       {cut ? (
         <Tooltip>
           <TooltipTrigger asChild>{name}</TooltipTrigger>
@@ -73,11 +63,16 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
         name
       )}
       {live ? <span className="size-1.5 shrink-0 rounded-full bg-destructive animate-pulse-dot" title="Recording" /> : null}
+      {p.slot >= 0 ? (
+        <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title={`Run ${SLOT_LETTERS[p.slot]}`}>
+          <span className="size-2 rounded-full" style={{ background: seriesVar(p.slot) }} />
+          {SLOT_LETTERS[p.slot]}
+        </span>
+      ) : null}
       <span className="num shrink-0 text-xs text-muted-foreground group-hover/row:hidden group-has-[[data-state=open]]/row:hidden">
         {formatDuration(lastFrameTime(frames, run.dt))}
       </span>
-      <div className="hidden shrink-0 items-center gap-1 group-hover/row:flex has-[[data-state=open]]:flex" onClick={(e) => e.stopPropagation()}>
-        {!showSlot ? <PickBox run={run} picked={p.picked} onPick={p.onPick} /> : null}
+      <div className="hidden shrink-0 items-center group-hover/row:flex has-[[data-state=open]]:flex" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" className="size-6" aria-label={`Actions for ${run.name}`}>
@@ -94,7 +89,14 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
 function PickBox({ run, picked, onPick }: { run: Row; picked: boolean; onPick(r: Row): void }) {
   const full = useApp((s) => s.picks.length >= MAX_COMPARE);
   const box = (
-    <Checkbox checked={picked} disabled={full && !picked} onCheckedChange={() => onPick(run)} aria-label={`Compare ${run.name}`} />
+    <Checkbox
+      checked={picked}
+      disabled={full && !picked}
+      onCheckedChange={() => onPick(run)}
+      aria-label={`Compare ${run.name}`}
+      // Faint at rest, stronger when the row is hovered, strongest under the pointer.
+      className="data-[state=unchecked]:border-muted-foreground/35 data-[state=unchecked]:group-hover/row:border-muted-foreground/80 data-[state=unchecked]:hover:border-foreground"
+    />
   );
   if (!full || picked) return box;
   return (

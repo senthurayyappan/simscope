@@ -163,6 +163,8 @@ def _cmd_export(args: argparse.Namespace) -> int:
     root = _library_root(args.dir)
     _check_runs(root, args.runs)
     layout = args.layout or ("single" if len(args.runs) == 1 else "grid")
+    if args.arrange and layout != "compare":
+        raise UserError("--arrange needs --layout compare")
     try:
         out = export.export_html(
             root,
@@ -170,6 +172,7 @@ def _cmd_export(args: argparse.Namespace) -> int:
             args.output,
             title=args.title,
             layout=layout,
+            arrange=args.arrange,
             transcode=not args.no_transcode,
             annotations=not args.no_annotations,
             ui=args.ui,
@@ -390,6 +393,12 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("runs", nargs="+", metavar="RUN")
     p.add_argument("-o", "--output", required=True, metavar="OUT.html")
     p.add_argument("--layout", choices=("single", "grid", "compare"))
+    p.add_argument(
+        "--arrange",
+        choices=export.ARRANGEMENTS,
+        help="compare panes: side (default for 2 runs), stack, or grid "
+        "(default for 3-4); needs --layout compare",
+    )
     p.add_argument("--title")
     p.add_argument(
         "--ui",

@@ -89,6 +89,7 @@ export class Player extends EventTarget {
     this.rest = new Vector3();
     this.holdZ = null; // the height position follow holds once the run's extent is known
     this._fitPending = false;
+    this._fitted = false; // the run's extent has been fitted once
     this.r = null; // the loaded run
     this._token = 0;
     this.followPref = opts.follow;
@@ -357,6 +358,7 @@ export class Player extends EventTarget {
     this.pan.a = this.pan.b = 0;
     this.holdZ = null;
     this._fitPending = false;
+    this._fitted = false;
     this.rig.setView(this.viewName, false);
     this.rig.fitBox(fit.ex / 2, fit.ey / 2, fit.ez / 2, false);
     this._setDepth(tiered ? all : fit);
@@ -477,6 +479,7 @@ export class Player extends EventTarget {
     this.fstate.z0.clear();
     this.holdZ = null;
     this._fitPending = false;
+    this._fitted = false;
     this.pan.a = this.pan.b = 0;
     this.poseDirty = true;
     this.invalidate();
@@ -1182,6 +1185,10 @@ export class Player extends EventTarget {
   /** Hold the target at height `zc` and show `height` metres of world (animated). @internal */
   _fitVertical(zc, height, animate) {
     this.holdZ = zc;
+    if (this.linked && this.fstate.mode === "off") {
+      this.rest.z = zc;
+      this._writeRestTarget(animate, true);
+    }
     this.rig.setHeight(height, animate);
     this.fstate.settled = false;
     this.invalidate();
@@ -1194,17 +1201,20 @@ export class Player extends EventTarget {
     if (!ext) return false;
     const zc = (ext.zlo + ext.zhi) / 2;
     this._fitVertical(zc, this._fitHeight(zc), animate);
+    this._fitted = true;
     return true;
   }
 
   /**
-   * The extent arrived (or position follow was switched on): fit it once.
-   * Not while playing (the view must not move under a running clock; it
-   * waits for a pause) and not after the user zoomed by hand.
+   * The extent arrived (or position follow was switched on): fit it. The
+   * first fit of a run happens at once, even if the clock is already playing
+   * (the frame-0 view would otherwise stay: it can crop the robot), as one
+   * short animation. Later ones (another env's range) wait for a pause: the
+   * view must not move under a running clock. Never after the user zoomed.
    */
   _autoFit() {
     if (this.linked || !this.r || this.fstate.mode !== "position" || !this._extent()) return;
-    if (this.clock.playing) {
+    if (this.clock.playing && this._fitted) {
       this._fitPending = true;
       return;
     }
@@ -1270,8 +1280,10 @@ export class Player extends EventTarget {
     const b = this._bounds(false);
     this.pan.a = this.pan.b = 0;
     if (fs.mode === "off") {
-      this.rest.set(b.cx, b.cy, b.cz);
-      this.rig.setTarget(b.cx, b.cy, b.cz, animate);
+      // In a ground-aligned group the camera looks at the group's height even when not following.
+      const z = this.linked && this.linked.z() !== null ? this.linked.z() : b.cz;
+      this.rest.set(b.cx, b.cy, z);
+      this.rig.setTarget(b.cx, b.cy, z, animate);
     }
     return b;
   }
@@ -1281,7 +1293,15 @@ export class Player extends EventTarget {
     if (what === "all") {
       this.rig.fitBox(b.ex / 2, b.ey / 2, b.ez / 2, animate);
       this._setDepth(b);
-    } else if (!this._trajectoryFit(animate)) this.rig.fitBox(b.ex / 2, b.ey / 2, b.ez / 2, animate);
+    } else if (!this._trajectoryFit(animate)) {
+      // Frame 0's box is centred on the bounds, but position follow holds the camera at
+      // the standing height (or the group's): leave room for the difference, or a robot
+      // whose bounds centre is off that height is cropped in a short pane.
+      const mode = this.fstate.mode;
+      const held = mode === "pose" || (mode === "off" && !this.linked) ? null : (this._heldZ() ?? this.standingHeight());
+      const dz = held === null ? 0 : Math.abs(b.cz - held);
+      this.rig.fitBox(b.ex / 2, b.ey / 2, b.ez / 2 + dz, animate);
+    }
   }
 
   /** Orbit, zoom and pan (`pan`: right and up, metres), plus where the target is now. */
@@ -1351,7 +1371,18 @@ export class Player extends EventTarget {
     this.cssWidth = Math.max(cssWidth, 1);
     this.cssHeight = Math.max(cssHeight, 1);
     this.dpr = dpr;
+    const before = this.rig.aspect;
     this.rig.setFrame(undefined, this.cssWidth / this.cssHeight);
+    // The height that shows the run depends on the pane's shape (in a narrow pane the width limits it):
+    // fit it again for the new one, at once. Only if it was fitted to the run and not zoomed by hand.
+    if (this.r && Math.abs(this.rig.aspect / before - 1) > 0.01 && !this.rig.userZoomed) {
+      if (this.linked) {
+        if (this.linked.zc !== null && !this.linked.zoomed()) this.linked.trajectory(false);
+      } else if (this.fstate.mode === "position" && this.holdZ !== null) {
+        const h = this._fitHeight(this.holdZ);
+        if (h) this.rig.setHeight(h, false);
+      }
+    }
     this.invalidate();
   }
 

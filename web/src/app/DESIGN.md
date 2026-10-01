@@ -43,7 +43,7 @@ This file keeps only the layout facts that are specific to the code.
   popover, Visual, Collision, Contacts, Sync cameras (compare only), Export,
   Theme. In compare it becomes a strip above the panes so it never covers a
   pane header. Camera, speed and follow are in the timeline bar.
-- Compare: 2-4 panes on one clock, three panes in a 2 x 2 grid. Run slots A-D
+- Compare: 2-4 panes on one clock in the user's arrangement (contracts §10.1: side by side, stacked, or a grid; default side for two runs and grid for three or four; remembered, and sent to exports as `arrange`). The three-way toggle is in the library's pick bar and in the viewport strip. Panes always have equal pixel sizes. Run slots A-D
   (`--series-1..4`) are assigned when a run is picked and kept on its row,
   pane header, timeline lane and plot trace. `linkCameras` (core) keeps the
   panes' orbit, zoom and ground height shared.

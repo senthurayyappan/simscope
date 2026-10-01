@@ -1,164 +1,135 @@
-// The shared control of a compare page (export layout="compare"): one play
-// button, scrubber, time readout and speed menu for every <simscope-player
-// sync="NAME"> on the page. This is the old inline master script of
-// export.py, rebuilt on the shared Clock: there is no leader and no drift
-// correction, because every player reads the same clock.
+// The compare page (export layout="compare"): every <simscope-player
+// sync="NAME"> in the box fills the page in the chosen arrangement, with one
+// title per pane and ONE shared control bar at the bottom, in the visual
+// language of the app (ui.js). It looks like the app's compare view, minus
+// the app: no letters, no colour dots, no highlight rows.
 //
-// Markup it drives (ids are the ones export.py writes): #ss-play, #ss-scrub
-// (range 0..1000), #ss-time, #ss-speed, #ss-marks, inside the box `box`,
-// which carries data-autoplay="1" and data-loop="1" flags and starts hidden.
+// Markup (contracts §10.2): `<div id="ss-master" data-arrange="side|stack|grid">`
+// holding one `<figure>` per run, each with a `<figcaption>` (the title) and
+// a `<simscope-player sync="NAME">`. The page needs no CSS beyond
+// `html, body { margin: 0; height: 100% }`: the layout, the styles and the
+// bar are made here.
 //
-// The marks strip has one row per player, in page order, drawn in the
-// player's `color` attribute (its compare slot): the run's highlights as the
-// element draws them on its own scrub bar (marks.js: jump spans as thin bars,
-// moments as ticks) and its annotation events as a thin underline. A dot in
-// the same colour goes in front of the name in the player's <figure>
-// <figcaption>, if it has one. The `color` attributes are all the page needs
-// to provide: the rows and the dots are made here, with inline styles, so the
-// page's CSS needs nothing new.
+// All panes read one Clock, so there is no leader and no drift correction; a
+// run shorter than the longest holds its last frame, and the bar's duration
+// is the longest. Cameras are linked with ground alignment and pan sync
+// (linkCameras): the comparison is only honest if z = 0 and the zoom agree.
+// Panes of an arrangement all have the same pixel size, which that needs.
 
 import { clockFor } from "../core/clock.js";
-import { layoutMarks } from "./marks.js";
+import { linkCameras } from "../core/compare.js";
+import { arrangementOf, gridShape } from "./layout.js";
+import { BAR_CSS, barHTML, barParts, bindBar, FONT, TOKENS } from "./ui.js";
 
-const fmt = (t) => `${t.toFixed(2)}s`;
+const STYLE_ID = "ss-master-style";
 
-/** Used for a player that has no `color` attribute. */
-const NEUTRAL = "#2c7a7b";
-/** Height of one run's row in the strip, px. */
-const ROW = 7;
-
-function node(tag, style, title) {
-  const el = document.createElement(tag);
-  Object.assign(el.style, style);
-  if (title) el.title = title;
-  return el;
-}
-
-/** A dot in `color` in front of the name in a player's <figcaption>, once. */
-function addDot(player, color) {
-  const caption = player.closest("figure")?.querySelector("figcaption");
-  if (!caption || caption.querySelector("[data-ss-dot]")) return null;
-  const dot = node("span", { display: "inline-block", width: "8px", height: "8px", marginRight: "6px", borderRadius: "50%", background: color });
-  dot.setAttribute("data-ss-dot", "");
-  caption.prepend(dot);
-  return dot;
-}
+const CSS = `
+#ss-master { ${TOKENS.light} position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; background: var(--ss-bg); color: var(--ss-fg); font: 12px/16px ${FONT}; }
+@media (prefers-color-scheme: dark) { #ss-master { ${TOKENS.dark} } }
+#ss-master[hidden] { display: none; }
+#ss-master .ss-stage { flex: 1; min-height: 0; display: grid; gap: 1px; background: var(--ss-border); }
+#ss-master figure { position: relative; margin: 0; min-width: 0; min-height: 0; overflow: hidden; background: var(--ss-viewport); }
+#ss-master .ss-empty { background: var(--ss-bg); }
+#ss-master figure > simscope-player { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; aspect-ratio: auto; border: 0; border-radius: 0; }
+#ss-master figcaption { position: absolute; left: 8px; top: 8px; z-index: 2; box-sizing: border-box; max-width: calc(100% - 16px); height: 24px; padding: 0 8px;
+  display: flex; align-items: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; background: var(--ss-bg); color: var(--ss-fg);
+  border: 1px solid var(--ss-border); border-radius: 6px; font-weight: 500; pointer-events: none; }
+${BAR_CSS}
+`;
 
 /**
- * Wire `box` to the clock named `sync` and to the players that use it.
+ * Lay out the page and wire the shared bar.
  *
- * @param {HTMLElement} box  the master control element.
+ * @param {HTMLElement} box  the master element (`#ss-master`).
  * @param {string} [sync]  clock name; default "compare".
- * @returns {{clock: import("../core/clock.js").Clock, dispose(): void}}
+ * @returns {{clock: import("../core/clock.js").Clock, arrange: string, dispose(): void}}
  */
 export function attachMaster(box, sync = "compare") {
-  const $ = (id) => box.querySelector(`#${id}`) || document.getElementById(id);
-  const play = $("ss-play"), scrub = $("ss-scrub"), time = $("ss-time"), speed = $("ss-speed"), marks = $("ss-marks");
+  const doc = box.ownerDocument || document;
+  const els = [...doc.querySelectorAll(`simscope-player[sync="${sync}"]`)];
   const clock = clockFor(sync);
-  const els = [...document.querySelectorAll(`simscope-player[sync="${sync}"]`)];
-  clock.loop = box.dataset.loop === "1";
+  clock.loop = box.getAttribute("data-loop") === "1";
 
-  // One entry per player: its colour, annotation events and highlights.
-  const runs = els.map((el) => {
-    const color = el.getAttribute("color") || "";
-    return { el, color: color || NEUTRAL, events: [], highlights: [], dot: color ? addDot(el, color) : null };
-  });
-
-  const paint = () => {
-    time.textContent = `${fmt(clock.time)} / ${fmt(clock.duration)}`;
-    if (document.activeElement !== scrub) scrub.value = clock.duration > 0 ? Math.round((clock.time / clock.duration) * 1000) : 0;
-  };
-  const label = () => {
-    play.textContent = clock.playing ? "Pause" : "Play";
-    play.setAttribute("aria-label", clock.playing ? "Pause" : "Play");
-  };
-  const onState = () => label();
-  clock.addEventListener("time", paint);
-  clock.addEventListener("state", onState);
-  const onPlay = () => clock.toggle();
-  const onScrub = () => clock.seek((scrub.value / 1000) * clock.duration);
-  const onSpeed = () => (clock.speed = Number(speed.value));
-  play.addEventListener("click", onPlay);
-  scrub.addEventListener("input", onScrub);
-  speed.addEventListener("change", onSpeed);
-
-  // The strip: a row per run, the track tall enough for them above the scrubber.
-  let shown = false;
-  const render = () => {
-    marks.textContent = "";
-    const d = clock.duration;
-    if (!shown || !(d > 0)) return;
-    const rows = runs.length;
-    marks.style.height = `${rows * ROW}px`;
-    if (marks.parentElement) marks.parentElement.style.height = `${rows * ROW + 24}px`;
-    const width = marks.getBoundingClientRect().width || 300;
-    runs.forEach((run, i) => {
-      const row = node("div", { position: "absolute", left: "0", right: "0", top: `${i * ROW}px`, height: `${ROW}px` });
-      for (const ev of run.events) {
-        const m = node("i", { left: `${Math.min(100, (ev.t0 / d) * 100)}%`, width: `${Math.max(0, ((ev.t1 - ev.t0) / d) * 100)}%`, top: `${ROW - 2}px`, height: "2px" }, ev.label);
-        m.addEventListener("click", () => clock.seek(ev.t0));
-        row.appendChild(m);
-      }
-      const { spans, ticks } = layoutMarks(run.highlights, d, width);
-      for (const sp of spans) {
-        const m = node("u", { position: "absolute", left: `${sp.left}%`, width: `${sp.width}%`, top: "2px", height: "3px", minWidth: "3px", borderRadius: "2px", background: run.color, opacity: "0.55", textDecoration: "none", cursor: "pointer" }, sp.title);
-        m.addEventListener("click", () => clock.seek(sp.t));
-        row.appendChild(m);
-      }
-      for (const tk of ticks) {
-        const m = node("b", { position: "absolute", left: `${tk.left}%`, top: "0", width: "2px", height: `${ROW - 2}px`, marginLeft: "-1px", borderRadius: "1px", background: run.color, cursor: "pointer" }, tk.title);
-        m.addEventListener("click", () => clock.seek(tk.t));
-        row.appendChild(m);
-      }
-      marks.appendChild(row);
-    });
-  };
-  const resize = typeof ResizeObserver === "function" ? new ResizeObserver(() => render()) : null;
-  if (resize) resize.observe(marks);
-
-  // Wait until every player has settled (ready or failed), then show the control.
-  const settled = new Set();
-  const settle = (run) => {
-    settled.add(run);
-    if (settled.size < runs.length) return;
-    const d = clock.duration;
-    if (d > 0) {
-      shown = true;
-      render();
-      play.disabled = scrub.disabled = false;
-      paint();
-      if (box.dataset.autoplay === "1") clock.play();
-    }
-    box.hidden = false;
-  };
-  for (const run of runs) {
-    run.el.addEventListener("ready", async (e) => {
-      run.events = e.detail.events || [];
-      try {
-        // The highlights of the env the player follows, as its own scrub bar draws them.
-        const doc = await run.el.player.highlights();
-        const env = run.el.player.follow().env;
-        run.highlights = ((doc && doc.highlights) || []).filter((h) => h.env === env).sort((a, b) => a.t - b.t);
-      } catch {
-        // Markers are a nicety; a bad file must not break playback.
-      }
-      settle(run);
-      if (shown) render();
-    });
-    run.el.addEventListener("error", () => settle(run));
+  if (!doc.getElementById(STYLE_ID)) {
+    const style = doc.createElement("style");
+    style.id = STYLE_ID;
+    style.textContent = CSS;
+    doc.head.appendChild(style);
   }
-  label();
+
+  // One figure per player, in page order; a title from the figcaption.
+  const figures = els.map((el) => {
+    let fig = el.closest("figure");
+    if (!fig) {
+      fig = doc.createElement("figure");
+      fig.appendChild(el);
+    }
+    el.setAttribute("nocontrols", ""); // the shared bar drives playback
+    return fig;
+  });
+  const arrange = arrangementOf(box.getAttribute("data-arrange"), figures.length);
+  const { cols, rows } = gridShape(figures.length, arrange);
+
+  const stage = doc.createElement("div");
+  stage.className = "ss-stage";
+  stage.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+  stage.style.gridTemplateRows = `repeat(${rows}, minmax(0, 1fr))`;
+  for (const fig of figures) stage.appendChild(fig);
+  for (let i = figures.length; i < cols * rows; i++) {
+    const empty = doc.createElement("div");
+    empty.className = "ss-empty";
+    stage.appendChild(empty);
+  }
+  const bar = doc.createElement("div");
+  bar.className = "ss-bar";
+  bar.innerHTML = barHTML();
+  box.replaceChildren(stage, bar);
+  box.removeAttribute("hidden");
+  box.setAttribute("data-arrange", arrange);
+
+  // The longest run sets the duration (the clock keeps the max of its players' claims).
+  const stepDt = () => {
+    const dts = els.map((el) => el.player && el.player.info() && el.player.info().dt).filter((d) => d > 0);
+    return dts.length ? Math.min(...dts) : 0.02;
+  };
+  const ctl = bindBar(barParts(bar), { stepDt, outside: doc });
+  ctl.setClock(clock);
+
+  const onKey = (e) => {
+    if (e.target && /^(input|button|select)$/i.test(e.target.tagName || "")) return;
+    if (e.key === " ") {
+      e.preventDefault?.();
+      clock.toggle();
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      clock.pause();
+      clock.step(e.key === "ArrowLeft" ? -1 : 1, stepDt());
+    }
+  };
+  doc.addEventListener("keydown", onKey);
+
+  // Link the cameras once every player has one; autoplay once every pane has settled.
+  const players = els.map((el) => el.player).filter(Boolean);
+  const unlink = players.length > 1 ? linkCameras(players) : () => {};
+  const settled = new Set();
+  const settle = (el) => {
+    settled.add(el);
+    if (settled.size < els.length) return;
+    if (box.getAttribute("data-autoplay") !== "1") return;
+    // Play once every pane has framed its run (the group fits the union of their ranges, and never while playing).
+    Promise.all(players.map((p) => p._extentJob)).then(() => clock.duration > 0 && clock.play(), () => clock.play());
+  };
+  for (const el of els) {
+    el.addEventListener("ready", () => settle(el));
+    el.addEventListener("error", () => settle(el));
+  }
 
   return {
     clock,
+    arrange,
     dispose() {
-      clock.removeEventListener("time", paint);
-      clock.removeEventListener("state", onState);
-      play.removeEventListener("click", onPlay);
-      scrub.removeEventListener("input", onScrub);
-      speed.removeEventListener("change", onSpeed);
-      if (resize) resize.disconnect();
-      for (const run of runs) if (run.dot) run.dot.remove();
+      doc.removeEventListener("keydown", onKey);
+      unlink();
+      ctl.dispose();
     },
   };
 }

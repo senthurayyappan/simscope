@@ -281,20 +281,19 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, s: DrawState, pal: P
 }
 
 function drawLaneLabel(ctx: CanvasRenderingContext2D, lane: LaneSpec, y: number, pal: Palette) {
+  if (!lane.label) return; // a lone highlight lane explains itself
   ctx.font = `11px ${pal.sans}`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   let x = 12;
   const cy = y + LANE_H / 2 + 0.5;
   if (lane.slot !== null) {
+    // In compare the run's title with its slot dot; the letter lives in the library and pane header.
     ctx.fillStyle = pal.series[lane.slot % 4];
     ctx.beginPath();
     ctx.arc(x + 4, cy, 4, 0, Math.PI * 2);
     ctx.fill();
     x += 14;
-    ctx.fillStyle = pal.muted;
-    ctx.fillText(lane.letter ?? "", x, cy);
-    x += ctx.measureText(lane.letter ?? "").width + 5;
   }
   ctx.fillStyle = pal.muted;
   ctx.fillText(fit(ctx, lane.label, GUTTER - x - 6), x, cy);
@@ -307,20 +306,19 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   return `${t}…`;
 }
 
-/** A glyph: the lucide path in colour on a 2 px surface ring, no disc (TL6). */
-function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: number, color: string, ring: string, size = GLYPH) {
+/**
+ * A marker: the plain lucide icon in its colour, no ring and no disc behind it.
+ * The centre snaps to whole pixels so the 1.2 px strokes stay crisp at 1x and 2x.
+ */
+function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: number, color: string, size = GLYPH) {
   ctx.save();
-  ctx.translate(cx - size / 2, cy - size / 2);
+  ctx.translate(Math.round(cx - size / 2), Math.round(cy - size / 2));
   ctx.scale(size / 24, size / 24);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  const path = kindIcon(kind);
-  ctx.strokeStyle = ring;
-  ctx.lineWidth = 2 * 2 + 2; // ring: the 2 px stroke plus 2 px of surface on each side, in icon units
-  ctx.stroke(path);
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  ctx.stroke(path);
+  ctx.lineWidth = 2.1;
+  ctx.stroke(kindIcon(kind));
   ctx.restore();
 }
 
@@ -372,13 +370,7 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
       ctx.fillText(label, cx - w / 2 + 16, cy + 0.5);
       hits.push({ lane: lane.id, pane: lane.pane, x: cx, y: cy, r: Math.max(12, w / 2), cluster: c });
     } else {
-      if (hot) {
-        ctx.fillStyle = pal.secondary;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 11, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      glyph(ctx, shapeOf(c.best.kind), cx, cy, glyphColor(c.best, lane, pal), pal.bg);
+      glyph(ctx, shapeOf(c.best.kind), cx, cy, glyphColor(c.best, lane, pal), hot ? GLYPH + 2 : GLYPH);
       hits.push({ lane: lane.id, pane: lane.pane, x: cx, y: cy, r: 12, cluster: c });
     }
   }
@@ -387,7 +379,7 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
   for (const h of spans) {
     const cx = xOf(h.t1 as number, s);
     if (cx < GUTTER - 12 || cx > s.width - RIGHT_PAD + 12) continue;
-    glyph(ctx, shapeOf(h.kind), cx, cy, glyphColor(h, lane, pal), pal.bg);
+    glyph(ctx, shapeOf(h.kind), cx, cy, glyphColor(h, lane, pal));
     hits.push({
       lane: lane.id,
       pane: lane.pane,
@@ -411,7 +403,7 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-    glyph(ctx, "label", cx, cy, pal.fg, pal.bg);
+    glyph(ctx, "label", cx, cy, pal.fg);
     ctx.fillStyle = pal.fg;
     ctx.font = `11px ${pal.sans}`;
     ctx.textAlign = "left";

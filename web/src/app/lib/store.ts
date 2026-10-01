@@ -7,6 +7,7 @@ import { create } from "zustand";
 import type { Api } from "./api";
 import type { FollowMode, RunInfo, ViewName } from "./core";
 import { buildSections, flatOrder, nextUnrated, stepRun, type LibraryView, type SortKey } from "./filters";
+import { carryPaneState, isArrangement, type Arrangement } from "./panes";
 import { MAX_SLOTS } from "./palette";
 import { EMPTY_ANNOTATIONS, rowWithAnnotations } from "./rows";
 import { readStore, writeStore } from "./utils";
@@ -72,6 +73,8 @@ export interface AppState {
   collision: boolean;
   contacts: boolean;
   cameraSync: boolean;
+  /** The user's compare arrangement, or null for the default of the pane count (10.1). */
+  arrange: Arrangement | null;
   tab: InspectorTab;
   plotWindow: PlotWindow;
   followLive: boolean;
@@ -83,7 +86,7 @@ export interface AppState {
 }
 
 export interface AppActions {
-  init(api: Api, layout?: { runs?: string[]; layout?: string }): Promise<void>;
+  init(api: Api, layout?: { runs?: string[]; layout?: string; arrange?: string }): Promise<void>;
   refreshRows(): Promise<void>;
   refreshGroups(): Promise<void>;
   setQuery(q: string): void;
@@ -114,6 +117,7 @@ export interface AppActions {
   cycleFollow(): void;
   setFollowMode(mode: FollowMode): void;
   setGroundKind(kind: GroundKind): void;
+  setArrange(a: Arrangement): void;
   poll(): Promise<void>;
 }
 
@@ -169,7 +173,18 @@ export const useApp = create<AppState & AppActions>((set, get) => {
   }
 
   function enterRuns(panes: PaneRef[], active = 0) {
-    set({ panes, active, cursor: panes[active]?.name ?? null, infos: {}, envs: {}, highlights: {}, pinned: [], labelDraft: null });
+    const s = get();
+    set({
+      panes,
+      active,
+      cursor: panes[active]?.name ?? null,
+      // Panes that keep their index and run do not reload, so keep what they reported.
+      infos: carryPaneState(s.panes, panes, s.infos),
+      envs: carryPaneState(s.panes, panes, s.envs),
+      highlights: carryPaneState(s.panes, panes, s.highlights),
+      pinned: [],
+      labelDraft: null,
+    });
     writeHash(panes[active]?.name ?? null);
     void loadRunData(panes[active]?.name);
   }
@@ -224,6 +239,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     collision: false,
     contacts: false,
     cameraSync: true,
+    arrange: ((v) => (isArrangement(v) ? v : null))(readStore(lsKey("arrange"))),
     tab: "plots",
     plotWindow: pick<PlotWindow>("plotwindow", ["all", "5", "2"], "all"),
     followLive: true,
@@ -234,6 +250,8 @@ export const useApp = create<AppState & AppActions>((set, get) => {
 
     async init(api, layout) {
       set({ api });
+      // A full export boots with the arrangement it was made with (not remembered as the user's choice).
+      if (isArrangement(layout?.arrange)) set({ arrange: layout.arrange });
       try {
         const [library] = await Promise.all([api.library(), get().refreshRows()]);
         set({ library });
@@ -427,6 +445,11 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     setFollowMode(mode) {
       writeStore(lsKey("follow"), mode);
       set({ followChosen: true, follow: mode, lastFollow: mode === "off" ? get().lastFollow : mode });
+    },
+
+    setArrange(arrange) {
+      writeStore(lsKey("arrange"), arrange);
+      set({ arrange });
     },
 
     setGroundKind(kind) {

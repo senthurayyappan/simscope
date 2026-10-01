@@ -577,7 +577,7 @@ _RUN_LIST = re.compile(r"^[A-Za-z0-9._,-]+$")
 
 
 def export_route(request: Request) -> Response:
-    """``GET /api/export?runs=&layout=&ui=&envs=``: an HTML download."""
+    """``GET /api/export?runs=&layout=&arrange=&ui=&envs=``: a download."""
     st = _svc(request).state
     q = request.query_params
     raw = q.get("runs", "")
@@ -596,6 +596,11 @@ def export_route(request: Request) -> Response:
     layout = q.get("layout") or ("single" if len(names) == 1 else "grid")
     if layout not in ("single", "grid", "compare"):
         return error(400, "layout must be single, grid or compare")
+    arrange = q.get("arrange") or None
+    if arrange is not None and arrange not in export.ARRANGEMENTS:
+        return error(400, "arrange must be side, stack or grid")
+    if layout != "compare":
+        arrange = None  # only a compare page has an arrangement
     ui = q.get("ui", "lean")
     if ui not in ("lean", "full"):
         return error(400, "ui must be lean or full")
@@ -620,6 +625,7 @@ def export_route(request: Request) -> Response:
                 names,
                 out,
                 layout=layout,
+                arrange=arrange,
                 **kwargs,
             )
         except ValueError as exc:  # still recording, bad layout for the runs

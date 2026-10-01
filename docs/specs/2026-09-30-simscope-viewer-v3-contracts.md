@@ -431,3 +431,39 @@ neutral. `also` is kept for merged kinds.
 `Body` gains optional `mass: float = 0.0` (kg; 0 means unknown). The scene
 descriptor writes `"mass"` for a body only when it is above 0, so scenes
 without masses keep their hashes. Format spec §4 documents it.
+
+## 10. v3.3 changes: compare layout and exports
+
+Normative; wins over earlier sections where they disagree.
+
+### 10.1 Compare arrangement
+
+The compare view has an **arrangement** chosen by the user: `side` (panes
+side by side: horizontal split), `stack` (panes stacked: vertical split) or
+`grid` (a 2 × 2 grid, one cell empty for three runs). Default: `side` for two
+runs, `grid` for three or four. The app shows the choice as a three-way icon
+toggle beside the Compare button in the pick bar, and in the viewport toolbar
+while comparing. It is remembered in `localStorage`.
+
+### 10.2 Exports
+
+- `GET /api/export` gains `arrange=side|stack|grid`; the app passes the
+  arrangement it is showing. Absent means the default of 10.1.
+- Boot block of full exports (§6) gains `"arrange"`.
+- **A compare export looks like the app's compare view:** panes fill the
+  whole page in the chosen arrangement (no padding, hairline gaps), one title
+  per pane and nothing else (no letters A–D, no colour dots: in a standalone
+  file they carry no meaning), and **one** control bar at the bottom shared by
+  every pane: play/pause (icon), step, a scrubber, the time readout, loop and
+  speed. No highlight rows or ticks anywhere in a lean export.
+- **A single-run lean export** has the same bar under one pane. Controls are
+  icon buttons (no text labels like "Play"); neutral colours, same visual
+  language as the app (rounded 6 px controls, hairlines, light/dark follows
+  the system).
+- Lean markup contract (written by `export.py`, laid out by the element):
+  `<div id="ss-master" data-arrange="side|stack|grid">` containing one
+  `<figure>` per run: `<figcaption>title</figcaption>` plus a
+  `<simscope-player src="#simscope-pack" run="…" sync="compare">`. No `color`
+  attribute, no letters. `SimscopePlayer.attachMaster(box, "compare")` builds
+  the shared bar and styles the layout itself (the page needs no CSS beyond
+  `html, body {margin: 0; height: 100%}`).

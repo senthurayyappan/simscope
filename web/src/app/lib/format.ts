@@ -67,3 +67,34 @@ export function lastFrameTime(frames: number, dt: number): number {
 export function formatDuration(seconds: number): string {
   return `${formatTimecode(Number.isFinite(seconds) ? Math.max(0, seconds) : 0)} s`;
 }
+
+// ---- highlight readouts (contracts §9.1): `value` is m/s² for acceleration and N for contact force; `ratio` is x the run's typical peak ----
+
+/** Standard gravity, m/s², to express an acceleration in g. */
+export const G = 9.80665;
+
+export interface Readout {
+  /** The first line, in medium weight. */
+  main: string;
+  /** Muted text beside it, or null. */
+  sub: string | null;
+}
+
+interface Hl {
+  kind: string;
+  label: string;
+  detail: string;
+  value: number;
+  ratio: number | null;
+}
+
+export function readout(h: Hl): Readout {
+  if (h.kind === "acceleration" && Number.isFinite(h.value)) {
+    return { main: `${formatValue(h.value)} m/s²`, sub: `${formatValue(h.value / G)} g` };
+  }
+  if (h.kind === "contact" && Number.isFinite(h.value)) {
+    return { main: `${formatValue(h.value)} N`, sub: h.ratio !== null && h.ratio !== undefined ? `${formatValue(h.ratio)}× typical` : null };
+  }
+  // Custom kinds say what they want to say in `detail`.
+  return { main: h.detail || h.label, sub: null };
+}

@@ -1,0 +1,225 @@
+// The compare master and the shared bar, on a stand-in DOM (fakedom.mjs).
+
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { clockFor } from "../src/core/clock.js";
+import { attachMaster } from "../src/element/master.js";
+import { barHTML, barParts, bindBar, icon, readout } from "../src/element/ui.js";
+import { Clock } from "../src/core/clock.js";
+import { makeDocument } from "./fakedom.mjs";
+
+let counter = 0;
+
+/** A compare page as export.py writes it: a box of figures, each a title and a player. */
+function page(titles, arrange, { dts = [] } = {}) {
+  const doc = makeDocument();
+  const sync = `cmp${counter++}`;
+  const box = doc.createElement("div");
+  box.id = "ss-master";
+  box.setAttribute("id", "ss-master");
+  if (arrange) box.setAttribute("data-arrange", arrange);
+  box.setAttribute("data-loop", "1");
+  doc.body.appendChild(box);
+  const players = titles.map((title, i) => {
+    const fig = doc.createElement("figure");
+    const cap = doc.createElement("figcaption");
+    cap.textContent = title;
+    const el = doc.createElement("simscope-player");
+    el.setAttribute("sync", sync);
+    el.setAttribute("run", title);
+    // A stand-in for the core player: what attachMaster asks of it.
+    el.player = {
+      dt: dts[i] ?? 0.02,
+      info() { return { dt: this.dt }; },
+      addEventListener() {},
+      removeEventListener() {},
+      linked: null,
+      rig: { state: () => ({}), setAngles() {}, targetHeight: 1, setHeight() {} },
+      _frameTarget: () => ({}),
+      _fitFrame() {},
+      _extent: () => null,
+    };
+    fig.appendChild(cap);
+    fig.appendChild(el);
+    box.appendChild(fig);
+    return el;
+  });
+  return { doc, box, players, sync, master: attachMaster(box, sync) };
+}
+
+const click = (n) => n.dispatchEvent(new Event("click"));
+const stageOf = (box) => box.querySelector(".ss-stage");
+
+test("arrangement: the stage's grid for two, three and four runs in each arrangement", () => {
+  const want = {
+    "2 side": [2, 1, 0], "2 stack": [1, 2, 0], "2 grid": [2, 1, 0],
+    "3 side": [3, 1, 0], "3 stack": [1, 3, 0], "3 grid": [2, 2, 1],
+    "4 side": [4, 1, 0], "4 stack": [1, 4, 0], "4 grid": [2, 2, 0],
+  };
+  for (const n of [2, 3, 4]) {
+    for (const arrange of ["side", "stack", "grid"]) {
+      const { box } = page(["a", "b", "c", "d"].slice(0, n).map((x) => `run_${x}`), arrange);
+      const stage = stageOf(box);
+      const [cols, rows, empty] = want[`${n} ${arrange}`];
+      assert.equal(stage.style.gridTemplateColumns, `repeat(${cols}, minmax(0, 1fr))`, `${n} ${arrange}`);
+      assert.equal(stage.style.gridTemplateRows, `repeat(${rows}, minmax(0, 1fr))`, `${n} ${arrange}`);
+      assert.equal(stage.querySelectorAll("figure").length, n);
+      assert.equal(stage.querySelectorAll(".ss-empty").length, empty, `${n} ${arrange}: empty cells`);
+      assert.equal(box.getAttribute("data-arrange"), arrange);
+    }
+  }
+});
+
+test("no arrangement given: side for two, a grid for three or four", () => {
+  assert.equal(page(["a", "b"]).box.getAttribute("data-arrange"), "side");
+  assert.equal(page(["a", "b", "c"]).box.getAttribute("data-arrange"), "grid");
+  assert.equal(page(["a", "b", "c", "d"], "bogus").master.arrange, "grid");
+});
+
+test("one title per pane and nothing else: no letters, no colour dots, no colours, no highlight rows", () => {
+  const titles = ["d12_cad2_stage3_w050", "m_roll_d001", "n_roll_d000"];
+  const { box, players, doc } = page(titles, "grid");
+  const caps = box.querySelectorAll("figcaption");
+  assert.deepEqual(caps.map((c) => c.textContent), titles, "the full run name, as given");
+  for (const c of caps) assert.equal(c.children.length, 0, "a title is text only: no letter badge, no dot");
+  for (const n of box.all()) {
+    assert.ok(!n.hasAttribute("data-ss-dot") && !n.hasAttribute("color"), "no dot, no color attribute");
+    assert.ok(!/^[A-D]$/.test(n.textContent.trim()), `no stand-alone letter: "${n.textContent}"`);
+    assert.ok(!n.style.background && !n.style.backgroundColor, "nothing is coloured inline");
+  }
+  assert.equal(box.querySelectorAll("u").length + box.querySelectorAll("b").length + box.querySelectorAll("i").length, 0, "no marker nodes");
+  assert.equal(box.querySelector("#ss-marks"), null);
+  for (const el of players) {
+    assert.ok(el.hasAttribute("nocontrols"), "players hide their own bars");
+    assert.ok(!el.hasAttribute("color"));
+  }
+  // The only control row is the shared one, under the stage.
+  assert.equal(box.querySelectorAll(".ss-bar").length, 1);
+  assert.equal(box.children[box.children.length - 1].className, "ss-bar");
+  const css = doc.getElementById("ss-master-style").textContent;
+  assert.ok(!/uppercase/.test(css), "sentence case");
+});
+
+test("the bar is icon buttons: the only text is the readout and the speed", () => {
+  const { box } = page(["a", "b"], "side");
+  const buttons = box.querySelectorAll("button").filter((b) => !/ss-item/.test(b.className));
+  assert.ok(buttons.length >= 5);
+  for (const b of buttons) {
+    assert.ok(b.getAttribute("aria-label"), "labelled for screen readers");
+    assert.ok(!/^(Play|Pause|Loop)$/.test(b.textContent), `no text label: "${b.textContent}"`);
+  }
+  assert.ok(barHTML().includes("<svg"));
+  assert.ok(icon("play").includes('stroke="currentColor"'));
+});
+
+test("the bar's duration is the longest run, and its buttons drive the shared clock", () => {
+  const { box, sync } = page(["a", "b"], "side", { dts: [0.04, 0.02] });
+  const clock = clockFor(sync);
+  clock.claim("short", 2, 0.02, false);
+  clock.claim("long", 5, 0.02, false);
+  assert.equal(clock.duration, 5, "the max over the runs");
+  const time = box.querySelector(".ss-time");
+  assert.equal(time.textContent, "0.00 / 5.00 s");
+  const [play, back, fwd] = ["ss-play", "ss-back", "ss-fwd"].map((c) => box.querySelector(`.${c}`));
+  assert.equal(play.disabled, false, "enabled once there is a duration");
+
+  click(play);
+  assert.equal(clock.playing, true);
+  assert.equal(play.getAttribute("aria-label"), "Pause");
+  click(play);
+  assert.equal(clock.playing, false);
+  assert.equal(play.getAttribute("aria-label"), "Play");
+
+  // A step is the shortest frame of the runs (0.02 s), and stops playback.
+  click(play);
+  click(fwd);
+  assert.equal(clock.playing, false);
+  assert.ok(Math.abs(clock.time - 0.02) < 1e-9, `${clock.time}`);
+  click(fwd);
+  click(back);
+  assert.ok(Math.abs(clock.time - 0.02) < 1e-9);
+  assert.equal(time.textContent, "0.02 / 5.00 s");
+
+  const scrub = box.querySelector(".ss-scrub");
+  scrub.value = "500";
+  scrub.dispatchEvent(new Event("input"));
+  assert.ok(Math.abs(clock.time - 2.5) < 1e-9);
+  assert.equal(time.textContent, "2.50 / 5.00 s");
+  assert.equal(scrub.style["--p"], "50%", "progress");
+  clock.seek(5);
+  assert.equal(String(scrub.value), "1000");
+});
+
+test("loop and speed: the loop button toggles the clock, the speed menu sets it", () => {
+  const { box, sync } = page(["a", "b"], "side");
+  const clock = clockFor(sync);
+  clock.claim("r", 3, 0.02, false);
+  const loop = box.querySelector(".ss-loop");
+  assert.equal(clock.loop, true, "from data-loop");
+  assert.equal(loop.getAttribute("aria-pressed"), "true");
+  click(loop);
+  assert.equal(clock.loop, false);
+  assert.equal(loop.getAttribute("aria-pressed"), "false");
+
+  const speed = box.querySelector(".ss-speed"), menu = box.querySelector(".ss-menu");
+  assert.equal(menu.hidden, true);
+  assert.equal(speed.textContent, "1×");
+  click(speed);
+  assert.equal(menu.hidden, false);
+  assert.equal(speed.getAttribute("aria-expanded"), "true");
+  const two = box.querySelectorAll(".ss-item").find((i) => i.getAttribute("data-speed") === "2");
+  click(two);
+  assert.equal(clock.speed, 2);
+  assert.equal(menu.hidden, true);
+  assert.equal(speed.textContent, "2×");
+  assert.equal(two.getAttribute("aria-checked"), "true");
+});
+
+test("keyboard: space plays and pauses, the arrows step", () => {
+  const { doc, sync } = page(["a", "b"], "side");
+  const clock = clockFor(sync);
+  clock.claim("r", 3, 0.02, false);
+  const key = (k) => {
+    const e = new Event("keydown");
+    e.key = k;
+    Object.defineProperty(e, "target", { value: { tagName: "BODY" } });
+    doc.dispatchEvent(e);
+  };
+  key(" ");
+  assert.equal(clock.playing, true);
+  key(" ");
+  assert.equal(clock.playing, false);
+  key("ArrowRight");
+  assert.ok(Math.abs(clock.time - 0.02) < 1e-9);
+  key("ArrowLeft");
+  assert.equal(clock.time, 0);
+});
+
+test("a bar without a duration is disabled; the readout is two numbers in seconds", () => {
+  const doc = makeDocument();
+  const root = doc.createElement("div");
+  root.innerHTML = barHTML();
+  const parts = barParts(root);
+  const clock = new Clock();
+  const ctl = bindBar(parts);
+  ctl.setClock(clock);
+  assert.ok(parts.play.disabled && parts.scrub.disabled && parts.back.disabled);
+  assert.equal(parts.time.textContent, "0.00 / 0.00 s");
+  clock.claim("x", 8, 0.02, false);
+  assert.equal(parts.play.disabled, false);
+  assert.equal(readout(2.487, 7.98), "2.49 / 7.98 s");
+  ctl.dispose();
+});
+
+test("the style sheet carries the app's neutral tokens and no uppercase or colour accents", () => {
+  const { doc } = page(["a", "b"], "side");
+  const css = doc.getElementById("ss-master-style").textContent;
+  assert.match(css, /--ss-border:#e5e5e5/, "shadcn border, oklch(0.922 0 0)");
+  assert.match(css, /--ss-fg:#0a0a0a/);
+  assert.match(css, /prefers-color-scheme: dark/);
+  assert.match(css, /border-radius: 6px/);
+  assert.match(css, /height: 28px/);
+  assert.match(css, /tabular-nums/);
+  assert.ok(!/#[0-9a-f]{6}/i.test(css.replace(/--ss-[\w-]+:#[0-9a-f]{6}/gi, "")), "every colour is a token");
+});

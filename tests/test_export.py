@@ -94,6 +94,13 @@ def _parse(path: pathlib.Path) -> _Page:
     return page
 
 
+def _parse_text(text: str) -> _Page:
+    page = _Page()
+    page.feed(text)
+    page.close()
+    return page
+
+
 def _embedded(page: _Page, script_id: str) -> bytes:
     return base64.b64decode(page.scripts[script_id])
 
@@ -139,7 +146,9 @@ def test_html_parses_and_has_expected_structure(library, tmp_path):
     assert out == tmp_path / "x.html"
     page = _parse(out)
     assert page.title == "simscope export"
-    assert {"style", "main", "h1"} <= {name for name, _ in page.tags}
+    tags = {name for name, _ in page.tags}
+    assert "style" in tags
+    assert not tags & {"main", "h1", "h2", "header", "nav", "span", "button"}
     players = page.find("simscope-player")
     assert [p["run"] for p in players] == names
     assert all(p["src"] == "#simscope-pack" for p in players)
@@ -159,7 +168,7 @@ def test_pack_roundtrips_from_page(library, tmp_path):
     root, names = library
     out = export.export_html(root, names, tmp_path / "x.html")
     data = _embedded(_parse(out), "simscope-pack")
-    assert data == export.build_pack(root, names)
+    assert data == export.build_pack(root, names, with_highlights=False)
     with pack.PackReader(data) as reader:
         assert reader.runs() == sorted(names)
         for name in names:
@@ -255,7 +264,11 @@ def test_export_pack_matches_embedded_pack(lib, tmp_path):
         )
         page = _parse(
             export.export_html(
-                root, names, tmp_path / "x.html", annotations=annotations
+                root,
+                names,
+                tmp_path / "x.html",
+                annotations=annotations,
+                ui="full",
             )
         )
         assert p.read_bytes() == _embedded(page, "simscope-pack")
@@ -303,7 +316,10 @@ def test_title_and_escaping(library, tmp_path):
     )
     page = _parse(out)
     assert page.title == 'Walk <b> & "run"'
-    assert "<h1>Walk &lt;b&gt; &amp; &quot;run&quot;</h1>" in out.read_text()
+    assert "<title>Walk &lt;b&gt; &amp; &quot;run&quot;</title>" in (
+        out.read_text()
+    )
+    assert "<h1" not in out.read_text()  # the page has no heading of its own
 
 
 # ------------------------------------------------------------------ layouts
@@ -318,9 +334,10 @@ def test_single_layout(library, tmp_path):
     assert page.title == names[0]
     (player,) = page.find("simscope-player")
     assert {"autoplay", "loop"} <= set(player)
-    assert "nocontrols" not in player
-    assert dict(page.tags[[t for t, _ in page.tags].index("body")][1]) == {
-        "class": "single"
+    assert "nocontrols" not in player and "sync" not in player
+    # One bare player: no heading, caption, figure or wrapper around it.
+    assert not {"figure", "figcaption", "h1", "main", "div"} & {
+        t for t, _ in page.tags
     }
     assert "ss-master" not in out.read_text()
 
@@ -344,61 +361,105 @@ def test_grid_layout_flags(library, tmp_path):
     assert "ss-master" not in (tmp_path / "x.html").read_text()
 
 
-def test_compare_layout_has_master_control(library, tmp_path):
+def _compare_html(names, **kwargs):
+    return export.build_html(b"pack", names, layout="compare", **kwargs).decode(
+        "utf-8"
+    )
+
+
+def _compare_box(text):
+    """The markup of the ``ss-master`` div, between its tags."""
+    return text[text.index('<div id="ss-master"') : text.index("</div>") + 6]
+
+
+def test_compare_markup_is_the_contract(library, tmp_path):
     root, names = library
     out = export.export_html(root, names, tmp_path / "x.html", layout="compare")
+    text = out.read_text()
+    assert _compare_box(text) == (
+        '<div id="ss-master" data-arrange="side" data-autoplay="1" '
+        'data-loop="1">\n'
+        f"<figure><figcaption>{names[0]}</figcaption><simscope-player "
+        f'src="#simscope-pack" run="{names[0]}" sync="compare">'
+        "</simscope-player></figure>\n"
+        f"<figure><figcaption>{names[1]}</figcaption><simscope-player "
+        f'src="#simscope-pack" run="{names[1]}" sync="compare">'
+        "</simscope-player></figure>\n</div>"
+    )
     page = _parse(out)
     players = page.find("simscope-player")
-    assert len(players) == 2
+    assert [p["run"] for p in players] == names
+    assert {p["sync"] for p in players} == {"compare"}
     for player in players:
-        assert "nocontrols" in player
-        assert "autoplay" not in player and "loop" not in player
-    ids = {a.get("id") for _, a in page.tags if a.get("id")}
-    assert {"ss-master", "ss-play", "ss-scrub", "ss-speed", "ss-time"} <= ids
-    assert "ss-marks" in ids  # the strip of highlight rows
-    master = next(a for _, a in page.tags if a.get("id") == "ss-master")
-    assert master["data-autoplay"] == "1" and master["data-loop"] == "1"
+        assert not {"color", "nocontrols", "autoplay", "loop"} & set(player)
 
 
-def test_compare_players_share_a_clock_and_have_slot_colours(library, tmp_path):
+def test_compare_page_has_no_chrome_of_its_own(library, tmp_path):
     root, names = library
     out = export.export_html(root, names, tmp_path / "x.html", layout="compare")
     text = out.read_text()
     page = _parse(out)
-    players = page.find("simscope-player")
-    assert {p["sync"] for p in players} == {"compare"}
-    colors = [p["color"] for p in players]
-    assert colors == ["#2282fb", "#d35f10"]  # slots A and B, in page order
+    tags = {t for t, _ in page.tags}
+    # The runtime builds the bar, the titles' look and the arrangement.
+    assert not tags & {"button", "input", "select", "span", "main", "h1"}
+    ids = {a.get("id") for _, a in page.tags if a.get("id")}
+    assert ids == {
+        "simscope-error",
+        "ss-master",
+        "simscope-runtime",
+        "simscope-pack",
+    }
+    for old in ("slot", "#2282fb", "ss-play", "ss-scrub", "ss-marks", "color="):
+        assert old not in _visible_text(text), old
+    # The only page CSS: margins, height, a neutral background, colour scheme.
+    (style,) = re.findall(r"<style>(.*?)</style>", text, flags=re.S)
+    assert "html,body{margin:0;height:100%;background:#f5f5f5}" in style
+    assert (
+        "@media (prefers-color-scheme:dark){html,body{background:#121212}}"
+        in style
+    )
+    assert "color-scheme:light dark" in style
+    assert "figure" not in style and "simscope-player" not in style
     # The page script only starts the control that the runtime brings.
     inline = [b for k, b in page.scripts.items() if "whenDefined" in b]
     assert len(inline) == 1
     assert "SimscopePlayer.attachMaster(" in inline[0]
     assert '"ss-master"' in inline[0] and '"compare"' in inline[0]
     for old in ("timeupdate", "seek(", "setSpeed(", "ss-scrub", "DRIFT"):
-        assert old not in inline[0], old  # the old inline control is gone
+        assert old not in inline[0], old
     assert len(inline[0]) < 300
-    # Each caption carries the slot letter beside the name.
-    for letter, name in zip("AB", names, strict=True):
-        assert (
-            f'<figcaption><span class="slot">{letter}</span>{name}</figcaption>'
-        ) in text
 
 
-def test_compare_slots_cover_four_runs_and_no_more(library, tmp_path):
+@pytest.mark.parametrize(
+    ("count", "default"), [(1, "side"), (2, "side"), (3, "grid"), (4, "grid")]
+)
+@pytest.mark.parametrize("arrange", [None, "side", "stack", "grid"])
+def test_compare_arrangements(count, default, arrange):
+    names = ["a", "b", "c", "d"][:count]
+    text = _compare_html(names, arrange=arrange)
+    want = arrange or default
+    assert f'<div id="ss-master" data-arrange="{want}"' in text
+    page = _Page()
+    page.feed(text)
+    assert [p["run"] for p in page.find("simscope-player")] == names
+    assert text.count("<figure>") == count
+    assert text.count("<figcaption>") == count
+    for name in names:  # one title per pane: the full run name
+        assert f"<figcaption>{name}</figcaption>" in text
+
+
+def test_compare_title_is_the_whole_run_name():
+    name = "a_long_run_name-" + "x" * 100
+    text = _compare_html([name])
+    assert f"<figcaption>{name}</figcaption>" in text
+    assert f'run="{name}"' in text
+
+
+def test_compare_takes_four_runs_and_no_more(library, tmp_path):
     names = ["a", "b", "c", "d"]
     page = _Page()
-    page.feed(
-        export.build_html(b"pack", names, layout="compare").decode("utf-8")
-    )
-    players = page.find("simscope-player")
-    assert [p["run"] for p in players] == names
-    assert [p["color"] for p in players] == [
-        "#2282fb",
-        "#d35f10",
-        "#109646",
-        "#c344ae",
-    ]
-    assert len({p["color"] for p in players}) == 4
+    page.feed(_compare_html(names))
+    assert [p["run"] for p in page.find("simscope-player")] == names
     root, _ = library
     with pytest.raises(ValueError, match="up to 4 runs"):
         export.build_html(b"pack", [*names, "e"], layout="compare")
@@ -408,14 +469,45 @@ def test_compare_slots_cover_four_runs_and_no_more(library, tmp_path):
     assert not out.exists()  # refused before anything was packed
 
 
-def test_other_layouts_have_no_clock_or_slot_colours(library, tmp_path):
+def test_compare_autoplay_and_loop_are_flags_of_the_box():
+    text = _compare_html(["a", "b"], autoplay=False, loop=False)
+    assert 'data-autoplay="0" data-loop="0"' in text
+
+
+def test_arrange_is_validated(library, tmp_path):
+    root, names = library
+    out = tmp_path / "x.html"
+    with pytest.raises(ValueError, match="arrange must be one of"):
+        export.export_html(
+            root,
+            names,
+            out,
+            layout="compare",
+            arrange="wall",  # ty: ignore[invalid-argument-type]
+        )
+    with pytest.raises(ValueError, match="arrange"):
+        export.build_html(b"pack", ["a"], layout="compare", arrange="")  # ty: ignore[invalid-argument-type]
+    for layout in ("grid", "single"):
+        use = names[:1] if layout == "single" else names
+        with pytest.raises(ValueError, match='needs layout="compare"'):
+            export.export_html(root, use, out, layout=layout, arrange="side")
+    assert not out.exists()  # refused before anything was packed
+
+
+def test_other_layouts_have_no_clock_colours_or_letters(library, tmp_path):
     root, names = library
     for layout in ("grid", "single"):
         use = names[:1] if layout == "single" else names
         out = export.export_html(root, use, tmp_path / "x.html", layout=layout)
+        text = out.read_text()
         for player in _parse(out).find("simscope-player"):
-            assert "sync" not in player and "color" not in player
-        assert 'class="slot"' not in out.read_text()
+            assert not {"sync", "color", "nocontrols"} & set(player)
+        assert 'class="slot"' not in text and "data-arrange" not in text
+        assert "<style>" in text and "figure{" not in text
+    grid = _parse(
+        export.export_html(root, names, tmp_path / "g.html", layout="grid")
+    )
+    assert len(grid.find("figure")) == len(grid.find("figcaption")) == 2
 
 
 def test_bad_arguments(library, tmp_path):
@@ -476,9 +568,15 @@ def _visible_text(text: str) -> str:
 
 def test_no_network_references(library, tmp_path):
     root, names = library
-    for layout in ("grid", "compare"):
+    for layout, arrange in (
+        ("grid", None),
+        ("compare", None),
+        ("compare", "stack"),
+        ("single", None),
+    ):
+        use = names[:1] if layout == "single" else names
         out = export.export_html(
-            root, names, tmp_path / "x.html", layout=layout
+            root, use, tmp_path / "x.html", layout=layout, arrange=arrange
         )
         page = _parse(out)
         text = _visible_text(out.read_text())
@@ -795,6 +893,89 @@ def test_boot_block_cannot_break_out_of_its_script():
     ] == ['a"</script><!--']
 
 
+def _pack_paths(out):
+    with pack.PackReader(_embedded(_parse(out), "simscope-pack")) as reader:
+        return set(reader.paths())
+
+
+def test_lean_packs_leave_highlights_out_and_full_packs_keep_them(tmp_path):
+    root = tmp_path / "lib"
+    _record_spiky(root, "spiky")
+    _record_spiky(root, "crowd", envs=70, frames=30)
+    lean = export.export_html(root, ["spiky"], tmp_path / "lean.html")
+    full = export.export_html(
+        root, ["spiky"], tmp_path / "full.html", ui="full"
+    )
+    key = "derived/spiky/highlights.json"
+    assert key not in _pack_paths(lean)
+    assert not [p for p in _pack_paths(lean) if p.startswith("derived/")]
+    assert key in _pack_paths(full)
+    assert len(_embedded(_parse(lean), "simscope-pack")) < len(
+        _embedded(_parse(full), "simscope-pack")
+    )
+    # Crowd data is not about highlights: a lean export still carries it.
+    crowd = export.export_html(root, ["crowd"], tmp_path / "c.html")
+    paths = _pack_paths(crowd)
+    assert "derived/crowd/root_pose.blk" in paths
+    assert "derived/crowd/summaries.json" in paths
+    assert "derived/crowd/highlights.json" not in paths
+    # The same holds for a subset and for compare layouts.
+    sub = export.export_html(
+        root, ["spiky"], tmp_path / "s.html", envs=[3, 1], layout="single"
+    )
+    assert not [p for p in _pack_paths(sub) if p.startswith("derived/")]
+    fsub = export.export_html(
+        root, ["spiky"], tmp_path / "fs.html", envs=[3, 1], ui="full"
+    )
+    assert key in _pack_paths(fsub)
+    with pack.PackReader(_embedded(_parse(fsub), "simscope-pack")) as reader:
+        doc = json.loads(bytes(reader.read(key)))
+    assert [(h["env"], h["frame"]) for h in doc["highlights"]] == [
+        (1, 30),
+        (0, 50),
+    ]
+
+
+def test_build_pack_can_skip_highlights(tmp_path):
+    root = tmp_path / "lib"
+    _record_spiky(root, "spiky")
+    data = export.build_pack(root, ["spiky"], with_highlights=False)
+    assert _pack_minor(data) == 0
+    assert export.build_pack(root, ["spiky"]) != data
+
+
+def test_full_export_boot_block_carries_the_arrangement(library, tmp_path):
+    root, names = library
+    for arrange, want in (
+        (None, "side"),
+        ("stack", "stack"),
+        ("grid", "grid"),
+    ):
+        out = export.export_html(
+            root,
+            names,
+            tmp_path / "x.html",
+            ui="full",
+            layout="compare",
+            arrange=arrange,
+        )
+        boot = json.loads(_parse(out).scripts["simscope-boot"])
+        assert boot["layout"] == "compare" and boot["arrange"] == want
+    four = export.build_html(
+        b"pack", ["a", "b", "c", "d"], layout="compare", ui="full"
+    )
+    boot = json.loads(_parse_text(four.decode()).scripts["simscope-boot"])
+    assert boot["arrange"] == "grid"
+    grid = export.export_html(
+        root, names, tmp_path / "g.html", ui="full", layout="grid"
+    )
+    assert "arrange" not in json.loads(_parse(grid).scripts["simscope-boot"])
+    with pytest.raises(ValueError, match="arrange"):
+        export.export_html(
+            root, names, tmp_path / "y.html", ui="full", arrange="stack"
+        )
+
+
 def test_runtime_size_budgets():
     def gz(name):
         return len(export.gzip_runtime(export.read_asset(name)))
@@ -838,3 +1019,37 @@ def test_cli_export_rejects_bad_envs(tmp_path, capsys):
     bad = ["export", str(root), "spiky", "--envs", "a,b", "-o", str(out)]
     assert cli.main(bad) == 2  # argparse usage error
     assert "comma-separated" in capsys.readouterr().err
+
+
+def test_cli_export_arrange(tmp_path, capsys):
+    from simscope import cli
+
+    root = tmp_path / "lib"
+    _record_spiky(root, "a")
+    _record_spiky(root, "b")
+    out = tmp_path / "x.html"
+    argv = [
+        "export",
+        str(root),
+        "a",
+        "b",
+        "--layout",
+        "compare",
+        "-o",
+        str(out),
+    ]
+    assert cli.main(argv) == 0
+    assert 'data-arrange="side"' in out.read_text()
+    assert cli.main([*argv, "--arrange", "stack"]) == 0
+    assert 'data-arrange="stack"' in out.read_text()
+    capsys.readouterr()
+    other = tmp_path / "y.html"
+    code = cli.main(
+        ["export", str(root), "a", "b", "--arrange", "grid", "-o", str(other)]
+    )
+    assert code == 1
+    assert "--layout compare" in capsys.readouterr().err
+    assert not other.exists()
+    bad = [*argv, "--arrange", "wall"]
+    assert cli.main(bad) == 2  # argparse usage error
+    assert "invalid choice" in capsys.readouterr().err

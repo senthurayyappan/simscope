@@ -1,16 +1,17 @@
 // The <simscope-player> custom element (vanilla DOM, shadow root): the lean
 // player for decks and exported pages. It wraps one core `Player` and adds a
-// small control bar.
+// control bar under the viewport: icon buttons, a thin scrubber, one readout,
+// loop and speed (ui.js, shared with the compare master).
 //
 // Attributes: src (URL of a .simscope pack, or "#id" of an inline
 // <script type="text/plain" id="..."> holding base64 pack bytes), run,
 // autoplay, loop, speed, view (iso|front|side|top), background (CSS colour or
-// "transparent"), collision, nocontrols, and the v3 additions env (which env
-// to show and follow), follow (off|position|pose|heading), ground
-// (checker|grid|none), theme (light|dark), sync (elements with the same name
-// share one clock, for compare), color (a CSS colour: the compare slot, which
-// colours this player's highlight markers). Events: ready, timeupdate ({t,
-// duration}), ended, error.
+// "transparent"), collision, nocontrols (or controls="none": no bar), env
+// (which env to show and follow), follow (off|position|pose|heading), ground
+// (checker|grid|none), theme (light|dark; absent: follow the system), sync
+// (elements with the same name share one clock, for compare). Events: ready,
+// timeupdate ({t, duration}), ended, error. The scrub bar draws no highlight
+// marks; the highlights document stays readable through `player.highlights()`.
 //
 // A pack in `src="#id"` form never touches the network, so it works from
 // file:// pages. Loading starts when the element first becomes visible, so a
@@ -23,51 +24,37 @@ import { clockFor } from "../core/clock.js";
 import * as fmt from "../core/format.js";
 import { Player } from "../core/player.js";
 import { PackSource } from "../core/source.js";
-import { layoutMarks } from "./marks.js";
+import { barHTML, barParts, bindBar, BAR_CSS, FONT, icon, TOKENS } from "./ui.js";
 
-const SPEEDS = [0.25, 0.5, 1, 2, 4];
 const FOLLOWS = ["off", "position", "pose", "heading"];
 const GROUNDS = ["checker", "grid", "none"];
 const MAX_LIVE = 8;
 
+// A player that is a direct child of <body> is the whole page (a single-run
+// export): it fills the window. In a slide or any other flow it keeps its 16:9.
+const FILL = ":host { aspect-ratio: auto; height: 100vh; height: 100dvh; min-height: 0; }";
+
+// Bare figures in <body> (the independent-players export): no default margins, a quiet caption.
+const FIGURES_ID = "ss-figures-style";
+const FIGURES = `body > figure:has(> simscope-player) { margin: 0; }
+body > figure:has(> simscope-player) > figcaption { padding: 6px 12px; font: 12px/16px ${FONT}; color: #737373; }`;
+
 const STYLE = `
-:host { display: block; position: relative; aspect-ratio: 16 / 9; min-height: 96px;
-  overflow: hidden; background: #f5f5f5; color: #0a0a0a; font: 12px/1.2 system-ui, sans-serif;
-  --simscope-accent: #3b6ea5; --ss-bar: rgba(255, 255, 255, 0.86); --ss-line: rgba(0, 0, 0, 0.16);
-  --ss-mark: #d1495b; --ss-hl: #2c7a7b; }
-:host([theme="dark"]) { background: #121212; color: #fafafa; --simscope-accent: #6ea8e0;
-  --ss-bar: rgba(18, 18, 18, 0.86); --ss-line: rgba(255, 255, 255, 0.22); --ss-hl: #5fc2c4; }
+:host { ${TOKENS.light} display: flex; flex-direction: column; position: relative; aspect-ratio: 16 / 9; min-height: 96px;
+  overflow: hidden; background: var(--ss-viewport); color: var(--ss-fg); font: 12px/16px ${FONT}; }
+:host([theme="dark"]) { ${TOKENS.dark} }
+@media (prefers-color-scheme: dark) { :host(:not([theme="light"])) { ${TOKENS.dark} } }
 :host([hidden]) { display: none; }
+.stage { position: relative; flex: 1; min-height: 0; }
 canvas, img.poster { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 canvas { touch-action: none; }
 img.poster { object-fit: contain; }
 .msg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   padding: 12px; text-align: center; color: #b3261e; pointer-events: none; }
 .msg[hidden] { display: none; }
-.bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: 8px;
-  padding: 4px 8px; background: var(--ss-bar); backdrop-filter: blur(6px); }
-:host([nocontrols]) .bar { display: none; }
-button, select { font: inherit; color: inherit; background: transparent; border: 1px solid var(--ss-line);
-  border-radius: 6px; padding: 2px 6px; cursor: pointer; }
-button.play { width: 28px; height: 24px; padding: 0; display: grid; place-items: center; }
-button.on { background: var(--simscope-accent); color: #fff; border-color: transparent; }
-button[hidden], select[hidden] { display: none; }
-.track { position: relative; flex: 1; min-width: 40px; height: 26px; }
-.marks { position: absolute; left: 0; right: 0; top: 1px; height: 8px; }
-.marks i { position: absolute; top: 0; height: 6px; min-width: 3px; background: var(--ss-mark); border-radius: 1px;
-  opacity: 0.85; cursor: pointer; }
-.marks b { position: absolute; top: 0; width: 2px; height: 8px; margin-left: -1px; border-radius: 1px;
-  background: var(--ss-hl); cursor: pointer; }
-.marks b::before { content: ""; position: absolute; inset: 0 -4px; }
-.marks u { position: absolute; top: 2px; height: 4px; min-width: 3px; border-radius: 2px; background: var(--ss-hl);
-  opacity: 0.55; text-decoration: none; cursor: pointer; }
-input.scrub { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 16px; margin: 0;
-  accent-color: var(--simscope-accent); }
-.time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+:host([nocontrols]) .ss-bar, :host([controls="none"]) .ss-bar, :host([sync]) .ss-bar { display: none; }
+${BAR_CSS}
 `;
-
-const ICON_PLAY = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg>';
-const ICON_PAUSE = '<svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 1h3v10H2zM7 1h3v10H7z" fill="currentColor"/></svg>';
 
 /** Decode base64 bytes: Uint8Array.fromBase64 when available, else atob. */
 export function decodeBase64(text) {
@@ -85,69 +72,57 @@ const INLINE_PACKS = new WeakMap();
 // Elements that hold a loaded run, least recently shown first.
 const LIVE = [];
 
-const seconds = (t) => `${t.toFixed(2)}s`;
-
 export class SimscopePlayerElement extends HTMLElement {
   static get observedAttributes() {
-    return ["src", "run", "loop", "speed", "view", "background", "collision", "env", "follow", "ground", "theme", "sync", "color"];
+    return ["src", "run", "loop", "speed", "view", "background", "collision", "env", "follow", "ground", "theme", "sync"];
   }
 
   constructor() {
     super();
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `<style>${STYLE}</style>
-      <canvas part="canvas"></canvas>
-      <div class="msg" hidden></div>
-      <div class="bar" part="controls">
-        <button class="play" aria-label="Play" disabled>${ICON_PLAY}</button>
-        <div class="track"><div class="marks"></div>
-          <input class="scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" disabled></div>
-        <span class="time">0.00s / 0.00s</span>
-        <select class="speed" aria-label="Speed">${SPEEDS.map((s) => `<option value="${s}"${s === 1 ? " selected" : ""}>${s}x</option>`).join("")}</select>
-        <button class="col" hidden aria-pressed="false">collision</button>
-      </div>`;
+      <div class="stage"><canvas part="canvas"></canvas><div class="msg" hidden></div></div>
+      <div class="ss-bar" part="controls">${barHTML(`<button type="button" class="ss-btn ss-col" aria-label="Collision geometry" title="Collision geometry" aria-pressed="false" hidden>${icon("box")}</button>`)}</div>`;
     const $ = (sel) => root.querySelector(sel);
-    this._ui = {
-      canvas: $("canvas"),
-      msg: $(".msg"),
-      play: $(".play"),
-      scrub: $(".scrub"),
-      marks: $(".marks"),
-      time: $(".time"),
-      speed: $(".speed"),
-      col: $(".col"),
-    };
+    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: $(".ss-col") };
+    this._bar = bindBar(barParts($(".ss-bar")), {
+      stepDt: () => (this._info ? this._info.dt : 0.02),
+      onLoop: (on) => this.toggleAttribute("loop", on),
+      outside: document,
+    });
     this._player = null;
     this._clock = null;
     this._loading = null;
     this._loaded = false;
     this._visible = false;
-    this._scrubbing = false;
     this._autoplayDone = false;
     this._failed = false;
     this._poster = null;
     this._info = null;
 
-    const ui = this._ui;
-    ui.play.addEventListener("click", () => (this._clock && this._clock.playing ? this.pause() : this.play()));
-    ui.scrub.addEventListener("pointerdown", () => (this._scrubbing = true));
-    ui.scrub.addEventListener("input", () => this.seek((ui.scrub.value / 1000) * this._clock.duration));
-    const endScrub = () => (this._scrubbing = false);
-    ui.scrub.addEventListener("pointerup", endScrub);
-    ui.scrub.addEventListener("pointercancel", endScrub);
-    ui.speed.addEventListener("change", () => this.setSpeed(Number(ui.speed.value)));
-    ui.col.addEventListener("click", () => this.toggleAttribute("collision"));
+    this._ui.col.addEventListener("click", () => this.toggleAttribute("collision"));
     this._onTime = () => this._time();
-    this._onState = () => this._syncPlay();
     this._onEnded = () => this._emit("ended");
   }
 
   // ---- lifecycle ----
 
   connectedCallback() {
+    if (this.parentElement === document.body) {
+      this._fill ??= Object.assign(document.createElement("style"), { textContent: FILL });
+      this.shadowRoot.appendChild(this._fill);
+    } else if (this._fill) this._fill.remove();
+    const fig = this.parentElement;
+    if (fig && fig.tagName === "FIGURE" && fig.parentElement === document.body && !document.getElementById(FIGURES_ID)) {
+      document.head.appendChild(Object.assign(document.createElement("style"), { id: FIGURES_ID, textContent: FIGURES }));
+    }
     this._ensurePlayer();
     this._resize = new ResizeObserver(() => this._measure());
-    this._resize.observe(this);
+    this._resize.observe(this._ui.stage);
+    // No `theme` attribute: follow the system, live.
+    this._mq = typeof matchMedia === "function" ? matchMedia("(prefers-color-scheme: dark)") : null;
+    this._onScheme = () => this._player && !this.hasAttribute("theme") && this._player.setTheme(this._theme(), this._background());
+    if (this._mq) this._mq.addEventListener("change", this._onScheme);
     this._seen = new IntersectionObserver(
       (entries) => {
         const on = entries[entries.length - 1].isIntersecting;
@@ -162,10 +137,12 @@ export class SimscopePlayerElement extends HTMLElement {
   disconnectedCallback() {
     this._resize.disconnect();
     this._seen.disconnect();
+    if (this._mq) this._mq.removeEventListener("change", this._onScheme);
     this._visible = false;
     this._dropLive();
     if (this._player) {
       this._unbindClock();
+      this._bar.setClock(null);
       this._player.destroy();
       this._player = null;
       this._clock = null;
@@ -193,7 +170,6 @@ export class SimscopePlayerElement extends HTMLElement {
     else if (name === "ground") p.setGround(this._ground());
     else if (name === "theme") p.setTheme(this._theme(), this._background());
     else if (name === "sync") this._rebindClock();
-    else if (name === "color") p.setColor(this._color());
   }
 
   _background() {
@@ -202,16 +178,14 @@ export class SimscopePlayerElement extends HTMLElement {
   }
 
   _theme() {
-    return this.getAttribute("theme") === "dark" ? "dark" : "light";
+    const t = this.getAttribute("theme");
+    if (t === "dark" || t === "light") return t;
+    return typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   }
 
   _ground() {
     const g = this.getAttribute("ground");
     return GROUNDS.includes(g) ? g : "checker";
-  }
-
-  _color() {
-    return this.getAttribute("color") || undefined;
   }
 
   _followMode() {
@@ -239,7 +213,6 @@ export class SimscopePlayerElement extends HTMLElement {
         view: VIEWS.includes(view) ? view : "iso",
         background: this._background(),
         follow: this._followMode(),
-        color: this._color(),
       });
     } catch (err) {
       this._fail(new Error(`simscope: WebGL is not available (${err.message})`));
@@ -253,22 +226,18 @@ export class SimscopePlayerElement extends HTMLElement {
     this._bindClock();
     p.addEventListener("error", (e) => this._fail(new Error(e.detail.message)));
     p.addEventListener("live", () => this._buildUi(this._info));
-    p.addEventListener("color", () => this._paintColor());
-    this._paintColor();
-    this._syncSpeedUi(this._clock.speed);
+    this._bar.setClock(this._clock);
     this._measure();
   }
 
   _bindClock() {
     this._clock.addEventListener("time", this._onTime);
-    this._clock.addEventListener("state", this._onState);
     this._clock.addEventListener("ended", this._onEnded);
   }
 
   _unbindClock() {
     if (!this._clock) return;
     this._clock.removeEventListener("time", this._onTime);
-    this._clock.removeEventListener("state", this._onState);
     this._clock.removeEventListener("ended", this._onEnded);
   }
 
@@ -287,9 +256,8 @@ export class SimscopePlayerElement extends HTMLElement {
 
   _measure() {
     if (!this._player) return;
-    const r = this.getBoundingClientRect();
+    const r = this._ui.stage.getBoundingClientRect();
     if (r.width > 0 && r.height > 0) this._player.resize(r.width, r.height, Math.min(window.devicePixelRatio || 1, 2));
-    this._placeMarks();
   }
 
   _setVisible(on) {
@@ -380,7 +348,6 @@ export class SimscopePlayerElement extends HTMLElement {
     this._applyFollow();
     this._clock.loop = this.hasAttribute("loop") || this._clock.loop;
     this._emit("ready", { duration: info.duration, frames: info.frames, dt: info.dt, run: info.run, events: info.events });
-    this._loadHighlights(info.run);
     this._maybeAutoplay();
     return info;
   }
@@ -411,19 +378,6 @@ export class SimscopePlayerElement extends HTMLElement {
     return new Uint8Array(await res.arrayBuffer());
   }
 
-  /** Highlight markers from derived/<run>/highlights.json, when the pack carries it. */
-  async _loadHighlights(run) {
-    try {
-      const doc = await this._player.highlights();
-      if (!doc || this._info?.run !== run) return;
-      const env = this._player.follow().env;
-      this._highlights = (doc.highlights || []).filter((h) => h.env === env).sort((a, b) => a.t - b.t);
-      this._placeMarks();
-    } catch {
-      // Markers are a nicety; a bad file must not break playback.
-    }
-  }
-
   /** Without WebGL, fall back to the pack's poster frame if it carries one. */
   _showPoster(source, run) {
     if (this._player || this._poster || !run) return;
@@ -435,7 +389,7 @@ export class SimscopePlayerElement extends HTMLElement {
         this._poster.className = "poster";
         this._poster.alt = "";
         this._poster.src = URL.createObjectURL(new Blob([bytes], { type: "image/png" }));
-        this.shadowRoot.insertBefore(this._poster, this._ui.msg);
+        this._ui.stage.insertBefore(this._poster, this._ui.msg);
       })
       .catch(() => {});
   }
@@ -446,7 +400,6 @@ export class SimscopePlayerElement extends HTMLElement {
     this._failed = false;
     this._autoplayDone = false;
     this._info = null;
-    this._highlights = [];
     this._dropLive();
     if (this._player) {
       this._player.unload({ keepFrame });
@@ -456,13 +409,8 @@ export class SimscopePlayerElement extends HTMLElement {
       this._poster.remove();
       this._poster = null;
     }
-    const ui = this._ui;
-    ui.marks.textContent = "";
-    ui.scrub.disabled = ui.play.disabled = true;
-    ui.scrub.value = 0;
-    ui.col.hidden = true;
-    ui.time.textContent = `${seconds(0)} / ${seconds(0)}`;
-    this._syncPlay();
+    this._ui.col.hidden = true;
+    this._bar.paint();
   }
 
   _fail(err) {
@@ -479,89 +427,21 @@ export class SimscopePlayerElement extends HTMLElement {
 
   _buildUi(info) {
     if (!info) return;
-    const ui = this._ui;
-    ui.play.disabled = ui.scrub.disabled = false;
-    ui.col.hidden = !info.hasCollision;
-    this._events = info.events || [];
-    this._placeMarks();
+    this._ui.col.hidden = !info.hasCollision;
     this._time();
-    this._syncPlay();
-  }
-
-  /** The player's slot colour, if it has one, colours the highlight markers. */
-  _paintColor() {
-    const color = this._player ? this._player.color : null;
-    if (color) this._ui.marks.style.setProperty("--ss-hl", color);
-    else this._ui.marks.style.removeProperty("--ss-hl");
-  }
-
-  /**
-   * Annotation events and jump spans as bars, highlight moments as ticks, in
-   * percent of the duration (see marks.js for the layout).
-   */
-  _placeMarks() {
-    const ui = this._ui;
-    ui.marks.textContent = "";
-    const d = this._clock ? this._clock.duration : 0;
-    if (!(d > 0) || !this._info) return;
-    for (const ev of this._events || []) {
-      const m = document.createElement("i");
-      m.style.left = `${Math.min(100, (ev.t0 / d) * 100)}%`;
-      m.style.width = `${Math.max(0, ((ev.t1 - ev.t0) / d) * 100)}%`;
-      m.title = ev.label;
-      m.addEventListener("click", () => this.seek(ev.t0));
-      ui.marks.appendChild(m);
-    }
-    const width = ui.marks.getBoundingClientRect().width || 300;
-    const { spans, ticks } = layoutMarks(this._highlights || [], d, width);
-    for (const sp of spans) {
-      const node = document.createElement("u");
-      node.style.left = `${sp.left}%`;
-      node.style.width = `${sp.width}%`;
-      node.title = sp.title;
-      node.addEventListener("click", () => this.seek(sp.t));
-      ui.marks.appendChild(node);
-    }
-    for (const tk of ticks) {
-      const node = document.createElement("b");
-      node.style.left = `${tk.left}%`;
-      node.title = tk.title;
-      node.addEventListener("click", () => this.seek(tk.t));
-      ui.marks.appendChild(node);
-    }
+    this._bar.paint();
   }
 
   _time() {
-    const ui = this._ui;
     const c = this._clock;
     if (!c) return;
-    const t = c.time, duration = c.duration;
-    ui.time.textContent = `${seconds(t)} / ${seconds(duration)}`;
-    if (!this._scrubbing) ui.scrub.value = duration > 0 ? Math.round((t / duration) * 1000) : 0;
-    this._emit("timeupdate", { t, duration });
-  }
-
-  _syncPlay() {
-    const playing = !!this._clock && this._clock.playing;
-    this._ui.play.innerHTML = playing ? ICON_PAUSE : ICON_PLAY;
-    this._ui.play.setAttribute("aria-label", playing ? "Pause" : "Play");
-  }
-
-  _syncSpeedUi(x) {
-    const sel = this._ui.speed;
-    if (![...sel.options].some((o) => Number(o.value) === x)) {
-      const opt = new Option(`${x}x`, String(x));
-      const at = [...sel.options].findIndex((o) => Number(o.value) > x);
-      sel.add(opt, at < 0 ? null : sel.options[at]);
-    }
-    sel.value = String(x);
+    this._emit("timeupdate", { t: c.time, duration: c.duration });
   }
 
   _applyRoles() {
     if (!this._player) return;
     const on = this.hasAttribute("collision");
     this._player.setCollision(on);
-    this._ui.col.classList.toggle("on", on);
     this._ui.col.setAttribute("aria-pressed", String(on));
   }
 
@@ -577,10 +457,21 @@ export class SimscopePlayerElement extends HTMLElement {
     if (mode !== undefined) this._player.setFollow({ mode });
   }
 
-  _maybeAutoplay() {
+  /**
+   * Autoplay once the run's extent is known: the player frames the whole
+   * motion, not frame 0, but never while the clock runs, so a run that started
+   * playing at once would stay in its frame-0 view.
+   */
+  async _maybeAutoplay() {
     if (this._autoplayDone || !this.hasAttribute("autoplay") || !this._visible || !this._loaded) return;
     this._autoplayDone = true;
-    this.play();
+    const player = this._player;
+    try {
+      await (player && player._extentJob);
+    } catch {
+      // framing is a nicety
+    }
+    if (this._player === player && this._loaded) this.play();
   }
 
   // ---- public API ----
@@ -600,9 +491,7 @@ export class SimscopePlayerElement extends HTMLElement {
   }
 
   setSpeed(x) {
-    if (!this._clock) return;
-    this._clock.speed = x;
-    this._syncSpeedUi(this._clock.speed);
+    if (this._clock) this._clock.speed = x;
   }
 
   /** Switch camera view: iso, front, side or top. */

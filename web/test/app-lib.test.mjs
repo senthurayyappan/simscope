@@ -282,3 +282,45 @@ test("metadata: the source file shows its file name, streams their shape and uni
   assert.equal(streamSummary([], "N"), "scalar N");
   assert.equal(streamSummary([3], "N·m"), "[3] N·m");
 });
+
+import { ARRANGEMENTS, arrangementGrid, carryPaneState, defaultArrangement, effectiveArrangement } from "../src/app/lib/panes.ts";
+import { G, readout } from "../src/app/lib/format.ts";
+
+test("compare: panes that keep their index and run keep their state (the 'only the last run has a lane' bug)", () => {
+  const prev = [{ name: "a" }, { name: "b" }, { name: "c" }];
+  const infos = { 0: "A", 1: "B", 2: "C" };
+  // Compare [a, b, c] again with d added: a, b, c are not reloaded by their panes, so they must stay.
+  assert.deepEqual(carryPaneState(prev, [{ name: "a" }, { name: "b" }, { name: "c" }, { name: "d" }], infos), { 0: "A", 1: "B", 2: "C" });
+  // A different run in a slot drops that slot's state (its pane reloads and refills it).
+  assert.deepEqual(carryPaneState(prev, [{ name: "a" }, { name: "x" }, { name: "c" }], infos), { 0: "A", 2: "C" });
+  // Closing the first pane shifts everyone: every index now holds another run.
+  assert.deepEqual(carryPaneState(prev, [{ name: "b" }, { name: "c" }], infos), {});
+  // From a single run to a compare whose first run is the same: the pane is recreated by the app (new key) but the state is
+  // refilled on load, so carrying it is harmless.
+  assert.deepEqual(carryPaneState([{ name: "a" }], [{ name: "a" }, { name: "b" }], { 0: "A" }), { 0: "A" });
+  assert.deepEqual(carryPaneState([], [{ name: "a" }], {}), {});
+});
+
+test("compare arrangement: defaults, remembered choice, grid shapes", () => {
+  assert.equal(defaultArrangement(2), "side");
+  assert.equal(defaultArrangement(3), "grid");
+  assert.equal(defaultArrangement(4), "grid");
+  assert.equal(effectiveArrangement(3, null), "grid");
+  assert.equal(effectiveArrangement(3, "stack"), "stack");
+  assert.deepEqual(ARRANGEMENTS, ["side", "stack", "grid"]);
+  assert.deepEqual(arrangementGrid(3, "side"), { cols: 3, rows: 1 });
+  assert.deepEqual(arrangementGrid(4, "stack"), { cols: 1, rows: 4 });
+  assert.deepEqual(arrangementGrid(3, "grid"), { cols: 2, rows: 2 });
+  assert.deepEqual(arrangementGrid(4, "grid"), { cols: 2, rows: 2 });
+  assert.deepEqual(arrangementGrid(2, "grid"), { cols: 2, rows: 1 });
+  assert.deepEqual(arrangementGrid(1, "stack"), { cols: 1, rows: 1 });
+});
+
+test("hover readouts: acceleration in m/s2 and g, contact in N and x typical, custom kinds say their detail", () => {
+  const h = (kind, value, ratio = null, detail = "") => ({ kind, label: kind, detail, value, ratio });
+  assert.deepEqual(readout(h("acceleration", 42.2)), { main: "42.2 m/s²", sub: `${(42.2 / G).toPrecision(2)} g` });
+  assert.deepEqual(readout(h("contact", 127.4, 1.93)), { main: "127 N", sub: "1.93× typical" });
+  assert.deepEqual(readout(h("contact", 127.4)), { main: "127 N", sub: null });
+  assert.deepEqual(readout(h("my_marker", 1, 2, "slipped 3 cm")), { main: "slipped 3 cm", sub: null });
+  assert.deepEqual(readout(h("my_marker", 1, 2, "")), { main: "my_marker", sub: null });
+});

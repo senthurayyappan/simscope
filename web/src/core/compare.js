@@ -42,6 +42,8 @@ function makeGroup(players) {
     zc: null,
     /** An extent arrived while the clock was playing: fit it at the next pause. */
     pending: false,
+    /** The runs have been fitted once; later fits wait for a pause. */
+    fitted: false,
 
     /** Players still in the group (a destroyed or unlinked one drops out). */
     members: () => players.filter((p) => p.linked === group),
@@ -93,6 +95,7 @@ function makeGroup(players) {
         height = Math.max(height, exts[i] ? p._fitHeight(zc) : p.rig.targetHeight);
       });
       group.zc = zc;
+      group.fitted = true;
       for (const p of loaded) p._fitVertical(zc, height, animate);
       return true;
     },
@@ -101,7 +104,8 @@ function makeGroup(players) {
     arrived() {
       const loaded = group.loaded();
       if (loaded.some((p) => p._extent() === undefined)) return;
-      if (group.playing()) group.pending = true;
+      // The first fit is not deferred, whatever the clock does (the frame-0 views can crop a robot); later ones wait.
+      if (group.playing() && group.fitted) group.pending = true;
       else if (!group.zoomed()) group.trajectory(true);
     },
 
@@ -137,6 +141,7 @@ function makeGroup(players) {
       if (!loaded.length) return;
       group.zc = null;
       group.pending = false;
+      group.fitted = false;
       const lead = loaded[0].rig.state(false);
       for (const p of loaded) p.rig.setAngles(lead, false);
       group.frame("focus", { animate: false });

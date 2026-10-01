@@ -45,6 +45,12 @@ marker (see "Custom markers" in the getting-started guide).
 
 ## Export
 
+`export_html` writes one offline HTML file. For `layout="compare"` the
+`arrange` keyword sets how the panes sit: `"side"` (side by side, the default
+for one or two runs), `"stack"` (one above the other) or `"grid"` (two by two,
+the default for three or four). Lean files carry no highlights; `ui="full"`
+files do.
+
 ::: simscope.export
 
 ## Data model

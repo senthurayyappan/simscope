@@ -31,12 +31,16 @@ export interface Boot {
   pack?: string;
   runs?: string[];
   layout?: "single" | "grid" | "compare";
+  /** Compare arrangement of a full export (contracts §10.2). */
+  arrange?: "side" | "stack" | "grid";
 }
 
 export interface ExportOptions {
   runs: string[];
   layout: "single" | "grid" | "compare";
   ui: "lean" | "full";
+  /** The compare arrangement being shown; sent as `arrange` (contracts §10.2). */
+  arrange?: "side" | "stack" | "grid";
 }
 
 export interface Api {
@@ -232,8 +236,9 @@ export class HttpApi implements Api {
     return this.mock ? this.mock.withGroup(name, out) : out;
   }
 
-  exportUrl({ runs, layout, ui }: ExportOptions): string {
+  exportUrl({ runs, layout, ui, arrange }: ExportOptions): string {
     const q = new URLSearchParams({ runs: runs.join(","), layout, ui });
+    if (arrange && runs.length > 1) q.set("arrange", arrange);
     return `${this.base}/api/export?${q}`;
   }
 }

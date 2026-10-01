@@ -81,8 +81,12 @@ How the pieces fit:
   robot, so the exact rows for the view's up vector are used (side and front
   reduce to the z range). The series is decoded by the worker (`envArray`)
   after the load; until then the frame-0 fit stands, then the fit replaces it
-  once, in about 250 ms, never while the clock plays and not after the user
-  zoomed by hand. `frame()` and choosing a view refit it. Live runs, `pose`
+  once, in about 250 ms, even if the clock is already playing (the frame-0 view
+  would otherwise stay and can crop the robot); a later fit (another env's
+  range) waits for a pause. Never after the user zoomed by hand. `frame()`,
+  choosing a view and resizing the pane refit it (the pane's shape matters: a
+  wide strip is limited by its height, a narrow column by its width). Before
+  the series arrives the frame-0 fit leaves room for the held height. Live runs, `pose`
   and `off` follow, and `frame("all")` keep the frame-0 fit.
 - **Tiers** (`tiers.js`, `crowd.js`): above 64 envs, a focus set (selected,
   pinned, nearest, up to the triangle budget) is drawn in full and every other
@@ -129,6 +133,8 @@ angles, the world height shown and the target's z, so the group shares those:
   its frame-0 fit; then the group holds the middle of the union of the panes'
   vertical ranges (see Framing above) and shows the most any pane needs, so a
   robot that jumps or climbs stays in frame in every pane.
+- Panes that are not following (a batched run's default) look at the same
+  height, so their ground rows match too.
 - `setView()` and `frame()` on any player act on all of them; `frame()` gives
   every pane the largest world height any of them needs, so none is cropped.
 - Loading a run into a pane frames the group again, with the first player's
@@ -163,33 +169,49 @@ network requests at runtime.
 `src` is a URL or `#id` of an inline base64 script (the only form that works
 from `file://`). Attributes: `run`, `autoplay`, `loop`, `speed`, `view`
 (`iso|front|side|top`), `background` (CSS colour or `transparent`),
-`collision` (show collision geoms), `nocontrols`, and, new in v3:
+`collision` (show collision geoms), `nocontrols` (or `controls="none"`: no bar), and, new in v3:
 
 | Attribute | Meaning |
 | --- | --- |
 | `env` | which env to show and follow (default 0) |
 | `follow` | `off`, `position`, `pose`, `heading`; absent: `position` for a single-env run, else `off` |
 | `ground` | `checker` (default), `grid`, `none` |
-| `theme` | `light` (default) or `dark` |
-| `sync` | name of a shared clock (compare) |
+| `theme` | `light` or `dark`; absent: follows the system (`prefers-color-scheme`), live |
+| `sync` | name of a shared clock (compare); a player with `sync` hides its own bar (the compare master has one for all) |
 
 Methods: `load()`, `unload()`, `play()`, `pause()`, `seek(t)`, `setSpeed(x)`,
 `setView(name)`, `snapshot()` (a Promise of a PNG Blob); properties `player`
 (the core `Player`), `clock`, `currentTime`, `duration`, `playing`. Events:
 `ready` (`{duration, frames, dt, run, events}`), `timeupdate`
-(`{t, duration}`), `ended`, `error`. Highlight markers from
-`derived/<run>/highlights.json` are drawn on the scrub bar when the pack has
-them: `jump` spans as thin bars, other moments as ticks (no two closer than 6
-px; the strongest wins), with a tooltip of the label, the detail and the
-time. A `/1` document draws neutral ticks named after their signal. The
-element also takes `color="<css colour>"` (its compare slot), which colours
-its markers and is what `player.info().color` reports.
+(`{t, duration}`), `ended`, `error`.
 
-`attachMaster` (the shared control of a compare page) draws one row of
-markers per player in the strip above the scrubber, in that player's `color`,
-with the same rules, and puts a dot in the same colour in front of the name in
-the player's `<figure><figcaption>`. A page needs only `sync` and `color`
-attributes on its players; the rows and dots are made with inline styles.
+The control bar sits under the viewport (`ui.js`, shared with the compare
+master) in the app's visual language: neutral colours, hairlines, 28 px
+controls with 6 px radius, lucide icons inlined as SVG (play/pause, previous
+and next frame, loop, collision), a thin scrubber with a handle on hover, the
+readout `2.49 / 7.98 s` in tabular figures and a speed menu. It draws no
+highlight marks: the scrub bar is only a scrub bar. The loop button toggles the
+`loop` attribute. A player that is a direct child of `<body>` fills the window
+(a single-run export); anywhere else it keeps its 16:9. Bare `<figure>`s in
+`<body>` get no margin and a quiet caption. `autoplay` waits for the run's
+extent (see Framing), so the first frame is already the framed one.
+
+### Compare master
+
+`SimscopePlayer.attachMaster(box, "compare")` builds a compare page from
+`<div id="ss-master" data-arrange="side|stack|grid">` holding one
+`<figure><figcaption>title</figcaption><simscope-player sync="compare"
+src=… run=…></simscope-player></figure>` per run (`data-autoplay` and
+`data-loop` are read too). The page needs only `html, body { margin: 0;
+height: 100% }`. The master fills the window: the panes in the arrangement
+(`side` columns, `stack` rows, `grid` 2 x 2 with an empty cell for three) with
+1 px hairlines between them, each title a small pill top-left (no letters, no
+colour dots), and one shared bar at the bottom: play/pause, previous and next
+frame, the scrubber (its duration is the longest run), `current / total`, loop
+and the speed menu; Space and the arrow keys work too. Cameras are linked
+(`linkCameras`: ground alignment, pan sync). All panes of an arrangement have
+the same pixel size, which that needs; a stack makes short wide panes, and the
+framing (see Framing) is fitted to each pane's shape. No highlight rows.
 
 A page with many players shares one WebGL context (the blit renderer), decodes
 only what is on screen, and keeps at most 8 runs loaded: a player that
@@ -229,8 +251,9 @@ python3 web/bench/devserver.py 8791 --up http://127.0.0.1:8772 --root .
 | `src/core/renderer.js` | shared (blit) and direct renderers |
 | `src/core/compare.js` | `linkCameras`, the ground-aligned camera group |
 | `src/core/extent.js` | the run's vertical range and the world height that fits it (pure) |
-| `src/element/` | the custom element and `attachMaster`; `marks.js` lays out the scrub-bar markers |
-| `test/headless.mjs` | helpers: players without WebGL, projection, a simulated drag |
+| `src/element/` | the custom element and `attachMaster` |
+| `src/element/ui.js`, `layout.js` | the shared bar (icons, tokens, behaviour); pane arrangement geometry |
+| `test/headless.mjs`, `fakedom.mjs` | helpers: players without WebGL, projection, a simulated drag; a tiny DOM for the bar and master tests |
 | `test/encoder.mjs` | test-only encoder that mirrors the spec |
 | `demo/make_demo.mjs` | writes `demo/demo.simscope` and `demo/index.html` |
 
