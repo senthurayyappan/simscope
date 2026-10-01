@@ -22,8 +22,8 @@ export function ArrangeToggle({ count }: { count: number }) {
         const Icon = ICONS[a];
         return (
           <Hint key={a} label={ARRANGE_LABELS[a]}>
-            <ToggleGroupItem value={a} aria-label={ARRANGE_LABELS[a]} className="size-6 min-w-6 px-0">
-              <Icon />
+            <ToggleGroupItem value={a} aria-label={ARRANGE_LABELS[a]} className="size-7 min-w-7 shrink-0 px-0 [&_svg]:size-5! [&_svg]:shrink-0">
+              <Icon strokeWidth={1.75} />
             </ToggleGroupItem>
           </Hint>
         );

@@ -46,6 +46,8 @@ type Item =
 
 // Rows are 32 px plus 1 px of gap above and below, so a ring never touches its neighbour.
 const HEIGHT = { header: 32, row: 34, more: 28, empty: 28, "new-group": 36 } as const;
+/** Extra space above every section header but the first, so groups read as separate. */
+const SECTION_GAP = 14;
 
 export function Library({ onCollapse }: { onCollapse(): void }) {
   const s = useApp(
@@ -111,7 +113,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
   const virt = useVirtualizer({
     count: items.length,
     getScrollElement: () => scroller.current,
-    estimateSize: (i) => HEIGHT[items[i].kind],
+    estimateSize: (i) => HEIGHT[items[i].kind] + (items[i].kind === "header" && i > 0 ? SECTION_GAP : 0),
     overscan: 10,
     rangeExtractor: useCallback(
       (range: Range) => {
@@ -401,13 +403,15 @@ function SectionHeader({
       if (next && next !== section.title) void useApp.getState().groupOp({ op: "rename", name: section.title, to: next });
     };
     return (
-      <div className="flex h-8 items-center bg-sidebar px-1">
-        <InlineName initial={section.title} onSave={save} onCancel={() => setEditing(false)} />
+      <div className="flex h-full items-end bg-sidebar">
+        <div className="flex h-8 w-full items-center px-1">
+          <InlineName initial={section.title} onSave={save} onCancel={() => setEditing(false)} />
+        </div>
       </div>
     );
   }
   return (
-    <div className="group/header flex h-8 items-center bg-sidebar">
+    <div className="group/header flex h-full items-end bg-sidebar"><div className="flex h-8 w-full items-center">
       <button
         type="button"
         onClick={() => toggleFolded(section.id)}
@@ -439,6 +443,7 @@ function SectionHeader({
         </DropdownMenu>
       ) : null}
       <SidebarMenuBadge>{section.runs.length}</SidebarMenuBadge>
+      </div>
     </div>
   );
 }
