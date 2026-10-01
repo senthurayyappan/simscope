@@ -9,7 +9,7 @@ export function Logo({ className }: { className?: string }) {
       <path
         d="M7 11.4c.9 0 1.1-2.6 2-2.6s1.1 3.4 2 3.4 1.1-4.2 2-4.2.9 3 1.5 3"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth="1.1"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
