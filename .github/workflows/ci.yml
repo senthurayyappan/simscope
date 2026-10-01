@@ -49,18 +49,14 @@ jobs:
       - run: git diff --exit-code src/simscope/_assets web/src/core/decode_worker.generated.js
         working-directory: .
   tests:
-    name: Python ${{ matrix.python }} / ${{ matrix.os }}
+    # Linux only: simscope is a pure Python library with a browser app, so it
+    # is tested where it is developed and run; other platforms are not covered.
+    name: Python ${{ matrix.python }}
     strategy:
       fail-fast: false
       matrix:
         python: ["3.12", "3.13", "3.14"]
-        os: [ubuntu-latest]
-        include:
-          - python: "3.12"
-            os: windows-latest
-          - python: "3.12"
-            os: macos-latest
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
