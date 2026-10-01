@@ -587,7 +587,7 @@ def test_no_network_references(library, tmp_path):
         page = _parse(out)
         text = _visible_text(out.read_text(encoding="utf-8"))
         assert not re.search(r"https?://|//[a-z0-9.-]+\.[a-z]{2,}/", text)
-        assert all(a["href"] == "data:," for a in page.find("link"))
+        assert all(a["href"].startswith("data:") for a in page.find("link"))
         assert not page.find("img") and not page.find("iframe")
         assert not any("href" in a for n, a in page.tags if n != "link")
         srcs = {a["src"] for a in page.find("simscope-player")}
@@ -862,7 +862,7 @@ def test_full_export_licence_and_offline(library, tmp_path):
     assert "@import" not in visible and "url(http" not in visible
     assert not page.find("img") and not page.find("iframe")
     assert not any("src" in a for a in page.find("script"))
-    assert all(a["href"] == "data:," for a in page.find("link"))
+    assert all(a["href"].startswith("data:") for a in page.find("link"))
     body = next(
         b for k, b in page.scripts.items() if "DecompressionStream" in b
     )

@@ -46,7 +46,7 @@ import tempfile
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from simscope import highlights, library
+from simscope import _icon, highlights, library
 from simscope.io import cas, manifest, pack
 
 logger = logging.getLogger(__name__)
@@ -596,7 +596,7 @@ def _full_page(
         "<head>",
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
-        '<link rel="icon" href="data:,">',  # no /favicon.ico request
+        _icon.ICON_LINK,  # a data URI: no /favicon.ico request
         f"<title>{html.escape(heading)}</title>",
         f"<style>{_FULL_CSS}</style>",
         f"<style>\n{css.strip()}\n</style>",
@@ -678,7 +678,7 @@ def build_html(
         "<head>",
         '<meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
-        '<link rel="icon" href="data:,">',  # no /favicon.ico request
+        _icon.ICON_LINK,  # a data URI: no /favicon.ico request
         f"<title>{html.escape(heading)}</title>",
         f"<style>\n{_CSS}</style>",
         "</head>",

@@ -1,18 +1,18 @@
 import { cn } from "@/lib/utils";
 
-/** The mark: a scope ring with a playhead tick and a trace through it. */
+/** The mark: a magnifying glass with a trace in its lens. */
 export function Logo({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={cn("size-5", className)} aria-hidden>
-      <circle cx="12" cy="12" r="9.25" stroke="currentColor" strokeWidth="1.6" opacity="0.35" />
+      <circle cx="10.5" cy="10.5" r="6.75" stroke="currentColor" strokeWidth="2" />
+      <path d="M15.5 15.5 21 21" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
       <path
-        d="M3.5 13.2c1.7 0 2.1-4.6 3.9-4.6s2 6.4 3.8 6.4 1.9-8.2 3.7-8.2 1.9 5.6 3.4 5.6"
+        d="M7 11.4c.9 0 1.1-2.6 2-2.6s1.1 3.4 2 3.4 1.1-4.2 2-4.2.9 3 1.5 3"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <path d="M12 2.5v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }

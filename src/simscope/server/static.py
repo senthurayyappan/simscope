@@ -5,6 +5,8 @@ import json
 import pathlib
 from typing import Any
 
+from simscope import _icon
+
 ASSETS_DIR = pathlib.Path(__file__).resolve().parents[1] / "_assets"
 ASSET_TYPES = {
     "simscope-app.js": "text/javascript; charset=utf-8",
@@ -20,7 +22,7 @@ _PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <title>{title}</title>
-<link rel="icon" href="data:,">
+{icon}
 <link rel="stylesheet" href="/assets/simscope-app.css">
 </head>
 <body>
@@ -77,5 +79,6 @@ def index_page(
     page = _PAGE.format(
         title=html.escape(title or f"simscope {library}"),
         boot=boot_block(boot),
+        icon=_icon.ICON_LINK,
     )
     return page.encode()
