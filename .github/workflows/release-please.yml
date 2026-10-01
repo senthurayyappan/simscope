@@ -3,6 +3,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_tag:
+        description: Publish this existing tag, such as v0.1.1
+        required: false
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -28,7 +33,14 @@ jobs:
           manifest-file: .release-please-manifest.json
   publish:
     needs: release
-    if: needs.release.outputs.release_created == 'true' && vars.PUBLISH_PYPI == 'true'
+    # A later run does not recreate an existing release, so release_created
+    # stays false. Dispatch this workflow with publish_tag to publish that tag.
+    if: >-
+      vars.PUBLISH_PYPI == 'true' &&
+      (
+        needs.release.outputs.release_created == 'true' ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish_tag != '')
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: pypi
@@ -38,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ needs.release.outputs.tag_name }}
+          ref: ${{ needs.release.outputs.tag_name || inputs.publish_tag }}
           persist-credentials: false
       - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:

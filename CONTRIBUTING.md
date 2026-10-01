@@ -78,9 +78,12 @@ The workflow builds and tests the release tag, then publishes the package.
 It uses GitHub's identity to sign in to PyPI, so you do not need a PyPI
 API token.
 
-If publishing fails after the GitHub release is created, open the workflow run
-in the Actions tab and choose **Re-run failed jobs**. Running Release Please
-again does not publish an existing release.
+If the GitHub release is created before `PUBLISH_PYPI` is true, the publish
+job is skipped. Running Release Please again does not publish that release.
+Dispatch the Release Please workflow and set `publish_tag` to the existing
+tag, such as `v0.1.1`.
+
+If the publish job runs and fails, open that run and choose **Re-run failed jobs**.
 
 [pending]: https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/
 
