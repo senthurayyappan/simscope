@@ -61,3 +61,5 @@ This file keeps only the layout facts that are specific to the code.
   and committed.
 - `lib/mock-groups.ts` stands in for `/api/groups` only with `?mock=groups`
   and only when the server answers 404.
+
+Library rename (contracts §11.1): double-click a run name or use Rename in the row menu; the field is `InlineName` (`features/library/InlineName.tsx`), the refusal shows as one red line under it, and `renameRun` in the store re-keys rows, panes, picks, cursor and `#run=`. Name rules and re-keying helpers live in `lib/rename.ts`. Pack exports hide Rename. Highlight hover card fields come from `readout` in `lib/format.ts` (§11.2).

@@ -2,6 +2,12 @@
 
 ## Library and recording
 
+`Library.rename(old, new)` renames a run: the folder and the `name` in
+`rollout.json` change, and the run's id, annotations, groups and derived cache
+stay. It refuses a run that is still recording and a name that exists, and a
+`Rollout` opened before the rename must be reopened. The viewer offers the same
+as `POST /api/runs/<name>/rename`.
+
 ::: simscope.library
 
 ::: simscope.recorder

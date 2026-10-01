@@ -74,9 +74,11 @@ export function formatDuration(seconds: number): string {
 export const G = 9.80665;
 
 export interface Readout {
-  /** The first line, in medium weight. */
+  /** The kind's name, for the card's first row. */
+  title: string;
+  /** The reading: the primary number (or a custom kind's detail), shown large. */
   main: string;
-  /** Muted text beside it, or null. */
+  /** The secondary value, muted, on the right; null when there is none. */
   sub: string | null;
 }
 
@@ -88,13 +90,23 @@ interface Hl {
   ratio: number | null;
 }
 
+/** A ratio to two significant digits: 1.9, 4.2, 12. */
+export function formatRatio(r: number): string {
+  return r >= 10 ? String(Math.round(r)) : r.toFixed(1);
+}
+
+/** The fields of a highlight hover card (contracts §11.2). */
 export function readout(h: Hl): Readout {
   if (h.kind === "acceleration" && Number.isFinite(h.value)) {
-    return { main: `${formatValue(h.value)} m/s²`, sub: `${formatValue(h.value / G)} g` };
+    return { title: h.label, main: `${formatValue(h.value)} m/s²`, sub: `${formatValue(h.value / G)} g` };
   }
   if (h.kind === "contact" && Number.isFinite(h.value)) {
-    return { main: `${formatValue(h.value)} N`, sub: h.ratio !== null && h.ratio !== undefined ? `${formatValue(h.ratio)}× typical` : null };
+    return {
+      title: h.label,
+      main: `${formatValue(h.value)} N`,
+      sub: h.ratio !== null && h.ratio !== undefined && Number.isFinite(h.ratio) ? `${formatRatio(h.ratio)}× typical` : null,
+    };
   }
   // Custom kinds say what they want to say in `detail`.
-  return { main: h.detail || h.label, sub: null };
+  return { title: h.label, main: h.detail || h.label, sub: null };
 }

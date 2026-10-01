@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 
 import { ArrangeToggle } from "../ArrangeToggle";
 import { Logo } from "../Logo";
+import { InlineName } from "./InlineName";
 import { NameDialog } from "./NameDialog";
 import { RunContextMenu } from "./RunMenu";
 import { RunRowItem } from "./RunRow";
@@ -68,6 +69,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
       library: st.library,
       mode: st.api?.mode,
       writable: !!st.api?.writable,
+      renaming: st.renaming,
     })),
   );
   const act = useApp.getState();
@@ -298,9 +300,11 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
             {virt.getVirtualItems().map((v) => {
               const it = items[v.index];
               const isSticky = v.index === stickyIdx.current && it.kind === "header";
+              // The row being renamed, in its pinned copy when it has one, so a single editor shows.
+              const editing = it.kind === "row" && s.renaming?.name === it.run.name && (it.section.kind === "pinned") === it.run.favorite;
               const style: React.CSSProperties = isSticky
                 ? { position: "sticky", top: 0, zIndex: 2, height: v.size }
-                : { position: "absolute", top: 0, left: 4, right: 4, height: v.size, transform: `translateY(${v.start}px)` };
+                : { position: "absolute", top: 0, left: 4, right: 4, height: v.size, transform: `translateY(${v.start}px)`, zIndex: editing ? 3 : undefined };
               return (
                 <div key={`${v.index}:${it.kind}:${it.kind === "row" ? `${it.section.id}/${it.run.name}` : it.kind === "new-group" ? "" : it.section.id}`} style={style}>
                   {it.kind === "header" ? (
@@ -320,6 +324,8 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
                             slot={slotOf(it.run.name)}
                             picked={s.picks.some((p) => p.name === it.run.name)}
                             liveFrames={s.live[it.run.name]}
+                            editing={editing}
+                            renamable={s.writable}
                             onOpen={onOpen}
                             onPick={onPick}
                             onNewGroup={onNewGroup}
@@ -405,7 +411,7 @@ function SectionHeader({
     return (
       <div className="flex h-full items-end bg-sidebar">
         <div className="flex h-8 w-full items-center px-1">
-          <InlineName initial={section.title} onSave={save} onCancel={() => setEditing(false)} />
+          <InlineName initial={section.title} label="Group name" onSave={save} onCancel={() => setEditing(false)} />
         </div>
       </div>
     );
@@ -445,39 +451,6 @@ function SectionHeader({
       <SidebarMenuBadge>{section.runs.length}</SidebarMenuBadge>
       </div>
     </div>
-  );
-}
-
-/** An inline name field in a list row: Enter or blur saves, Escape cancels. Same height and font as the text it replaces. */
-function InlineName({ initial, onSave, onCancel }: { initial: string; onSave(v: string): void; onCancel(): void }) {
-  const ref = useRef<HTMLInputElement>(null);
-  const done = useRef(false);
-  useEffect(() => {
-    ref.current?.focus();
-    ref.current?.select();
-  }, []);
-  const finish = (save: boolean, value: string) => {
-    if (done.current) return;
-    done.current = true;
-    if (save) onSave(value);
-    else onCancel();
-  };
-  return (
-    <input
-      ref={ref}
-      defaultValue={initial}
-      maxLength={64}
-      aria-label="Group name"
-      spellCheck={false}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") finish(true, e.currentTarget.value);
-        else if (e.key === "Escape") finish(false, "");
-        e.stopPropagation();
-      }}
-      onBlur={(e) => finish(true, e.currentTarget.value)}
-      onClick={(e) => e.stopPropagation()}
-      className="h-7 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    />
   );
 }
 

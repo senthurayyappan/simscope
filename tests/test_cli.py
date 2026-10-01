@@ -467,3 +467,40 @@ def test_import_reports_bad_files_and_continues(tmp_path, capsys):
     assert code == 0 and "good  4 frames" in out
     assert "skipped" in err and "bad.html" in err
     assert "skipped 1" in out.splitlines()[-1]
+
+
+# -- rename --
+
+
+def test_rename_renames_a_run(root, capsys):
+    code, out, err = run(capsys, "rename", root, "walk_a", "stride")
+    assert code == 0 and err == ""
+    assert out.strip() == "renamed walk_a to stride"
+    _, listing, _ = run(capsys, "ls", root, "--sort", "name")
+    names = [line.split()[0] for line in listing.splitlines()[1:]]
+    assert names == ["run_b", "stride", "walk_c"]
+    assert manifest.read_manifest(root / "runs" / "stride").name == "stride"
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "message"),
+    [
+        ("walk_a", "run_b", "already exists"),
+        ("ghost", "x", "no run"),
+        ("walk_a", "../x", "invalid run name"),
+    ],
+)
+def test_rename_user_errors(root, capsys, old, new, message):
+    code, out, err = run(capsys, "rename", root, old, new)
+    assert code == 1 and out == "" and message in err
+    assert (root / "runs" / "walk_a").is_dir()
+
+
+def test_rename_refuses_a_recording_run(tmp_path, capsys):
+    lib = library.Library(tmp_path / "lib")
+    rec = lib.record("live", scene=make_scene(), dt=0.02)
+    rec.log(make_poses(1)[0])
+    code, _, err = run(capsys, "rename", tmp_path / "lib", "live", "done")
+    rec.abort()
+    lib.close()
+    assert code == 1 and "still recording" in err

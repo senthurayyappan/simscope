@@ -285,6 +285,7 @@ test("metadata: the source file shows its file name, streams their shape and uni
 
 import { ARRANGEMENTS, arrangementGrid, carryPaneState, defaultArrangement, effectiveArrangement } from "../src/app/lib/panes.ts";
 import { G, readout } from "../src/app/lib/format.ts";
+import { MSG_CHARS, MSG_EXISTS, MSG_LONG, MSG_RECORDING, MSG_START, RenameError, renameIn, renameKey, renameMessage, validateRunName } from "../src/app/lib/rename.ts";
 
 test("compare: panes that keep their index and run keep their state (the 'only the last run has a lane' bug)", () => {
   const prev = [{ name: "a" }, { name: "b" }, { name: "c" }];
@@ -316,11 +317,40 @@ test("compare arrangement: defaults, remembered choice, grid shapes", () => {
   assert.deepEqual(arrangementGrid(1, "stack"), { cols: 1, rows: 1 });
 });
 
-test("hover readouts: acceleration in m/s2 and g, contact in N and x typical, custom kinds say their detail", () => {
-  const h = (kind, value, ratio = null, detail = "") => ({ kind, label: kind, detail, value, ratio });
-  assert.deepEqual(readout(h("acceleration", 42.2)), { main: "42.2 m/s²", sub: `${(42.2 / G).toPrecision(2)} g` });
-  assert.deepEqual(readout(h("contact", 127.4, 1.93)), { main: "127 N", sub: "1.93× typical" });
-  assert.deepEqual(readout(h("contact", 127.4)), { main: "127 N", sub: null });
-  assert.deepEqual(readout(h("my_marker", 1, 2, "slipped 3 cm")), { main: "slipped 3 cm", sub: null });
-  assert.deepEqual(readout(h("my_marker", 1, 2, "")), { main: "my_marker", sub: null });
+test("hover card fields: the number is the point; acceleration in m/s2 and g, contact in N and x typical", () => {
+  const h = (kind, value, ratio = null, detail = "", label = kind) => ({ kind, label, detail, value, ratio });
+  assert.deepEqual(readout(h("acceleration", 164.1, 4.2, "", "Acceleration")), { title: "Acceleration", main: "164 m/s²", sub: `${(164.1 / G).toPrecision(3)} g` });
+  assert.equal(readout(h("acceleration", 164.1)).sub, "16.7 g");
+  assert.deepEqual(readout(h("contact", 127.4, 1.93, "", "Contact force")), { title: "Contact force", main: "127 N", sub: "1.9× typical" });
+  assert.equal(readout(h("contact", 127.4, 12.4)).sub, "12× typical");
+  assert.equal(readout(h("contact", 127.4)).sub, null);
+  assert.deepEqual(readout(h("my_marker", 1, 2, "slipped 3 cm", "My marker")), { title: "My marker", main: "slipped 3 cm", sub: null });
+  assert.equal(readout(h("my_marker", 1, 2, "", "My marker")).main, "My marker");
+});
+
+test("rename: name rules, server errors as one line, re-keying by run name", () => {
+  assert.equal(validateRunName("crate-2"), null);
+  assert.equal(validateRunName("a"), null);
+  assert.equal(validateRunName("A.b_c-1"), null);
+  assert.equal(validateRunName("a".repeat(128)), null);
+  assert.equal(validateRunName("a".repeat(129)), MSG_LONG);
+  assert.equal(validateRunName("has space"), MSG_CHARS);
+  assert.equal(validateRunName("slash/name"), MSG_CHARS);
+  assert.equal(validateRunName("-lead"), MSG_START);
+  assert.equal(validateRunName(".hidden"), MSG_START);
+  assert.equal(validateRunName(""), MSG_START);
+
+  assert.equal(renameMessage(400, "bad"), MSG_CHARS);
+  assert.equal(renameMessage(409, "a run named 'x' already exists"), MSG_EXISTS);
+  assert.equal(renameMessage(409, "the run is still recording"), MSG_RECORDING);
+  assert.match(renameMessage(404, "no such run"), /no longer exists/);
+  assert.match(renameMessage(403, "read-only"), /read-only/);
+  assert.equal(new RenameError(409, "m").status, 409);
+
+  const panes = [{ name: "a", slot: 0 }, { name: "b", slot: 2 }];
+  assert.deepEqual(renameIn(panes, "b", "c"), [{ name: "a", slot: 0 }, { name: "c", slot: 2 }]);
+  assert.equal(renameIn(panes, "zzz", "c"), panes);
+  assert.deepEqual(renameKey({ a: 1, b: 2 }, "a", "x"), { b: 2, x: 1 });
+  const rec = { a: 1 };
+  assert.equal(renameKey(rec, "nope", "x"), rec);
 });

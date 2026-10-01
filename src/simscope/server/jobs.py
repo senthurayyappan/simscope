@@ -97,6 +97,8 @@ class Jobs:
         """Computes one derived file (worker thread)."""
         try:
             self.compute(run, what)
+        except FileNotFoundError:
+            logger.info("run %s is gone (renamed or deleted)", run)
         except Exception as exc:
             logger.exception("deriving %s for %s failed", what, run)
             with self._lock:
@@ -151,6 +153,8 @@ class Jobs:
                 return
             try:
                 self.compute(name, derived.HIGHLIGHTS)
+            except FileNotFoundError:
+                continue  # renamed or deleted since the list was made
             except Exception:
                 logger.exception("highlights for %s failed", name)
 

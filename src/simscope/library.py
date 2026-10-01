@@ -451,6 +451,67 @@ class Library:
         """
         return Rollout(self.root, name)
 
+    def rename(self, old: str, new: str) -> None:
+        """Renames a run.
+
+        A run is known by its folder name and the ``name`` in its manifest;
+        its ``id`` never changes, so annotations, groups, the derived cache
+        and exports keep belonging to it. Only ``rollout.json`` is
+        rewritten (atomically); streams, scenes and assets are untouched.
+        If the folder cannot be renamed, the manifest is put back.
+
+        :class:`Rollout` objects opened before the rename keep pointing at
+        the old folder; reopen the run with :meth:`open`.
+
+        Args:
+            old: The run's current name.
+            new: The new name, ``[A-Za-z0-9][A-Za-z0-9._-]{0,127}``.
+
+        Raises:
+            ValueError: If a name is invalid or the run is still recording.
+            FileNotFoundError: If there is no run ``old``.
+            FileExistsError: If a run ``new`` exists.
+            OSError: If the folder cannot be renamed (for example on
+                Windows while a file in it is open).
+            errors.FormatError: If the manifest is invalid.
+        """
+        old_dir, new_dir = self.run_dir(old), self.run_dir(new)
+        if not old_dir.is_dir():
+            raise FileNotFoundError(f"no run {old!r} in {self.root}")
+        if not (old_dir / manifest.MANIFEST_NAME).is_file():
+            raise ValueError(f"run {old!r} is still recording")
+        # On a case-insensitive filesystem a case-only rename names the same
+        # folder; that is a rename, not a clash.
+        if os.path.lexists(new_dir) and (
+            old == new or not old_dir.samefile(new_dir)
+        ):
+            raise FileExistsError(f"run {new!r} already exists")
+        from simscope import derived  # circular at module level
+
+        m = manifest.read_manifest(old_dir)
+        with Rollout(self.root, old) as run:
+            before = derived.fingerprint(run)
+        m.name = new
+        m.validate()
+        cas.atomic_write(
+            old_dir / manifest.MANIFEST_NAME, manifest.manifest_bytes(m)
+        )
+        try:
+            os.rename(old_dir, new_dir)
+        except OSError:
+            m.name = old
+            cas.atomic_write(
+                old_dir / manifest.MANIFEST_NAME, manifest.manifest_bytes(m)
+            )
+            raise
+        try:
+            with Rollout(self.root, new) as run:
+                derived.carry_over(self.root, run, before)
+        except Exception:  # isolation point: a cold cache is only slower
+            logger.warning("derived cache of %r not carried over", new)
+        self._index.refresh()
+        logger.info("renamed run %r to %r", old, new)
+
     # -- browsing --
 
     def refresh(self) -> index.RefreshStats:

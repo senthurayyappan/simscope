@@ -141,6 +141,56 @@ def _stamp_ok(rollout: library.Rollout, cache: pathlib.Path) -> bool:
     return stamp == {"version": VERSION, "manifest": manifest_digest(rollout)}
 
 
+def fingerprint(rollout: library.Rollout) -> tuple[str, str]:
+    """Returns what the cache of a run is valid for, to carry it over.
+
+    Args:
+        rollout: The run.
+
+    Returns:
+        The manifest digest and the highlights cache key.
+    """
+    return manifest_digest(rollout), highlights.cache_key(rollout)
+
+
+def carry_over(
+    lib_root: pathlib.Path,
+    rollout: library.Rollout,
+    before: tuple[str, str],
+) -> None:
+    """Keeps a run's cache valid after its manifest was rewritten.
+
+    A rename rewrites ``rollout.json`` (only its ``name`` changes), which
+    would make the stamp and the highlights key look stale and throw the
+    cache away. If the cache was valid for ``before`` (:func:`fingerprint`
+    taken before the rewrite), it is stamped for the run as it is now.
+
+    Args:
+        lib_root: The library folder.
+        rollout: The run, opened after the rewrite.
+        before: The fingerprint from before the rewrite.
+    """
+    digest, key = before
+    cache = cache_dir(lib_root, rollout)
+    with _lock_for(cache):
+        try:
+            stamp = json.loads((cache / STAMP).read_bytes())
+        except (OSError, ValueError):
+            stamp = None
+        if stamp == {"version": VERSION, "manifest": digest}:
+            now = {"version": VERSION, "manifest": manifest_digest(rollout)}
+            cas.atomic_write(cache / STAMP, _dumps(now))
+        key_path = cache / highlights.KEY_NAME
+        try:
+            same = key_path.read_text("utf-8") == key
+        except (OSError, ValueError):
+            same = False
+        if same:
+            cas.atomic_write(
+                key_path, highlights.cache_key(rollout).encode("utf-8")
+            )
+
+
 def _reset(rollout: library.Rollout, cache: pathlib.Path) -> None:
     """Discards the cache folder's files and stamps it for this manifest."""
     if cache.exists():

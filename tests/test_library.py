@@ -286,3 +286,111 @@ def test_record_keeps_a_given_creation_time(tmp_path):
     ) as rec:
         rec.log_frames(np.zeros((3, 1, 1, 7), np.float32))
     assert lib.open("old").manifest.created == "2026-09-10T00:58:46Z"
+
+
+# -- rename --
+
+
+def _names(lib):
+    return sorted(r.name for r in lib.runs())
+
+
+def test_rename_moves_the_folder_and_rewrites_only_the_name(lib):
+    poses = record(lib, "old", n=40)
+    with lib.open("old") as run:
+        run.annotations.set_favorite()
+        run.annotations.save()
+    before = manifest.read_manifest(lib.run_dir("old")).to_json()
+    lib.rename("old", "new.v2")
+    assert not lib.run_dir("old").exists()
+    after = manifest.read_manifest(lib.run_dir("new.v2")).to_json()
+    assert after.pop("name") == "new.v2" and before.pop("name") == "old"
+    assert after == before  # the id and everything else are unchanged
+    assert _names(lib) == ["new.v2"]
+    assert lib.query(text="old") == []
+    with lib.open("new.v2") as run:
+        assert run.name == "new.v2" and run.annotations.marks.favorite
+        np.testing.assert_array_equal(
+            run.frame_source().read(0, 40)[..., :3], poses[..., :3]
+        )  # positions; quaternion signs are canonicalised
+    with pytest.raises(FileNotFoundError):
+        lib.open("old")
+
+
+def test_rename_refuses_bad_requests_and_changes_nothing(lib):
+    record(lib, "a", n=20)
+    record(lib, "b", n=20)
+    crashed_run(lib, "live")
+    with pytest.raises(FileExistsError):
+        lib.rename("a", "b")
+    with pytest.raises(FileExistsError):
+        lib.rename("a", "a")
+    with pytest.raises(FileNotFoundError):
+        lib.rename("ghost", "c")
+    with pytest.raises(ValueError, match="still recording"):
+        lib.rename("live", "c")
+    for bad in ("../x", "", ".hidden", "a/b", "x" * 129, " a"):
+        with pytest.raises(ValueError, match="invalid run name"):
+            lib.rename("a", bad)
+    with pytest.raises(ValueError, match="invalid run name"):
+        lib.rename("../a", "c")
+    assert _names(lib) == ["a", "b", "live"]
+    for name in ("a", "b"):
+        assert manifest.read_manifest(lib.run_dir(name)).name == name
+
+
+def test_a_failed_folder_rename_puts_the_manifest_back(lib, monkeypatch):
+    record(lib, "a", n=20)
+    real = library.os.rename
+
+    def boom(src, dst):
+        if str(src).endswith("a"):
+            raise PermissionError("in use")
+        real(src, dst)
+
+    monkeypatch.setattr(library.os, "rename", boom)
+    with pytest.raises(PermissionError):
+        lib.rename("a", "b")
+    monkeypatch.undo()
+    assert manifest.read_manifest(lib.run_dir("a")).name == "a"
+    assert not lib.run_dir("b").exists()
+    assert [r.name for r in lib.runs()] == ["a"]
+
+
+def test_a_failed_manifest_write_leaves_the_folder_alone(lib, monkeypatch):
+    record(lib, "a", n=20)
+
+    def boom(path, data):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(library.cas, "atomic_write", boom)
+    with pytest.raises(OSError, match="disk full"):
+        lib.rename("a", "b")
+    monkeypatch.undo()
+    assert lib.run_dir("a").is_dir() and not lib.run_dir("b").exists()
+    assert manifest.read_manifest(lib.run_dir("a")).name == "a"
+
+
+def test_rename_to_another_case_is_allowed(lib):
+    record(lib, "Walk", n=20)
+    lib.rename("Walk", "walk")
+    assert _names(lib) == ["walk"]
+    assert manifest.read_manifest(lib.run_dir("walk")).name == "walk"
+
+
+def test_rename_keeps_the_derived_cache_valid(lib):
+    from simscope import derived, highlights
+
+    record(lib, "old", n=60)
+    with lib.open("old") as run:
+        cache = derived.cache_dir(lib.root, run)
+        derived.ensure(run, cache, derived.HIGHLIGHTS)
+        stamp = (cache / derived.STAMP).read_bytes()
+        done = (cache / derived.HIGHLIGHTS).stat().st_mtime_ns
+    lib.rename("old", "new")
+    with lib.open("new") as run:
+        assert derived.cache_dir(lib.root, run) == cache  # keyed by id
+        assert derived.fresh(run, cache, derived.HIGHLIGHTS) is not None
+        assert (cache / derived.STAMP).read_bytes() != stamp  # restamped
+        highlights.load_or_compute(run, cache)  # served, not recomputed
+        assert (cache / derived.HIGHLIGHTS).stat().st_mtime_ns == done

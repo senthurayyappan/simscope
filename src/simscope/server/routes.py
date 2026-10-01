@@ -548,6 +548,43 @@ async def annotate(request: Request) -> Response:
     return JSONResponse(result, headers={"Cache-Control": "no-store"})
 
 
+async def rename_run(request: Request) -> Response:
+    """``POST /api/runs/<name>/rename`` with ``{"to": "<new name>"}``."""
+    st = _svc(request).state
+    name = request.path_params["name"]
+    obj, reply = await _write_request(request)
+    if reply is not None:
+        return reply
+    assert obj is not None
+    new = obj.get("to")
+    if not isinstance(new, str):
+        return error(400, "to must be a string")
+    try:
+        manifest.validate_run_name(new)
+    except ValueError as exc:
+        return error(400, str(exc))
+    try:
+        manifest.validate_run_name(name)
+    except ValueError:
+        return error(404, "no such run")
+    info = st.info(name)
+    if info is None:
+        return error(404, "no such run")
+    if info.status == "recording":
+        return error(409, "the run is still recording")
+    if st.info(new) is not None:
+        return error(409, f"a run named {new!r} already exists")
+    try:
+        await run_in_threadpool(st.rename_run, name, new)
+    except FileNotFoundError:
+        return error(404, "no such run")
+    except FileExistsError:
+        return error(409, f"a run named {new!r} already exists")
+    except (ValueError, errors.FormatError, OSError) as exc:
+        return error(409, str(exc))
+    return JSONResponse({"name": new}, headers={"Cache-Control": "no-store"})
+
+
 def groups(request: Request) -> Response:
     """``GET /api/groups``."""
     return JSONResponse(

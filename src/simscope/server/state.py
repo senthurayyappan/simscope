@@ -311,6 +311,27 @@ class LibraryState:
             self.touch(name)
         return result
 
+    def rename_run(self, old: str, new: str) -> None:
+        """Renames a run and announces it at once.
+
+        The old name goes into ``removed`` and the new one into ``changed``
+        of ``/api/changes``, without waiting for the file watcher.
+
+        Args:
+            old: The run's current name.
+            new: Its new name.
+
+        Raises:
+            ValueError: If a name is invalid or the run is recording.
+            FileNotFoundError: If there is no run ``old``.
+            FileExistsError: If a run ``new`` exists.
+            OSError: If the folder cannot be renamed.
+            errors.FormatError: If the manifest is invalid.
+        """
+        with self.run_lock(old):  # no sidecar write while the folder moves
+            self.lib.rename(old, new)
+        self._scan([old, new])
+
     # -- groups --
 
     def _load_groups(

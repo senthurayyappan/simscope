@@ -184,6 +184,16 @@ def _cmd_export(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_rename(args: argparse.Namespace) -> int:
+    root = _library_root(args.dir)
+    try:
+        library.Library(root).rename(args.old, args.new)
+    except (ValueError, FileNotFoundError, FileExistsError, OSError) as exc:
+        raise UserError(str(exc)) from exc
+    print(f"renamed {args.old} to {args.new}")
+    return 0
+
+
 def _cmd_pack(args: argparse.Namespace) -> int:
     root = _library_root(args.dir)
     _check_runs(root, args.runs)
@@ -414,6 +424,10 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--no-transcode", action="store_true")
     p.add_argument("--no-annotations", action="store_true")
+
+    p = add("rename", _cmd_rename, "rename a run")
+    p.add_argument("old", metavar="OLD", help="the run's current name")
+    p.add_argument("new", metavar="NEW", help="its new name")
 
     p = add("pack", _cmd_pack, "write runs to a .simscope pack")
     p.add_argument("runs", nargs="+", metavar="RUN")

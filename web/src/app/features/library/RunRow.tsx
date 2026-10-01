@@ -12,6 +12,7 @@ import { seriesVar, SLOT_LETTERS } from "@/lib/palette";
 import type { RunRow as Row } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+import { InlineName } from "./InlineName";
 import { RunDropdownMenu } from "./RunMenu";
 
 export interface RunRowProps {
@@ -22,6 +23,10 @@ export interface RunRowProps {
   slot: number;
   picked: boolean;
   liveFrames: number | undefined;
+  /** The name is an editor (double-click or Rename in the menu). */
+  editing: boolean;
+  /** Double-clicking the name starts editing; false in read-only libraries. */
+  renamable: boolean;
   onOpen(run: Row, e: React.MouseEvent): void;
   onPick(run: Row): void;
   onNewGroup(names: string[]): void;
@@ -37,7 +42,11 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
   const live = run.status === "recording";
   const frames = live ? (p.liveFrames ?? run.n_frames) : run.n_frames;
   const { text, cut } = shortName(run.name);
-  const name = <span className="min-w-0 flex-1 truncate">{text}</span>;
+  const name = (
+    <span className="min-w-0 flex-1 truncate" onDoubleClick={p.renamable ? () => useApp.getState().startRename(run.name) : undefined}>
+      {text}
+    </span>
+  );
   return (
     <div
       role="option"
@@ -54,7 +63,9 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
       <div className="flex w-4 shrink-0 items-center" onClick={(e) => e.stopPropagation()}>
         <PickBox run={run} picked={p.picked} onPick={p.onPick} />
       </div>
-      {cut ? (
+      {p.editing ? (
+        <RunEditor name={run.name} />
+      ) : cut ? (
         <Tooltip>
           <TooltipTrigger asChild>{name}</TooltipTrigger>
           <TooltipContent side="right">{run.name}</TooltipContent>
@@ -62,29 +73,58 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
       ) : (
         name
       )}
-      {live ? <span className="size-1.5 shrink-0 rounded-full bg-destructive animate-pulse-dot" title="Recording" /> : null}
-      {p.slot >= 0 ? (
+      {p.editing ? null : live ? <span className="size-1.5 shrink-0 rounded-full bg-destructive animate-pulse-dot" title="Recording" /> : null}
+      {p.editing ? null : p.slot >= 0 ? (
         <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground" title={`Run ${SLOT_LETTERS[p.slot]}`}>
           <span className="size-2 rounded-full" style={{ background: seriesVar(p.slot) }} />
           {SLOT_LETTERS[p.slot]}
         </span>
       ) : null}
-      <span className="num shrink-0 text-xs text-muted-foreground group-hover/row:hidden group-has-[[data-state=open]]/row:hidden">
-        {formatDuration(lastFrameTime(frames, run.dt))}
-      </span>
-      <div className="hidden shrink-0 items-center group-hover/row:flex has-[[data-state=open]]:flex" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="size-6" aria-label={`Actions for ${run.name}`}>
-              <Ellipsis />
-            </Button>
-          </DropdownMenuTrigger>
-          <RunDropdownMenu run={run} onNewGroup={p.onNewGroup} />
-        </DropdownMenu>
-      </div>
+      {p.editing ? null : (
+        <>
+          <span className="num shrink-0 text-xs text-muted-foreground group-hover/row:hidden group-has-[[data-state=open]]/row:hidden">
+            {formatDuration(lastFrameTime(frames, run.dt))}
+          </span>
+          <div className="hidden shrink-0 items-center group-hover/row:flex has-[[data-state=open]]:flex" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon-sm" className="size-6" aria-label={`Actions for ${run.name}`}>
+                  <Ellipsis />
+                </Button>
+              </DropdownMenuTrigger>
+              <RunDropdownMenu run={run} onNewGroup={p.onNewGroup} />
+            </DropdownMenu>
+          </div>
+        </>
+      )}
     </div>
   );
 });
+
+/** The name as a field (contracts §11.1): the row's own font and height; the server's refusal shows under it. */
+function RunEditor({ name }: { name: string }) {
+  const error = useApp((s) => s.renaming?.error ?? null);
+  const { renameRun, cancelRename, setRenameError } = useApp.getState();
+  return (
+    <InlineName
+      initial={name}
+      label={`Name of ${name}`}
+      maxLength={128}
+      className="text-sm"
+      error={error}
+      onChange={() => setRenameError(null)}
+      onCancel={cancelRename}
+      onSave={(value) => {
+        const next = value.trim();
+        if (!next || next === name) {
+          cancelRename();
+          return;
+        }
+        return renameRun(name, next);
+      }}
+    />
+  );
+}
 
 function PickBox({ run, picked, onPick }: { run: Row; picked: boolean; onPick(r: Row): void }) {
   const full = useApp((s) => s.picks.length >= MAX_COMPARE);

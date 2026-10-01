@@ -19,6 +19,15 @@ The README has a complete MuJoCo recording example. `simscope serve` shows
 runs that are still recording, and `simscope import` brings in `.rbundle`
 files and Brax HTML viewers.
 
+## Renaming runs
+
+`simscope rename demo_lib old_name new_name` renames a run (in Python,
+`Library.rename(old, new)`; in the app, double-click the name). A run's name
+is its folder name; its id never changes, so notes, ratings, groups, cached
+highlights and exports stay with it. A run that is still recording cannot be
+renamed, and neither can one onto an existing name. Reopen any `Rollout` you
+had open before the rename, because it still points at the old folder.
+
 ## Exports
 
 `simscope export` writes one HTML file that works offline. A lean export

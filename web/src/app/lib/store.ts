@@ -9,6 +9,7 @@ import type { FollowMode, RunInfo, ViewName } from "./core";
 import { buildSections, flatOrder, nextUnrated, stepRun, type LibraryView, type SortKey } from "./filters";
 import { carryPaneState, isArrangement, type Arrangement } from "./panes";
 import { MAX_SLOTS } from "./palette";
+import { renameIn, renameKey, validateRunName } from "./rename";
 import { EMPTY_ANNOTATIONS, rowWithAnnotations } from "./rows";
 import { readStore, writeStore } from "./utils";
 import type { AnnotationOp, Annotations, GroupOp, GroupsDoc, HighlightsDoc, LibraryInfo, Manifest, RunRow } from "./types";
@@ -45,6 +46,8 @@ export interface AppState {
   /** Section ids the user folded. */
   folded: string[];
   cursor: string | null;
+  /** The run whose name is being edited in the library, with the server's or the name rule's complaint. */
+  renaming: { name: string; error: string | null } | null;
 
   panes: PaneRef[];
   active: number;
@@ -107,6 +110,11 @@ export interface AppActions {
   annotate(op: AnnotationOp): Promise<void>;
   annotateRun(name: string, op: AnnotationOp): Promise<void>;
   moveToGroup(names: string[], group: string | null): Promise<void>;
+  startRename(name: string): void;
+  setRenameError(error: string | null): void;
+  cancelRename(): void;
+  /** Renames a run everywhere the app holds its name; false (with the reason in `renaming.error`) when refused. */
+  renameRun(name: string, to: string): Promise<boolean>;
   groupOp(op: GroupOp): Promise<void>;
   setInfo(pane: number, info: RunInfo | undefined): void;
   setEnv(pane: number, env: number): void;
@@ -214,6 +222,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     expanded: [],
     folded: [],
     cursor: null,
+    renaming: null,
 
     panes: [],
     active: 0,
@@ -401,6 +410,46 @@ export const useApp = create<AppState & AppActions>((set, get) => {
       } catch (e) {
         set({ error: (e as Error).message });
       }
+    },
+
+    startRename(name) {
+      if (get().api?.writable) set({ renaming: { name, error: null } });
+    },
+    setRenameError(error) {
+      const { renaming } = get();
+      if (renaming && renaming.error !== error) set({ renaming: { ...renaming, error } });
+    },
+    cancelRename: () => set({ renaming: null }),
+
+    async renameRun(name, to) {
+      const { api } = get();
+      if (!api?.writable) return false;
+      const fail = (error: string) => {
+        set({ renaming: { name, error } });
+        return false;
+      };
+      const bad = validateRunName(to);
+      if (bad) return fail(bad);
+      try {
+        await api.rename(name, to);
+      } catch (e) {
+        return fail((e as Error).message);
+      }
+      // The run keeps its place in every list and stays open; only its name changes.
+      const s = get();
+      const wasActive = s.panes[s.active]?.name === name;
+      set({
+        rows: renameIn(s.rows, name, to),
+        panes: renameIn(s.panes, name, to),
+        picks: renameIn(s.picks, name, to),
+        cursor: s.cursor === name ? to : s.cursor,
+        manifest: s.manifest?.name === name ? { ...s.manifest, name: to } : s.manifest,
+        refresh: renameKey(s.refresh, name, to),
+        live: renameKey(s.live, name, to),
+        renaming: null,
+      });
+      if (wasActive) writeHash(to);
+      return true;
     },
 
     async groupOp(op) {

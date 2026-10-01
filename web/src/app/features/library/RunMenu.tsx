@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { FolderInput, FolderPlus, FolderX, GitCompareArrows, Pin, PinOff, Play } from "lucide-react";
+import { FolderInput, FolderPlus, FolderX, GitCompareArrows, Pencil, Pin, PinOff, Play } from "lucide-react";
 
 import {
   ContextMenuContent,
@@ -92,6 +92,11 @@ function Menu({ kit, run, onNewGroup }: RunMenuProps & { kit: Kit }) {
           <Item onSelect={() => void annotateRun(run.name, { op: "favorite", value: !run.favorite })}>
             {run.favorite ? <PinOff /> : <Pin />}
             {run.favorite ? "Unpin" : "Pin"}
+          </Item>
+          {/* After the menu closes, so its focus return does not end the editor at once. */}
+          <Item onSelect={() => setTimeout(() => useApp.getState().startRename(run.name), 80)}>
+            <Pencil />
+            Rename
           </Item>
           {groups ? (
             <>

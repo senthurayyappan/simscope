@@ -4,6 +4,7 @@
 
 import { createHttpSource, createPackSource, readJson, type Source } from "./core";
 import { MockGroups, mockGroupsRequested } from "./mock-groups";
+import { RenameError, renameMessage } from "./rename";
 import {
   decodeBase64,
   manifestToRow,
@@ -56,6 +57,8 @@ export interface Api {
   /** Groups in library order, or null when this source has none (old server, read-only export without groups). */
   groups(): Promise<GroupsDoc | null>;
   groupOp(op: GroupOp): Promise<GroupsDoc>;
+  /** Renames a run; throws `RenameError`. Read-only sources cannot (contracts §11.1). */
+  rename(name: string, to: string): Promise<string>;
   /** A download URL (http mode only). */
   exportUrl(opts: ExportOptions): string | null;
 }
@@ -133,6 +136,10 @@ export class PackApi implements Api {
   }
 
   async annotate(): Promise<Annotations> {
+    throw new Error("this export is read-only");
+  }
+
+  async rename(): Promise<string> {
     throw new Error("this export is read-only");
   }
 
@@ -234,6 +241,24 @@ export class HttpApi implements Api {
     });
     const out = normalizeAnnotations(a);
     return this.mock ? this.mock.withGroup(name, out) : out;
+  }
+
+  async rename(name: string, to: string): Promise<string> {
+    const res = await fetch(`${this.base}/api/runs/${encodeURIComponent(name)}/rename`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Simscope-Token": this.token },
+      body: JSON.stringify({ to }),
+    });
+    if (!res.ok) {
+      let msg = res.statusText;
+      try {
+        msg = ((await res.json()) as { error?: string }).error ?? msg;
+      } catch {
+        /* non-JSON error body */
+      }
+      throw new RenameError(res.status, renameMessage(res.status, msg));
+    }
+    return ((await res.json()) as { name: string }).name;
   }
 
   exportUrl({ runs, layout, ui, arrange }: ExportOptions): string {

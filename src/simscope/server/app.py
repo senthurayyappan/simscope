@@ -95,6 +95,11 @@ def create_app(
                 routes.annotate,
                 methods=["POST"],
             ),
+            Route(
+                "/api/runs/{name}/rename",
+                routes.rename_run,
+                methods=["POST"],
+            ),
             Route("/files/{path:path}", routes.files),
         ],
         middleware=[
