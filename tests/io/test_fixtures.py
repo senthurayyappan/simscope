@@ -10,7 +10,9 @@ FORMAT_DIR = pathlib.Path(__file__).parent.parent / "fixtures" / "format"
 
 
 def _expected():
-    return json.loads((FORMAT_DIR / "expected.json").read_text())
+    return json.loads(
+        (FORMAT_DIR / "expected.json").read_text(encoding="utf-8")
+    )
 
 
 def test_fixtures_are_small():

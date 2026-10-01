@@ -79,7 +79,9 @@ def write_synthetic_runs(root: pathlib.Path, n_runs: int) -> None:
             "source": {"simulator": "brax", "importer": "brax"},
             "tags": [f"sweep_{i % 50}", "source:brax"],
         }
-        (d / "rollout.json").write_text(json.dumps(manifest, indent=2))
+        (d / "rollout.json").write_text(
+            json.dumps(manifest, indent=2), encoding="utf-8"
+        )
         if i % 3 == 0:
             ann = {
                 "format": "simscope-annotations/1",
@@ -89,7 +91,9 @@ def write_synthetic_runs(root: pathlib.Path, n_runs: int) -> None:
                 "ratings": [{"id": "r", "criterion": "overall", "value": 4}],
                 "events": [{"id": "e1"}, {"id": "e2"}],
             }
-            (d / "annotations.json").write_text(json.dumps(ann, indent=2))
+            (d / "annotations.json").write_text(
+                json.dumps(ann, indent=2), encoding="utf-8"
+            )
 
 
 @contextlib.contextmanager

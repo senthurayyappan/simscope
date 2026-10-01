@@ -34,12 +34,14 @@ def names(client):
 
 
 def groups_file(lib_root):
-    return json.loads((lib_root / ".simscope" / "groups.json").read_text())
+    return json.loads(
+        (lib_root / ".simscope" / "groups.json").read_text(encoding="utf-8")
+    )
 
 
 def sidecar_group(lib_root, name):
     path = lib_root / "runs" / name / "annotations.json"
-    return json.loads(path.read_text())["marks"]["group"]
+    return json.loads(path.read_text(encoding="utf-8"))["marks"]["group"]
 
 
 def row_group(client, name):
@@ -70,7 +72,7 @@ def test_create_lists_in_order_and_writes_the_file(client, lib_root):
     assert [g["name"] for g in doc["groups"]] == ["Vault sweep", "Crates"]
     assert all(g["created"].endswith("Z") for g in doc["groups"])
     assert seq(client) > before  # other clients learn of it
-    raw = (lib_root / ".simscope" / "groups.json").read_text()
+    raw = (lib_root / ".simscope" / "groups.json").read_text(encoding="utf-8")
     assert raw == json.dumps(doc, indent=2, sort_keys=True) + "\n"
     assert not list((lib_root / ".simscope").glob("*.tmp*"))
 
@@ -254,12 +256,12 @@ def test_writes_need_the_token_origin_and_a_writable_library(client, lib_root):
 def test_unknown_fields_of_the_file_survive(client, lib_root):
     post(client, {"op": "create", "name": "A"})
     path = lib_root / ".simscope" / "groups.json"
-    doc = json.loads(path.read_text())
+    doc = json.loads(path.read_text(encoding="utf-8"))
     doc["future"] = {"x": 1}
     doc["groups"][0]["color"] = "#fff"
-    path.write_text(json.dumps(doc))
+    path.write_text(json.dumps(doc), encoding="utf-8")
     post(client, {"op": "create", "name": "B"})
-    after = json.loads(path.read_text())
+    after = json.loads(path.read_text(encoding="utf-8"))
     assert after["future"] == {"x": 1}
     assert after["groups"][0]["color"] == "#fff"
     assert [g["name"] for g in after["groups"]] == ["A", "B"]
@@ -267,11 +269,15 @@ def test_unknown_fields_of_the_file_survive(client, lib_root):
 
 def test_a_broken_file_is_read_as_empty_and_blocks_writes(client, lib_root):
     post(client, {"op": "create", "name": "A"})
-    (lib_root / ".simscope" / "groups.json").write_text("{not json")
+    (lib_root / ".simscope" / "groups.json").write_text(
+        "{not json", encoding="utf-8"
+    )
     assert listing(client)["groups"] == []
     r = post(client, {"op": "create", "name": "B"})
     assert r.status_code == 409 and "groups.json" in r.json()["error"]
-    assert (lib_root / ".simscope" / "groups.json").read_text() == "{not json"
+    assert (lib_root / ".simscope" / "groups.json").read_text(
+        encoding="utf-8"
+    ) == "{not json"
 
 
 def test_a_run_that_vanished_does_not_stop_a_rename(client, lib_root):

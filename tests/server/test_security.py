@@ -72,7 +72,7 @@ def test_no_directory_listings(client):
 
 def test_symlinks_cannot_leave_the_library(client, lib_root, tmp_path):
     outside = tmp_path / "secret.json"
-    outside.write_text('{"secret": true}')
+    outside.write_text('{"secret": true}', encoding="utf-8")
     run = lib_root / "runs" / "walk"
     os.symlink(outside, run / "annotations.json")
     r = client.get("/files/runs/walk/annotations.json")
@@ -84,7 +84,7 @@ def test_symlinks_cannot_leave_the_library(client, lib_root, tmp_path):
     # A run directory that points elsewhere is out of bounds too.
     other = tmp_path / "elsewhere"
     other.mkdir()
-    (other / "rollout.json").write_text("{}")
+    (other / "rollout.json").write_text("{}", encoding="utf-8")
     os.symlink(other, lib_root / "runs" / "linked")
     assert client.get("/files/runs/linked/rollout.json").status_code == 404
 

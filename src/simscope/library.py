@@ -571,7 +571,7 @@ class Library:
         """
         run_dir = self.run_dir(name)
         if (run_dir / manifest.MANIFEST_NAME).exists():
-            (run_dir / manifest.PARTIAL_NAME).unlink(missing_ok=True)
+            cas.remove_file(run_dir / manifest.PARTIAL_NAME)
             m = manifest.read_manifest(run_dir)
             return RecoverReport(name, m.n_frames, True, {}, 0)
         m = manifest.read_manifest(run_dir)

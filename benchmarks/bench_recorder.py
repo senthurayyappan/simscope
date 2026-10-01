@@ -161,7 +161,9 @@ def write_synthetic_runs(root: pathlib.Path, n_runs: int) -> None:
             "streams": {},
             "tags": [f"sweep_{i % 50}", "walk"],
         }
-        (d / "rollout.json").write_text(json.dumps(manifest, indent=2))
+        (d / "rollout.json").write_text(
+            json.dumps(manifest, indent=2), encoding="utf-8"
+        )
         if i % 3 == 0:
             ann = {
                 "format": "simscope-annotations/1",
@@ -171,7 +173,9 @@ def write_synthetic_runs(root: pathlib.Path, n_runs: int) -> None:
                 "ratings": [{"id": "r", "criterion": "overall", "value": 4}],
                 "events": [{"id": "e1"}, {"id": "e2"}],
             }
-            (d / "annotations.json").write_text(json.dumps(ann, indent=2))
+            (d / "annotations.json").write_text(
+                json.dumps(ann, indent=2), encoding="utf-8"
+            )
 
 
 def bench_index(root: pathlib.Path, n_runs: int) -> None:
@@ -188,7 +192,7 @@ def bench_index(root: pathlib.Path, n_runs: int) -> None:
         noop.append(time.perf_counter() - t0)
     for i in range(0, n_runs, 100):
         p = root / "runs" / f"run_{i:05d}" / "rollout.json"
-        p.write_text(p.read_text() + "\n")
+        p.write_text(p.read_text() + "\n", encoding="utf-8")
     t0 = time.perf_counter()
     inc = idx.refresh()
     inc_s = time.perf_counter() - t0

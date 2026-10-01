@@ -48,7 +48,9 @@ def test_a_library_that_gets_its_first_run_while_served(tmp_path):
 def test_invalid_manifest_shows_as_an_invalid_row(tmp_path):
     root = tmp_path / "bad"
     (root / "runs" / "broken").mkdir(parents=True)
-    (root / "runs" / "broken" / "rollout.json").write_text("{nope")
+    (root / "runs" / "broken" / "rollout.json").write_text(
+        "{nope", encoding="utf-8"
+    )
     with make_client(root) as c:
         rows = c.get("/api/runs").json()["runs"]
         assert rows[0]["name"] == "broken" and rows[0]["status"] == "invalid"

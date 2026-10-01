@@ -5,7 +5,10 @@ import hashlib
 import os
 import pathlib
 import re
+import threading
+import time
 import uuid
+from collections.abc import Callable
 from typing import Any, Literal
 
 from simscope.io import errors
@@ -94,10 +97,93 @@ def create_temp(directory: pathlib.Path) -> tuple[int, str]:
         name = str(directory / f".tmp-{uuid.uuid4().hex}")
         try:
             return os.open(
-                name, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o666
+                name, os.O_CREAT | os.O_EXCL | os.O_WRONLY | _BINARY, 0o666
             ), name
         except FileExistsError:
             continue
+
+
+_BINARY = getattr(os, "O_BINARY", 0)
+"""Windows opens descriptors in text mode unless asked; 0 elsewhere."""
+
+_RETRY_SECONDS = 2.0
+"""How long a replace or delete keeps retrying while a reader holds the file."""
+
+_read_lock = threading.Lock()
+
+
+def open_read(path: os.PathLike[str] | str) -> int:
+    """Opens a file for reading as a raw descriptor, in binary mode.
+
+    Args:
+        path: The file.
+
+    Returns:
+        A file descriptor. Close it with ``os.close``.
+    """
+    return os.open(path, os.O_RDONLY | _BINARY)
+
+
+def read_at(fd: int, size: int, offset: int) -> bytes:
+    """Reads ``size`` bytes at ``offset`` without moving a shared position.
+
+    Uses ``os.pread`` where it exists. Windows has none, so there the seek
+    and the read happen under one lock.
+
+    Args:
+        fd: A descriptor from :func:`open_read`.
+        size: Bytes to read.
+        offset: Where to start.
+
+    Returns:
+        The bytes read (fewer than ``size`` at the end of the file).
+    """
+    if hasattr(os, "pread"):
+        return os.pread(fd, size, offset)
+    with _read_lock:  # pragma: no cover - Windows only
+        os.lseek(fd, offset, os.SEEK_SET)
+        return os.read(fd, size)
+
+
+def _retry_while_open(action: Callable[[], object]) -> None:
+    """Runs ``action``, retrying briefly on Windows' sharing violations.
+
+    Windows refuses to replace or delete a file that another handle has open,
+    for example a viewer reading a manifest that the recorder rewrites. The
+    other side only holds it for a moment, so a short retry is enough.
+    """
+    deadline = time.monotonic() + _RETRY_SECONDS
+    delay = 0.002
+    while True:
+        try:
+            action()
+            return
+        except PermissionError:
+            if os.name != "nt" or time.monotonic() >= deadline:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, 0.05)
+
+
+def replace_file(
+    src: os.PathLike[str] | str, dst: os.PathLike[str] | str
+) -> None:
+    """Moves ``src`` over ``dst`` atomically, waiting out Windows readers.
+
+    Args:
+        src: The new file.
+        dst: The file to replace.
+    """
+    _retry_while_open(lambda: os.replace(src, dst))
+
+
+def remove_file(path: os.PathLike[str] | str) -> None:
+    """Deletes a file if it exists, waiting out Windows readers.
+
+    Args:
+        path: The file.
+    """
+    _retry_while_open(lambda: pathlib.Path(path).unlink(missing_ok=True))
 
 
 def atomic_write(path: os.PathLike[str] | str, data: bytes) -> None:
@@ -113,7 +199,7 @@ def atomic_write(path: os.PathLike[str] | str, data: bytes) -> None:
     try:
         with os.fdopen(fd, "wb") as f:
             f.write(data)
-        os.replace(tmp_name, target)
+        replace_file(tmp_name, target)
     except BaseException:
         pathlib.Path(tmp_name).unlink(missing_ok=True)
         raise

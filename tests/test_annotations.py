@@ -43,7 +43,7 @@ def test_round_trip_and_file_format(tmp_path):
     )
     ann.save()
 
-    raw = ann.path.read_text()
+    raw = ann.path.read_text(encoding="utf-8")
     assert raw.endswith("\n") and not raw.endswith("\n\n")
     obj = json.loads(raw)
     assert obj["format"] == "simscope-annotations/1"
@@ -75,7 +75,10 @@ def test_lists_sorted_by_id_on_write(tmp_path):
         ann.add_note(f"n{i}", author="ada")
     ann.notes.reverse()
     ann.save()
-    ids = [n["id"] for n in json.loads(ann.path.read_text())["notes"]]
+    ids = [
+        n["id"]
+        for n in json.loads(ann.path.read_text(encoding="utf-8"))["notes"]
+    ]
     assert ids == sorted(ids)
 
 
@@ -154,7 +157,7 @@ def test_a_sidecar_without_a_group_still_loads(tmp_path):
         "run_id": RUN_ID,
         "marks": {"favorite": True, "flag": None, "status": None, "tags": []},
     }
-    (run_dir / "annotations.json").write_text(json.dumps(obj))
+    (run_dir / "annotations.json").write_text(json.dumps(obj), encoding="utf-8")
     ann = annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
     assert ann.marks.favorite and ann.marks.group is None
 
@@ -172,13 +175,15 @@ def test_deprecated_marks_are_read_and_written_back(tmp_path):
         "color": "red",
     }
     obj = {"format": "simscope-annotations/1", "run_id": RUN_ID, "marks": marks}
-    (run_dir / "annotations.json").write_text(json.dumps(obj))
+    (run_dir / "annotations.json").write_text(json.dumps(obj), encoding="utf-8")
     ann = annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
     assert (ann.marks.flag, ann.marks.status) == ("review", "candidate")
     assert ann.marks.tags == ["a", "b"] and ann.marks.extra == {"color": "red"}
     ann.set_group("G")
     ann.save()
-    saved = json.loads((run_dir / "annotations.json").read_text())["marks"]
+    saved = json.loads(
+        (run_dir / "annotations.json").read_text(encoding="utf-8")
+    )["marks"]
     assert saved == {
         "favorite": False,
         "group": "G",
@@ -237,11 +242,11 @@ def test_unknown_fields_preserved(tmp_path):
         ],
         "events": [],
     }
-    (run_dir / "annotations.json").write_text(json.dumps(src))
+    (run_dir / "annotations.json").write_text(json.dumps(src), encoding="utf-8")
     ann = annotations.Annotations.load(run_dir, RUN_ID, 0.02, 100)
     ann.add_note("another", author="bob")
     ann.save()
-    out = json.loads((run_dir / "annotations.json").read_text())
+    out = json.loads((run_dir / "annotations.json").read_text(encoding="utf-8"))
     assert out["future_top"] == {"x": [1, 2]}
     assert out["marks"]["color"] == "red"
     assert out["marks"]["tags"] == ["a", "z"]
@@ -253,17 +258,22 @@ def test_invalid_files_raise(tmp_path):
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     path = run_dir / "annotations.json"
-    path.write_text("{oops")
+    path.write_text("{oops", encoding="utf-8")
     with pytest.raises(errors.FormatError):
         annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
-    path.write_text(json.dumps({"format": "other/1"}))
-    with pytest.raises(errors.FormatError):
-        annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
-    path.write_text(json.dumps({"format": "simscope-annotations/2"}))
+    path.write_text(json.dumps({"format": "other/1"}), encoding="utf-8")
     with pytest.raises(errors.FormatError):
         annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
     path.write_text(
-        json.dumps({"format": "simscope-annotations/1", "notes": [{"id": "x"}]})
+        json.dumps({"format": "simscope-annotations/2"}), encoding="utf-8"
+    )
+    with pytest.raises(errors.FormatError):
+        annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
+    path.write_text(
+        json.dumps(
+            {"format": "simscope-annotations/1", "notes": [{"id": "x"}]}
+        ),
+        encoding="utf-8",
     )
     with pytest.raises(errors.FormatError):
         annotations.Annotations.load(run_dir, RUN_ID, 0.02, 10)
@@ -279,7 +289,7 @@ def test_run_id_mismatch_flagged(tmp_path, caplog):
     assert len(other.notes) == 1
     other.set_favorite()
     other.save()
-    assert json.loads(ann.path.read_text())["run_id"] == "OTHER"
+    assert json.loads(ann.path.read_text(encoding="utf-8"))["run_id"] == "OTHER"
 
 
 def test_two_authors_concurrent_edits_then_merge(tmp_path):
@@ -377,9 +387,12 @@ def test_event_types_default_and_round_trip(tmp_path):
     )
     annotations.save_event_types(tmp_path, types, {"custom": 1})
     path = tmp_path / ".simscope" / "event_types.json"
-    obj = json.loads(path.read_text())
+    obj = json.loads(path.read_text(encoding="utf-8"))
     assert obj["format"] == "simscope-event-types/1" and obj["custom"] == 1
-    assert path.read_text() == json.dumps(obj, indent=2, sort_keys=True) + "\n"
+    assert (
+        path.read_text(encoding="utf-8")
+        == json.dumps(obj, indent=2, sort_keys=True) + "\n"
+    )
     loaded, extra = annotations.load_event_types(tmp_path)
     assert extra == {"custom": 1}
     assert loaded["jump"].key == "j" and loaded["fall"].color == "#d33b3b"
@@ -404,7 +417,8 @@ def test_event_type_validation(tmp_path):
                 "format": "simscope-event-types/1",
                 "types": {"x": {"color": "bad"}},
             }
-        )
+        ),
+        encoding="utf-8",
     )
     with pytest.raises(errors.FormatError):
         annotations.load_event_types(tmp_path)
@@ -422,7 +436,7 @@ def test_group_list_default_and_round_trip(tmp_path):
     second = annotations.Group(name="Crates", created="2026-09-30T11:00:00Z")
     path = annotations.save_groups(tmp_path, [first, second], {"x": 1})
     assert path == tmp_path / ".simscope" / "groups.json"
-    raw = path.read_text()
+    raw = path.read_text(encoding="utf-8")
     obj = json.loads(raw)
     assert obj["format"] == "simscope-groups/1" and obj["x"] == 1
     assert raw == json.dumps(obj, indent=2, sort_keys=True) + "\n"
@@ -441,7 +455,7 @@ def test_group_list_drops_repeats_and_rejects_bad_files(tmp_path):
     path.parent.mkdir()
 
     def write(obj):
-        path.write_text(json.dumps(obj))
+        path.write_text(json.dumps(obj), encoding="utf-8")
 
     write(
         {
@@ -463,7 +477,7 @@ def test_group_list_drops_repeats_and_rejects_bad_files(tmp_path):
         write(obj)
         with pytest.raises(errors.FormatError):
             annotations.load_groups(tmp_path)
-    path.write_text("{")
+    path.write_text("{", encoding="utf-8")
     with pytest.raises(errors.FormatError):
         annotations.load_groups(tmp_path)
 

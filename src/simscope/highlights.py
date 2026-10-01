@@ -317,7 +317,7 @@ def _scan(
     codec_ids = table["codec"].astype(np.int64)
     chunks = [envs[i : i + _ENV_CHUNK] for i in range(0, len(envs), _ENV_CHUNK)]
     out: npt.NDArray[np.float32] | None = None
-    fd = os.open(run.path / run.manifest.streams[name].file, os.O_RDONLY)
+    fd = cas.open_read(run.path / run.manifest.streams[name].file)
 
     def job(at: tuple[int, int]) -> None:
         nonlocal out
@@ -327,7 +327,7 @@ def _scan(
         window = np.empty((n, len(chunks[c]), len(cols)), np.float32)
         for j, env in enumerate(chunks[c].tolist()):
             i = w * n_envs + env
-            payload = os.pread(fd, int(lengths[i]), int(offsets[i]))
+            payload = cas.read_at(fd, int(lengths[i]), int(offsets[i]))
             window[:, j] = codecs.decode_components(
                 payload, int(codec_ids[i]), n, k, cols
             )

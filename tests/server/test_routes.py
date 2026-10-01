@@ -1,4 +1,7 @@
 import json
+import sys
+
+import pytest
 
 from simscope.io import manifest
 
@@ -80,6 +83,10 @@ def test_page_carries_the_boot_block(client):
     assert "/assets/simscope-app.css" in html
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="a folder named x<b>&y cannot exist on Windows",
+)
 def test_boot_block_escapes_markup(tmp_path):
     root = tmp_path / "x<b>&y"
     root.mkdir()
@@ -171,7 +178,9 @@ def test_scene_referenced_by_a_manifest_is_reachable(client):
 
 def test_missing_annotations_is_404_then_served(client, lib_root):
     assert client.get("/files/runs/walk/annotations.json").status_code == 404
-    (lib_root / "runs" / "walk" / "annotations.json").write_text("{}")
+    (lib_root / "runs" / "walk" / "annotations.json").write_text(
+        "{}", encoding="utf-8"
+    )
     assert client.get("/files/runs/walk/annotations.json").status_code == 200
 
 

@@ -134,7 +134,9 @@ def lib(library, tmp_path):
 
 def _add_annotations(root: pathlib.Path, run: str) -> None:
     doc = {"format": "simscope-annotations/1", "events": [EVENT]}
-    (root / "runs" / run / "annotations.json").write_text(json.dumps(doc))
+    (root / "runs" / run / "annotations.json").write_text(
+        json.dumps(doc), encoding="utf-8"
+    )
 
 
 # ---------------------------------------------------------------- structure
@@ -204,7 +206,9 @@ def test_bootstrap_uses_documented_decode_path(library, tmp_path):
 
 def test_license_comment_is_last_and_complete(library, tmp_path):
     root, names = library
-    text = export.export_html(root, names, tmp_path / "x.html").read_text()
+    text = export.export_html(root, names, tmp_path / "x.html").read_text(
+        encoding="utf-8"
+    )
     licenses = export.read_asset("simscope-web.LICENSES.txt").decode()
     tail = text[text.rindex("<!--") :]
     assert tail.rstrip().endswith("-->")
@@ -223,7 +227,7 @@ def test_inline_scripts_are_valid_javascript(library, tmp_path):
         if key.startswith("simscope-"):
             continue
         js = tmp_path / f"s{n}.js"
-        js.write_text(body)
+        js.write_text(body, encoding="utf-8")
         n += 1
         done = subprocess.run(
             ["node", "--check", str(js)], capture_output=True, text=True
@@ -317,9 +321,11 @@ def test_title_and_escaping(library, tmp_path):
     page = _parse(out)
     assert page.title == 'Walk <b> & "run"'
     assert "<title>Walk &lt;b&gt; &amp; &quot;run&quot;</title>" in (
-        out.read_text()
+        out.read_text(encoding="utf-8")
     )
-    assert "<h1" not in out.read_text()  # the page has no heading of its own
+    assert "<h1" not in out.read_text(
+        encoding="utf-8"
+    )  # the page has no heading of its own
 
 
 # ------------------------------------------------------------------ layouts
@@ -339,7 +345,7 @@ def test_single_layout(library, tmp_path):
     assert not {"figure", "figcaption", "h1", "main", "div"} & {
         t for t, _ in page.tags
     }
-    assert "ss-master" not in out.read_text()
+    assert "ss-master" not in out.read_text(encoding="utf-8")
 
 
 def test_single_rejects_several_runs(library, tmp_path):
@@ -358,7 +364,7 @@ def test_grid_layout_flags(library, tmp_path):
     )
     for player in page.find("simscope-player"):
         assert "autoplay" not in player and "loop" not in player
-    assert "ss-master" not in (tmp_path / "x.html").read_text()
+    assert "ss-master" not in (tmp_path / "x.html").read_text(encoding="utf-8")
 
 
 def _compare_html(names, **kwargs):
@@ -375,7 +381,7 @@ def _compare_box(text):
 def test_compare_markup_is_the_contract(library, tmp_path):
     root, names = library
     out = export.export_html(root, names, tmp_path / "x.html", layout="compare")
-    text = out.read_text()
+    text = out.read_text(encoding="utf-8")
     assert _compare_box(text) == (
         '<div id="ss-master" data-arrange="side" data-autoplay="1" '
         'data-loop="1">\n'
@@ -397,7 +403,7 @@ def test_compare_markup_is_the_contract(library, tmp_path):
 def test_compare_page_has_no_chrome_of_its_own(library, tmp_path):
     root, names = library
     out = export.export_html(root, names, tmp_path / "x.html", layout="compare")
-    text = out.read_text()
+    text = out.read_text(encoding="utf-8")
     page = _parse(out)
     tags = {t for t, _ in page.tags}
     # The runtime builds the bar, the titles' look and the arrangement.
@@ -499,7 +505,7 @@ def test_other_layouts_have_no_clock_colours_or_letters(library, tmp_path):
     for layout in ("grid", "single"):
         use = names[:1] if layout == "single" else names
         out = export.export_html(root, use, tmp_path / "x.html", layout=layout)
-        text = out.read_text()
+        text = out.read_text(encoding="utf-8")
         for player in _parse(out).find("simscope-player"):
             assert not {"sync", "color", "nocontrols"} & set(player)
         assert 'class="slot"' not in text and "data-arrange" not in text
@@ -550,7 +556,7 @@ def test_export_is_deterministic(library, tmp_path):
     p1 = export.export_pack(root, names, tmp_path / "1.simscope")
     p2 = export.export_pack(root, names, tmp_path / "2.simscope")
     assert p1.read_bytes() == p2.read_bytes()
-    text = a.read_text()
+    text = a.read_text(encoding="utf-8")
     assert not re.search(r"20\d\d-\d\d-\d\dT", text.split("<!--")[0])
     head = gzip.compress(b"x", compresslevel=export.GZIP_LEVEL, mtime=0)[:10]
     assert head[4:8] == bytes(4)  # gzip mtime field is zero
@@ -579,7 +585,7 @@ def test_no_network_references(library, tmp_path):
             root, use, tmp_path / "x.html", layout=layout, arrange=arrange
         )
         page = _parse(out)
-        text = _visible_text(out.read_text())
+        text = _visible_text(out.read_text(encoding="utf-8"))
         assert not re.search(r"https?://|//[a-z0-9.-]+\.[a-z]{2,}/", text)
         assert all(a["href"] == "data:," for a in page.find("link"))
         assert not page.find("img") and not page.find("iframe")
@@ -997,8 +1003,8 @@ def test_cli_export_ui_and_envs(tmp_path, capsys):
     assert cli.main([*argv, str(lean)]) == 0
     assert cli.main([*argv, str(full), "--ui", "full"]) == 0
     capsys.readouterr()
-    assert "<simscope-player" in lean.read_text()
-    assert 'id="simscope-boot"' in full.read_text()
+    assert "<simscope-player" in lean.read_text(encoding="utf-8")
+    assert 'id="simscope-boot"' in full.read_text(encoding="utf-8")
     for out in (lean, full):
         with pack.PackReader(_embedded(_parse(out), "simscope-pack")) as r:
             assert r.manifest("spiky").n_envs == 2
@@ -1039,9 +1045,9 @@ def test_cli_export_arrange(tmp_path, capsys):
         str(out),
     ]
     assert cli.main(argv) == 0
-    assert 'data-arrange="side"' in out.read_text()
+    assert 'data-arrange="side"' in out.read_text(encoding="utf-8")
     assert cli.main([*argv, "--arrange", "stack"]) == 0
-    assert 'data-arrange="stack"' in out.read_text()
+    assert 'data-arrange="stack"' in out.read_text(encoding="utf-8")
     capsys.readouterr()
     other = tmp_path / "y.html"
     code = cli.main(

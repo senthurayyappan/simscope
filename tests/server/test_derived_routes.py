@@ -166,9 +166,9 @@ def test_recording_runs_are_not_derived(client, live):
 def test_derived_files_follow_the_manifest(client, lib_root):
     _, before = fetch(client, "derived/crowd/summaries.json")
     path = lib_root / "runs" / "crowd" / "rollout.json"
-    m = json.loads(path.read_text())
+    m = json.loads(path.read_text(encoding="utf-8"))
     m["tags"] = ["changed"]
-    path.write_text(json.dumps(m))
+    path.write_text(json.dumps(m), encoding="utf-8")
     first = client.get("/files/derived/crowd/summaries.json")
     assert first.status_code == 202  # stale: recomputed, not served
     _, after = fetch(client, "derived/crowd/summaries.json")

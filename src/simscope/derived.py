@@ -335,13 +335,13 @@ class _Source:
         out = np.empty((n, e1 - e0, c1 - c0), np.float32)
         d = self._dir
         pose = self.kind == "pose" and c0 % 7 == 0 and c1 % 7 == 0
-        fd = os.open(self.path, os.O_RDONLY)
+        fd = cas.open_read(self.path)
         try:
 
             def run(lo: int, hi: int) -> None:
                 for env in range(lo, hi):
                     ent = d[w * self.n_envs + env]
-                    payload = os.pread(
+                    payload = cas.read_at(
                         fd, int(ent["clen"]), int(ent["offset"]) + 32
                     )
                     codec = int(ent["codec"])
@@ -467,7 +467,7 @@ def _root_pass(rollout: library.Rollout, cache: pathlib.Path) -> None:
                     writer.write_encoded(w * bf, _encode_window(r, pool))
         if writer is not None:
             writer.finalize()
-            os.replace(tmp, cache / ROOT_POSE)
+            cas.replace_file(tmp, cache / ROOT_POSE)
     except BaseException:
         if writer is not None:
             writer.close()

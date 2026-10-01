@@ -295,7 +295,9 @@ def test_run_names_and_overwrite(lib):
     with pytest.raises(FileExistsError):
         lib.record("r", scene=scene, dt=0.02)
     old = manifest.read_manifest(lib.root / "runs" / "r").id
-    (lib.root / "runs" / "r" / "annotations.json").write_text("{}")
+    (lib.root / "runs" / "r" / "annotations.json").write_text(
+        "{}", encoding="utf-8"
+    )
     with lib.record("r", scene=scene, dt=0.02, overwrite=True) as rec:
         rec.log_frames(poses[:2])
     m = manifest.read_manifest(lib.root / "runs" / "r")
@@ -520,7 +522,9 @@ def test_records_a_mujoco_rollout(lib):
 def test_manifest_json_is_pretty_and_sorted(lib):
     with lib.record("p", scene=make_scene(3), dt=0.02) as rec:
         rec.log(make_poses(1, 1, 3)[0])
-    text = (lib.root / "runs" / "p" / "rollout.json").read_text()
+    text = (lib.root / "runs" / "p" / "rollout.json").read_text(
+        encoding="utf-8"
+    )
     obj = json.loads(text)
     assert text == json.dumps(obj, indent=2, sort_keys=True) + "\n"
 

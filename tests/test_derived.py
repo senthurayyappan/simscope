@@ -69,7 +69,7 @@ class Built:
     def json(self, what):
         path = self.ensure(what)
         assert path is not None
-        return json.loads(path.read_text())
+        return json.loads(path.read_text(encoding="utf-8"))
 
     def close(self):
         self.rollout.close()
@@ -214,7 +214,7 @@ def test_summaries_columns_only_when_the_data_exists(tmp_path):
         cache = derived.cache_dir(tmp_path / "lib", ro)
         path = derived.ensure(ro, cache, derived.SUMMARIES)
         assert path is not None
-        doc = json.loads(path.read_text())
+        doc = json.loads(path.read_text(encoding="utf-8"))
     keys = [c["key"] for c in doc["columns"]]
     assert "return" not in keys and "peak_contact_force" not in keys
     assert keys[:2] == ["min_height", "peak_speed"]
@@ -228,7 +228,7 @@ def test_summaries_include_highlight_counts(make_run):
     assert cols[-1] == "n_highlights"
     counts = doc["values"]["n_highlights"]
     assert len(counts) == 3 and all(isinstance(c, int) for c in counts)
-    hl = json.loads((run.cache / "highlights.json").read_text())
+    hl = json.loads((run.cache / "highlights.json").read_text(encoding="utf-8"))
     assert sum(counts) == len(hl["highlights"])
 
 
@@ -298,7 +298,7 @@ def test_envelope_reads_in_groups_when_a_window_is_large(make_run, monkeypatch):
 def test_files_are_reused_until_the_manifest_changes(make_run):
     run = make_run(n_envs=70)
     first = run.ensure(derived.SUMMARIES)
-    stamp = json.loads((run.cache / "stamp.json").read_text())
+    stamp = json.loads((run.cache / "stamp.json").read_text(encoding="utf-8"))
     assert stamp["version"] == derived.VERSION
     assert derived.fresh(run.rollout, run.cache, derived.SUMMARIES) == first
     mtime = first.stat().st_mtime_ns
@@ -306,13 +306,16 @@ def test_files_are_reused_until_the_manifest_changes(make_run):
     assert first.stat().st_mtime_ns == mtime
     # Touching the manifest discards every derived file of the run.
     path = run.rollout.path / "rollout.json"
-    m = json.loads(path.read_text())
+    m = json.loads(path.read_text(encoding="utf-8"))
     m["tags"] = ["edited"]
-    path.write_text(json.dumps(m))
+    path.write_text(json.dumps(m), encoding="utf-8")
     assert derived.fresh(run.rollout, run.cache, derived.SUMMARIES) is None
     again = run.ensure(derived.SUMMARIES)
     assert again == first and again.stat().st_mtime_ns != mtime
-    assert json.loads((run.cache / "stamp.json").read_text()) != stamp
+    assert (
+        json.loads((run.cache / "stamp.json").read_text(encoding="utf-8"))
+        != stamp
+    )
 
 
 def test_cache_is_keyed_by_run_id(make_run, tmp_path):
@@ -381,7 +384,7 @@ def test_highlights_are_delegated(make_run):
     run = make_run()
     path = run.ensure(derived.HIGHLIGHTS)
     assert path == run.cache / "highlights.json"
-    doc = json.loads(path.read_text())
+    doc = json.loads(path.read_text(encoding="utf-8"))
     assert doc["format"] == "simscope-highlights/2"
     assert derived.highlight_count(run.cache) == len(doc["highlights"])
     assert derived.highlight_count(run.cache / "nowhere") is None

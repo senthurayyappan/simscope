@@ -354,5 +354,5 @@ def write_manifest(
     path = run_dir / (PARTIAL_NAME if partial else MANIFEST_NAME)
     cas.atomic_write(path, manifest_bytes(manifest))
     if not partial:
-        (run_dir / PARTIAL_NAME).unlink(missing_ok=True)
+        cas.remove_file(run_dir / PARTIAL_NAME)
     return path

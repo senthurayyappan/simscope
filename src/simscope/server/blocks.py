@@ -14,7 +14,7 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from simscope.io import blockfile, errors
+from simscope.io import blockfile, cas, errors
 
 MAX_ENVS = 256
 """Most envs one ``/api/blocks`` request may ask for."""
@@ -181,10 +181,10 @@ def read_blocks(
     rows = d[window * n_envs + ids]
     offsets = rows["offset"].tolist()
     lengths = (rows["clen"].astype(np.int64) + _BLOCK_HEAD).tolist()
-    fd = os.open(path, os.O_RDONLY)
+    fd = cas.open_read(path)
     try:
         return [
-            os.pread(fd, n, off)
+            cas.read_at(fd, n, off)
             for off, n in zip(offsets, lengths, strict=True)
         ]
     finally:

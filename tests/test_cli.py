@@ -302,7 +302,9 @@ def test_info_user_errors(root, capsys):
 
 
 def test_corrupt_manifest_is_a_one_line_error(root, capsys):
-    (root / "runs" / "walk_a" / "rollout.json").write_text("{not json")
+    (root / "runs" / "walk_a" / "rollout.json").write_text(
+        "{not json", encoding="utf-8"
+    )
     code, _, err = run(capsys, "info", root, "walk_a")
     assert code == 1 and err.count("\n") == 1 and "Traceback" not in err
 
@@ -428,7 +430,7 @@ def test_import_files_and_folders(tmp_path, capsys):
     (src / "deep").mkdir(parents=True)
     write_brax_page(src / "a.html", 4)
     write_brax_page(src / "deep" / "b.html", 6)
-    (src / "deep" / "junk.html").write_text("<p>nothing</p>")
+    (src / "deep" / "junk.html").write_text("<p>nothing</p>", encoding="utf-8")
     lib_dir = tmp_path / "lib"
     code, out, err = run(
         capsys, "import", lib_dir, src, "--tag", "x", "--jobs", "2"
@@ -449,7 +451,7 @@ def test_import_files_and_folders(tmp_path, capsys):
 
 
 def test_import_nothing_is_an_error(tmp_path, capsys):
-    (tmp_path / "x.txt").write_text("hi")
+    (tmp_path / "x.txt").write_text("hi", encoding="utf-8")
     code, out, err = run(capsys, "import", tmp_path / "lib", tmp_path)
     assert code == 1 and out == "" and "nothing to import" in err
     code, _, err = run(capsys, "import", tmp_path / "lib", tmp_path / "nope")

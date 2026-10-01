@@ -118,7 +118,9 @@ def test_pack_smaller_when_transcoded(library, tmp_path):
 
 def test_pack_includes_annotations_and_is_deterministic(library, tmp_path):
     root, names = library
-    (root / "runs" / names[0] / "annotations.json").write_text('{"markers":[]}')
+    (root / "runs" / names[0] / "annotations.json").write_text(
+        '{"markers":[]}', encoding="utf-8"
+    )
     a = pack.write_pack(root, list(names), tmp_path / "a.simscope")
     b = pack.write_pack(root, list(names), tmp_path / "b.simscope")
     assert a.read_bytes() == b.read_bytes()
@@ -254,7 +256,9 @@ def test_env_subset_annotations(library, tmp_path):
             {"id": "c", "env": None, "t0": 0.2},
         ],
     }
-    (root / "runs" / run / "annotations.json").write_text(json.dumps(doc))
+    (root / "runs" / run / "annotations.json").write_text(
+        json.dumps(doc), encoding="utf-8"
+    )
     out = pack.write_pack(root, [run], tmp_path / "s.simscope", envs=[1])
     with pack.PackReader(out) as pr:
         got = json.loads(bytes(pr.read(f"runs/{run}/annotations.json")))

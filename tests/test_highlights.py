@@ -665,7 +665,7 @@ def test_load_or_compute_caches_and_invalidates(lib, tmp_path):
     # A hit does not run the detectors: plant a marker in the file.
     path = cache / "highlights.json"
     planted = {**doc, "highlights": []}
-    path.write_text(json.dumps(planted))
+    path.write_text(json.dumps(planted), encoding="utf-8")
     assert highlights.load_or_compute(run, cache) == planted
 
     # A newer manifest recomputes.
@@ -675,13 +675,15 @@ def test_load_or_compute_caches_and_invalidates(lib, tmp_path):
     assert highlights.load_or_compute(run, cache) == doc
 
     # So does another registered detector.
-    path.write_text(json.dumps(planted))
+    path.write_text(json.dumps(planted), encoding="utf-8")
     highlights.register("x", lambda r: [], label="X")
     assert highlights.load_or_compute(run, cache) == doc
 
     # And a corrupt file.
-    path.write_text("not json")
-    (cache / "highlights.key").write_text(highlights.cache_key(run))
+    path.write_text("not json", encoding="utf-8")
+    (cache / "highlights.key").write_text(
+        highlights.cache_key(run), encoding="utf-8"
+    )
     assert highlights.load_or_compute(run, cache) == doc
 
 
@@ -699,7 +701,7 @@ def guide_blocks():
     """The python code blocks of the "Custom markers" section."""
     text = (
         pathlib.Path(__file__).parents[1] / "docs" / "getting-started.md"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     section = text.split("## Custom markers", 1)[1].split("\n## ", 1)[0]
     return re.findall(r"```python\n(.*?)```", section, re.S)
 

@@ -37,7 +37,7 @@ def write_run(
         "tags": list(tags),
     }
     fname = "rollout.json.partial" if partial else "rollout.json"
-    (run_dir / fname).write_text(json.dumps(manifest))
+    (run_dir / fname).write_text(json.dumps(manifest), encoding="utf-8")
     if annotations is not None:
         write_annotations(root, name, annotations)
     return run_dir
@@ -48,7 +48,7 @@ def write_annotations(root, name, marks=None, **lists):
     obj["marks"] = marks or {}
     obj.update(lists)
     path = root / "runs" / name / "annotations.json"
-    path.write_text(json.dumps(obj))
+    path.write_text(json.dumps(obj), encoding="utf-8")
     return path
 
 
@@ -166,10 +166,10 @@ def test_refresh_is_incremental(lib, tmp_path):
 def test_ignores_non_runs_and_flags_invalid(lib, tmp_path):
     (tmp_path / "runs" / "empty_dir").mkdir()
     (tmp_path / "runs" / ".hidden").mkdir()
-    (tmp_path / "runs" / "stray.txt").write_text("x")
+    (tmp_path / "runs" / "stray.txt").write_text("x", encoding="utf-8")
     bad = tmp_path / "runs" / "broken"
     bad.mkdir()
-    (bad / "rollout.json").write_text("{not json")
+    (bad / "rollout.json").write_text("{not json", encoding="utf-8")
     lib.refresh()
     assert lib.count() == 4
     broken = lib.get("broken")

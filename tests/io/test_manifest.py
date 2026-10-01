@@ -40,7 +40,7 @@ def test_round_trip_and_pretty_printing(tmp_path):
         env_scenes=(cas.Ref("cd" * 32, 5), cas.Ref("ef" * 32, 6)),
     )
     path = manifest.write_manifest(tmp_path / "runs" / m.name, m, partial=False)
-    text = path.read_text()
+    text = path.read_text(encoding="utf-8")
     assert text.startswith('{\n  "created"')  # indent=2, sorted keys
     obj = json.loads(text)
     assert obj["format"] == "simscope-rollout/1"

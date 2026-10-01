@@ -165,6 +165,6 @@ def test_writes_to_the_index_cache_do_not_cause_changes(lib_root):
     with make_client(lib_root, watch=True) as c:
         seq = c.get("/api/library").json()["seq"]
         (lib_root / ".simscope").mkdir(exist_ok=True)
-        (lib_root / ".simscope" / "noise").write_text("x")
+        (lib_root / ".simscope" / "noise").write_text("x", encoding="utf-8")
         time.sleep(0.6)
         assert changes(c, seq)["seq"] == seq

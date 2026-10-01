@@ -15,7 +15,9 @@ def post(client, body, name="walk"):
 
 def sidecar(lib_root, name="walk"):
     return json.loads(
-        (lib_root / "runs" / name / "annotations.json").read_text()
+        (lib_root / "runs" / name / "annotations.json").read_text(
+            encoding="utf-8"
+        )
     )
 
 
@@ -261,7 +263,7 @@ def test_existing_sidecar_is_kept(client, lib_root):
     data = sidecar(lib_root)
     data["extra_field"] = {"kept": True}
     (lib_root / "runs" / "walk" / "annotations.json").write_text(
-        json.dumps(data)
+        json.dumps(data), encoding="utf-8"
     )
     post(client, {"op": "favorite", "value": True})
     after = sidecar(lib_root)
@@ -271,6 +273,6 @@ def test_existing_sidecar_is_kept(client, lib_root):
 
 def test_a_corrupt_sidecar_is_a_409_and_left_alone(client, lib_root):
     path = lib_root / "runs" / "walk" / "annotations.json"
-    path.write_text("{ broken")
+    path.write_text("{ broken", encoding="utf-8")
     assert post(client, {"op": "favorite", "value": True}).status_code == 409
-    assert path.read_text() == "{ broken"
+    assert path.read_text(encoding="utf-8") == "{ broken"

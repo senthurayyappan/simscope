@@ -177,6 +177,11 @@ def test_refresh_only_checks_new_blocks(tmp_path, monkeypatch):
         w.close()
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows cannot truncate, replace or shrink a file that another "
+    "handle has memory-mapped, which this test does to simulate the writer",
+)
 def test_half_window_blocks_are_not_rechecked(tmp_path, monkeypatch):
     """A window with only some envs' blocks is resumed, not re-read."""
     x = _data(10, 3, (2,))
@@ -344,6 +349,11 @@ def test_concurrent_reads_survive_refresh_remaps(tmp_path):
     assert not errs
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows cannot truncate, replace or shrink a file that another "
+    "handle has memory-mapped, which this test does to simulate the writer",
+)
 def test_recover_under_an_open_reader_switches_to_the_directory(tmp_path):
     x = _data(20, 2, (3,))
     p = _unfinished(tmp_path / "a.blk", x)
@@ -358,6 +368,11 @@ def test_recover_under_an_open_reader_switches_to_the_directory(tmp_path):
         np.testing.assert_array_equal(r.read(0, 20), x)
 
 
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Windows cannot truncate, replace or shrink a file that another "
+    "handle has memory-mapped, which this test does to simulate the writer",
+)
 def test_shrunk_file_is_an_error_not_a_crash(tmp_path):
     x = _data(20, 2, (3,))
     p = _unfinished(tmp_path / "a.blk", x)

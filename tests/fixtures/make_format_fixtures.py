@@ -261,7 +261,10 @@ def main() -> None:
             "runs": runs,
         }
 
-    (OUT_DIR / "expected.json").write_text(json.dumps(expected, indent=1))
+    # Bytes, not text: Windows would turn "\n" into "\r\n" and change the file.
+    (OUT_DIR / "expected.json").write_bytes(
+        json.dumps(expected, indent=1).encode("utf-8")
+    )
     total = sum(p.stat().st_size for p in OUT_DIR.iterdir())
     print(f"wrote {len(list(OUT_DIR.iterdir()))} files, {total} bytes")
 

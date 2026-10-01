@@ -148,7 +148,7 @@ def lib(tmp_path):
 @pytest.mark.parametrize("compress", [True, False])
 def test_rbundle_roundtrip(lib, tmp_path, compress):
     src = make_rbundle(tmp_path / "rollout.rbundle", compress=compress)
-    (tmp_path / "config.json").write_text('{"seed": 3}')
+    (tmp_path / "config.json").write_text('{"seed": 3}', encoding="utf-8")
     name = importers.import_rbundle(
         lib, tmp_path / "rollout.rbundle", tags=["x"]
     )
@@ -356,8 +356,8 @@ def test_import_path_sniffs_and_walks(lib, tmp_path):
     (src / "sub").mkdir(parents=True)
     make_rbundle(src / "sub" / "rollout.rbundle")
     make_brax(src / "b.html")
-    (src / "other.html").write_text("<html>hello</html>")
-    (src / "note.txt").write_text("x")
+    (src / "other.html").write_text("<html>hello</html>", encoding="utf-8")
+    (src / "note.txt").write_text("x", encoding="utf-8")
     names = importers.import_path(lib, src, tags=["all"])
     assert sorted(names) == ["b", "sub"]
     assert {r.name for r in lib.runs()} == {"b", "sub"}
@@ -434,12 +434,12 @@ def test_contact_scale_estimates_weight_without_mass():
 def test_recorded_time_reads_the_stamp_in_the_name(tmp_path, rel, expected):
     path = tmp_path / rel
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("x")
+    path.write_text("x", encoding="utf-8")
     assert importers.recorded_time(path) == expected
 
 
 def test_recorded_time_falls_back_to_the_file_mtime(tmp_path):
     path = tmp_path / "plain.html"
-    path.write_text("x")
+    path.write_text("x", encoding="utf-8")
     os.utime(path, (1_757_500_000, 1_757_500_000))
     assert importers.recorded_time(path) == "2025-09-10T10:26:40Z"
