@@ -728,15 +728,16 @@ def test_the_guides_computed_marker_example_runs(lib):
 
 def test_the_guides_event_example_runs(lib, tmp_path):
     _, _, event_code = guide_blocks()
-    record(lib, "walk", base_poses())
-    exec(event_code.replace("my_library", str(lib.root)), {})
-    run = library.Library(lib.root).open("walk")
+    record(lib, "drop", base_poses())
+    code = event_code.replace('"rollouts"', repr(str(lib.root)))
+    exec(code, {})
+    run = library.Library(lib.root).open("drop")
     (event,) = run.annotations.events
     assert (event.type, event.t0, event.t1, event.label, event.env) == (
-        "slip",
-        1.2,
-        1.5,
-        "left foot slips",
+        "landing",
+        0.4,
+        0.5,
+        "box lands",
         0,
     )
-    assert library.Library(lib.root).event_types()["slip"].color == "#e59a1c"
+    assert library.Library(lib.root).event_types()["landing"].color == "#e59a1c"
