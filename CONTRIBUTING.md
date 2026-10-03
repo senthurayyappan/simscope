@@ -53,14 +53,14 @@ It updates the version in both `pyproject.toml` and `uv.lock`. After that pull
 request is merged, its next run creates the GitHub release and version tag.
 
 In Settings → Actions → General, enable **Allow GitHub Actions to create and approve
-pull requests**. With automatic CI enabled, add a
-`RELEASE_PLEASE_TOKEN` secret to run checks on release pull requests. Use a
-fine-grained personal access token with
-read and write access to Contents, Pull requests, and Issues for this repository.
+pull requests**. Add a `RELEASE_PLEASE_TOKEN` secret to run checks on release
+pull requests. Use a fine-grained personal access token with read and write
+access to Contents, Pull requests, and Issues for this repository.
 
-Without that secret, Release Please uses `GITHUB_TOKEN`. GitHub does not start
-CI for pull requests created with that token. Run **CI** on the release branch
-before merging those pull requests.
+The release workflow fails if `RELEASE_PLEASE_TOKEN` is missing. That secret is
+required so CI can run on the release pull request. The default `GITHUB_TOKEN`
+opens that pull request as `github-actions[bot]`, and GitHub does not run
+workflows that token triggers.
 
 ### Publish to PyPI
 
