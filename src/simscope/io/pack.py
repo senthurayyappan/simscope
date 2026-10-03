@@ -14,7 +14,7 @@ from collections.abc import Mapping, Sequence
 from types import TracebackType
 from typing import BinaryIO
 
-from simscope import core
+from simscope import core, discover
 from simscope.io import blockfile, cas, codecs, errors, manifest, scene
 
 MAGIC = b"SSPK"
@@ -55,19 +55,34 @@ class _Collector:
     scene_map: dict[cas.Ref, cas.Ref] = dataclasses.field(default_factory=dict)
     mesh_map: dict[cas.Ref, cas.Ref] = dataclasses.field(default_factory=dict)
 
-    def add_asset(self, ref: cas.Ref) -> None:
-        """Adds an asset blob unchanged."""
-        self.entries[asset_path(ref)] = self.store.get(ref)
+    def add_asset(
+        self, ref: cas.Ref, store: cas.ContentStore | None = None
+    ) -> None:
+        """Adds an asset blob unchanged.
 
-    def add_mesh(self, ref: cas.Ref) -> cas.Ref:
+        Args:
+            ref: The asset reference.
+            store: Content store to read, or this collector's store.
+        """
+        source = self.store if store is None else store
+        self.entries[asset_path(ref)] = source.get(ref)
+
+    def add_mesh(
+        self, ref: cas.Ref, store: cas.ContentStore | None = None
+    ) -> cas.Ref:
         """Adds a mesh blob, transcoding raw meshes to q16 if requested.
+
+        Args:
+            ref: The mesh reference.
+            store: Content store to read, or this collector's store.
 
         Returns:
             The reference of the blob that was stored in the pack.
         """
         if ref in self.mesh_map:
             return self.mesh_map[ref]
-        blob = self.store.get(ref)
+        source = self.store if store is None else store
+        blob = source.get(ref)
         if self.transcode and blob[_MESH_CODEC_OFFSET] == codecs.MESH_RAW:
             blob = codecs.encode_mesh(codecs.decode_mesh(blob), "q16")
         new = cas.Ref.of(blob)
@@ -75,8 +90,14 @@ class _Collector:
         self.mesh_map[ref] = new
         return new
 
-    def add_scene(self, ref: cas.Ref) -> cas.Ref:
+    def add_scene(
+        self, ref: cas.Ref, store: cas.ContentStore | None = None
+    ) -> cas.Ref:
         """Adds a scene descriptor with its meshes and textures.
+
+        Args:
+            ref: The scene reference.
+            store: Content store to read, or this collector's store.
 
         Returns:
             The reference of the descriptor stored in the pack (new when
@@ -84,14 +105,15 @@ class _Collector:
         """
         if ref in self.scene_map:
             return self.scene_map[ref]
-        data = self.store.get(ref, "scene")
+        source = self.store if store is None else store
+        data = source.get(ref, "scene")
         doc = json.loads(data)
         for tex in doc.get("textures", []):
-            self.add_asset(cas.Ref.from_json(tex))
+            self.add_asset(cas.Ref.from_json(tex), source)
         changed = False
         for mesh in doc.get("meshes", []):
             old = cas.Ref.from_json(mesh)
-            new = self.add_mesh(old)
+            new = self.add_mesh(old, source)
             if new != old:
                 mesh.update(new.to_json())
                 changed = True
@@ -244,7 +266,9 @@ def write_pack(
     runs share it. The library is not modified.
 
     Args:
-        library_root: The library directory.
+        library_root: The library directory, or a folder that contains
+            libraries. A run is taken from the nested library that holds it
+            when it is not a direct child of ``library_root/runs``.
         run_names: Runs to include (each must be complete).
         out_path: The pack file to write (replaced atomically).
         transcode: Whether to shrink the pack as described above.
@@ -274,16 +298,25 @@ def write_pack(
         if not path.startswith(DERIVED_PREFIX) or ".." in path.split("/"):
             raise ValueError(f"derived entries live under derived/: {path!r}")
     col = _Collector(cas.ContentStore(root), transcode)
+    found = discover.by_name(root)
+    stores = {root: col.store}
     with tempfile.TemporaryDirectory(prefix="simscope-pack-") as tmp_name:
         tmp = pathlib.Path(tmp_name)
         for name in run_names:
+            hit = found.get(name)
+            lib_root = root if hit is None else hit.library
+            store = stores.get(lib_root)
+            if store is None:
+                store = cas.ContentStore(lib_root)
+                stores[lib_root] = store
             _add_run(
                 col,
-                root,
+                lib_root,
                 manifest.validate_run_name(name),
                 tmp,
                 sidecars=_sidecars(annotations=annotations, posters=posters),
                 envs=envs,
+                store=store,
             )
         col.entries.update(derived or {})
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -338,8 +371,19 @@ def _add_run(
     *,
     sidecars: tuple[str, ...],
     envs: Sequence[int] | None = None,
+    store: cas.ContentStore | None = None,
 ) -> None:
-    """Collects the entries of one run, plus the named sidecar files."""
+    """Collects the entries of one run, plus the named sidecar files.
+
+    Args:
+        col: Pack entry collector.
+        root: Library root that owns the run.
+        name: Run name, already validated.
+        tmp: Scratch folder for transcoded streams.
+        sidecars: Optional per-run files to copy.
+        envs: Env subset, or ``None`` for every env.
+        store: Content store of ``root``. The collector's store when omitted.
+    """
     run_dir = root / "runs" / name
     if not (run_dir / manifest.MANIFEST_NAME).exists():
         if (run_dir / manifest.PARTIAL_NAME).exists():
@@ -357,9 +401,9 @@ def _add_run(
             man.env_scenes = tuple(man.env_scenes[i] for i in ids)
     else:
         ids = None
-    man.scene = col.add_scene(man.scene)
+    man.scene = col.add_scene(man.scene, store)
     if man.env_scenes is not None:
-        man.env_scenes = tuple(col.add_scene(r) for r in man.env_scenes)
+        man.env_scenes = tuple(col.add_scene(r, store) for r in man.env_scenes)
     prefix = f"runs/{name}/"
     col.entries[prefix + manifest.MANIFEST_NAME] = manifest.manifest_bytes(man)
     for stream in man.streams.values():

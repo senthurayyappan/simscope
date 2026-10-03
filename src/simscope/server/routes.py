@@ -218,19 +218,33 @@ def _resolve(
     st: state_mod.LibraryState, target: security.Target
 ) -> pathlib.Path | None:
     """Maps a parsed path to a file inside the library, or ``None``."""
-    root = st.root
     if target.kind == "cas":
-        candidate = root / target.path
-    elif target.file == manifest.MANIFEST_NAME:
-        run_dir = root / "runs" / target.run
+        return _resolve_cas(st, target.path)
+    run_dir = st.lib.run_dir(target.run)
+    if target.file == manifest.MANIFEST_NAME:
         candidate = run_dir / manifest.MANIFEST_NAME
         if not candidate.is_file():
             candidate = run_dir / manifest.PARTIAL_NAME
     else:
-        candidate = root / "runs" / target.run / target.file
+        candidate = run_dir / target.file
     if not candidate.is_file():
         return None
     return security.confine(st.root_real, candidate)
+
+
+def _resolve_cas(st: state_mod.LibraryState, rel: str) -> pathlib.Path | None:
+    """Finds a content-addressed file in the root or a nested library."""
+    direct = st.root / rel
+    if direct.is_file():
+        return security.confine(st.root_real, direct)
+    for lib_root in st.index.owners():
+        candidate = lib_root / rel
+        if not candidate.is_file():
+            continue
+        confined = security.confine(st.root_real, candidate)
+        if confined is not None:
+            return confined
+    return None
 
 
 def _derived(
