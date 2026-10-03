@@ -2,7 +2,7 @@
 
 Look up every option of the `simscope` command.
 
-Run `simscope --help` for the command list, or `simscope COMMAND --help` for one command. Every command takes the library folder as its first argument. `serve` needs the `viewer` extra. The other commands do not.
+Run `simscope --help` for the command list, or `simscope COMMAND --help` for one command. Every command takes a folder as its first argument. `ls`, `serve`, and `export` treat that folder as a library, and they also find libraries nested under it. A library is a directory whose `runs/` folder holds rollouts. A folder that is itself one library keeps the same behavior. `serve` needs the `viewer` extra. The other commands do not.
 
 ## Exit status
 

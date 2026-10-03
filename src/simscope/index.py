@@ -4,11 +4,11 @@ The index lives at ``<library>/.simscope/index.sqlite``. It is a disposable
 cache (decision D8): the sidecars stay the source of truth, and a missing,
 corrupt or out-of-date-schema file is dropped and rebuilt on the next scan.
 
-``Index.refresh`` does one ``os.scandir`` of ``runs/`` and one ``stat`` per
-source file, and re-reads only runs whose files changed.
+``Index.refresh`` finds every rollout library under the root, a direct
+``runs/`` folder or one nested further down, and re-reads only runs whose
+files changed.
 """
 
-import contextlib
 import dataclasses
 import json
 import logging
@@ -19,11 +19,12 @@ import threading
 from collections.abc import Iterable, Sequence
 from typing import Any
 
+from simscope import discover
 from simscope.io import manifest
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 Signature = tuple[int, int, int, int, int]
 """``(m_mtime, m_size, m_partial, a_mtime, a_size)`` of a run."""
 INVALID = "invalid"
@@ -51,7 +52,8 @@ CREATE TABLE runs (
     m_size INTEGER NOT NULL,
     m_partial INTEGER NOT NULL,
     a_mtime INTEGER NOT NULL,
-    a_size INTEGER NOT NULL
+    a_size INTEGER NOT NULL,
+    lib_rel TEXT NOT NULL
 ) WITHOUT ROWID;
 CREATE TABLE run_tags (
     tag TEXT NOT NULL,
@@ -65,7 +67,7 @@ _COLUMNS = [
     *("name", "id", "created", "status", "dt", "n_frames", "n_envs"),
     *("n_bodies", "scene_hash", "favorite", "grp"),
     *("n_events", "n_notes", "rating", "tags", "hay", "m_mtime", "m_size"),
-    *("m_partial", "a_mtime", "a_size"),
+    *("m_partial", "a_mtime", "a_size", "lib_rel"),
 ]
 _UPSERT = (
     f"INSERT OR REPLACE INTO runs ({', '.join(_COLUMNS)}) "
@@ -276,6 +278,7 @@ class Index:
         self.path = self.root / ".simscope" / "index.sqlite"
         self._conn: sqlite3.Connection | None = None
         self._lock = threading.RLock()
+        self._looked = False
 
     # -- connection management --
 
@@ -358,71 +361,65 @@ class Index:
     # -- refresh --
 
     def refresh(self) -> RefreshStats:
-        """Brings the index up to date with ``runs/``.
+        """Brings the index up to date with the rollouts under ``root``.
 
-        One ``os.scandir`` plus a ``stat`` of each run's manifest and
-        annotations file. Only runs whose mtime or size changed are re-read.
-        Everything happens in one transaction.
+        Finds every library under the root, not only ``root/runs``, then
+        stats each run's manifest and annotations file. Only runs whose
+        mtime, size or library changed are re-read. The database update
+        happens in one transaction.
 
         Returns:
             Counts of added, updated, removed and unchanged runs.
         """
-        runs_dir = self.root / "runs"
-        if (
-            not runs_dir.is_dir()
-            and self._conn is None
-            and not self.path.exists()
-        ):
+        self._looked = True
+        found = discover.find_runs(self.root)
+        if not found and self._conn is None and not self.path.exists():
             return RefreshStats()
         with self._lock:
-            return self._refresh(runs_dir)
+            return self._refresh(found)
 
-    def _refresh(self, runs_dir: pathlib.Path) -> RefreshStats:
+    def _refresh(self, found: list[discover.FoundRun]) -> RefreshStats:
         """Implements :meth:`refresh` with the lock held."""
         conn = self._connect()
         known = {
-            row[0]: row[1:]
+            row[0]: (tuple(row[1:6]), row[6])
             for row in conn.execute(
-                "SELECT name, m_mtime, m_size, m_partial, a_mtime, a_size "
-                "FROM runs"
+                "SELECT name, m_mtime, m_size, m_partial, a_mtime, a_size, "
+                "lib_rel FROM runs"
             )
         }
         seen: set[str] = set()
-        changed: list[tuple[str, str, Signature, str]] = []
+        changed: list[tuple[str, str, Signature, str, str]] = []
         added = unchanged = 0
-        base = str(runs_dir) + os.sep
-        with contextlib.suppress(FileNotFoundError), os.scandir(runs_dir) as it:
-            for entry in it:
-                name = entry.name
-                if not entry.is_dir() or not _is_run_name(name):
-                    continue
-                d = base + name + os.sep
-                m_path = d + manifest.MANIFEST_NAME
+        for run in found:
+            lib_rel = discover.rel_library(self.root, run.library)
+            d = str(run.run_dir) + os.sep
+            m_path = d + manifest.MANIFEST_NAME
+            m_mtime, m_size = _stat(m_path)
+            partial = 0
+            if m_size < 0:
+                m_path = d + manifest.PARTIAL_NAME
                 m_mtime, m_size = _stat(m_path)
-                partial = 0
                 if m_size < 0:
-                    m_path = d + manifest.PARTIAL_NAME
-                    m_mtime, m_size = _stat(m_path)
-                    if m_size < 0:
-                        continue  # not a run (yet)
-                    partial = 1
-                a_path = d + "annotations.json"
-                a_mtime, a_size = _stat(a_path)
-                sig = (m_mtime, m_size, partial, a_mtime, a_size)
-                seen.add(name)
-                old = known.get(name)
-                if old == sig:
-                    unchanged += 1
-                    continue
-                added += old is None
-                changed.append((name, m_path, sig, a_path))
+                    continue  # not a run (yet)
+                partial = 1
+            a_path = d + "annotations.json"
+            a_mtime, a_size = _stat(a_path)
+            sig: Signature = (m_mtime, m_size, partial, a_mtime, a_size)
+            seen.add(run.name)
+            old = known.get(run.name)
+            if old == (sig, lib_rel):
+                unchanged += 1
+                continue
+            added += old is None
+            changed.append((run.name, m_path, sig, a_path, lib_rel))
         removed = [n for n in known if n not in seen]
         if not changed and not removed:
             return RefreshStats(unchanged=unchanged)
         rows, tag_rows = [], []
-        for name, m_path, sig, a_path in changed:
+        for name, m_path, sig, a_path, lib_rel in changed:
             row, tags = _row(name, m_path, sig, a_path)
-            rows.append(row)
+            rows.append((*row, lib_rel))
             tag_rows += [(t, name) for t in tags]
         conn.execute("BEGIN IMMEDIATE")
         try:
@@ -520,14 +517,58 @@ class Index:
             )
         return None if row is None else _info(row)
 
+    def owner(self, name: str, *, scan: bool = False) -> pathlib.Path | None:
+        """Returns the library root that holds ``name``, or ``None``.
 
-def _is_run_name(name: str) -> bool:
-    """Tells whether a directory name is a valid run name."""
-    try:
-        manifest.validate_run_name(name)
-    except ValueError:
-        return False
-    return True
+        Args:
+            name: Run name.
+            scan: When the run is missing from the index, scan once. Further
+                calls do not scan again until :meth:`refresh`.
+
+        Returns:
+            The library folder recorded for that run. ``None`` when the run
+            is not indexed. This does not create an index just to answer,
+            unless ``scan`` finds runs and therefore writes the cache.
+        """
+        rel = self._lib_rel(name)
+        if rel is None and scan and not self._looked:
+            self.refresh()
+            rel = self._lib_rel(name)
+        if rel is None:
+            return None
+        return self.root if rel == "" else self.root.joinpath(rel)
+
+    def owners(self) -> list[pathlib.Path]:
+        """Returns nested library folders that hold indexed runs.
+
+        The index root itself is omitted: its runs live in its ``runs/``.
+
+        Returns:
+            Those folders, in path order.
+        """
+        with self._lock:
+            if self._absent():
+                return []
+            rows = (
+                self._connect()
+                .execute(
+                    "SELECT DISTINCT lib_rel FROM runs WHERE lib_rel != ''"
+                )
+                .fetchall()
+            )
+        return [self.root.joinpath(rel) for rel in sorted(r[0] for r in rows)]
+
+    def _lib_rel(self, name: str) -> str | None:
+        """Returns the stored library path of ``name``, or ``None``."""
+        with self._lock:
+            if self._absent():
+                return None
+            row = (
+                self._connect()
+                .execute("SELECT lib_rel FROM runs WHERE name = ?", (name,))
+                .fetchone()
+            )
+        return None if row is None else row[0]
 
 
 def _delete_names(
