@@ -19,6 +19,8 @@ import type { AnnotationOp, Annotations, GroupOp, GroupsDoc, HighlightsDoc, Libr
 export type ThemePref = "light" | "dark" | "system";
 export type InspectorTab = "plots" | "metadata" | "envs";
 export type GroundKind = "checker" | "grid";
+/** The ground's colours: "auto" follows the theme; the rest are the same in both themes. */
+export type GroundColor = "auto" | "light" | "dark" | "mujoco";
 export type PlotWindow = "all" | "5" | "2";
 export const MAX_COMPARE = MAX_SLOTS;
 /** Pinned envs of a single run: the selected env plus three = four series colours. */
@@ -76,6 +78,7 @@ export interface AppState {
   lastFollow: FollowMode;
   groundOn: boolean;
   groundKind: GroundKind;
+  groundColor: GroundColor;
   visual: boolean;
   collision: boolean;
   contacts: boolean;
@@ -129,6 +132,7 @@ export interface AppActions {
   cycleFollow(): void;
   setFollowMode(mode: FollowMode): void;
   setGroundKind(kind: GroundKind): void;
+  setGroundColor(color: GroundColor): void;
   setArrange(a: Arrangement): void;
   poll(): Promise<void>;
 }
@@ -239,6 +243,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     lastFollow: follow === "off" ? "position" : follow,
     groundOn: pref("groundOn", true),
     groundKind: pref("groundKind", "checker") as GroundKind,
+    groundColor: pref("groundColor", "auto") as GroundColor,
     visual: pref("visual", true),
     collision: pref("collision", false),
     contacts: pref("contacts", false),
@@ -507,6 +512,10 @@ export const useApp = create<AppState & AppActions>((set, get) => {
 
     setGroundKind(kind) {
       set({ groundKind: kind });
+    },
+
+    setGroundColor(color) {
+      set({ groundColor: color });
     },
 
     async poll() {

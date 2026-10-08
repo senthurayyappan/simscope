@@ -25,6 +25,7 @@ const PREF_FIELDS = {
   contacts: "contacts",
   groundOn: "groundOn",
   groundKind: "groundKind",
+  groundColor: "groundColor",
   cameraSync: "cameraSync",
   plotWindow: "plotWindow",
   follow: "follow",

@@ -13,13 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ArrangeToggle } from "./ArrangeToggle";
 import { CaptureMenu } from "./CaptureMenu";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
 import { Hint } from "@/components/ui/tooltip";
 import { setDisplay } from "@/lib/commands";
 import { effectiveArrangement } from "@/lib/panes";
 
-import { useApp, type GroundKind, type ThemePref } from "@/lib/store";
+import { useApp, type GroundColor, type GroundKind, type ThemePref } from "@/lib/store";
 
 const Divider = () => <div className="mx-0.5 h-4 w-px bg-border" />;
 
@@ -62,7 +63,6 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   const panes = useApp((s) => s.panes.length);
   const compare = panes > 1;
   const hasRun = useApp((s) => s.panes.length > 0);
-  const groundOn = useApp((s) => s.groundOn);
   const visual = useApp((s) => s.visual);
   const collision = useApp((s) => s.collision);
   const contacts = useApp((s) => s.contacts);
@@ -72,14 +72,9 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
 
   const view = (
     <div className={PILL}>
-      <div className="flex items-center">
-        <Hint label="Show ground">
-          <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
-            <Grid3x3 />
-          </Toggle>
-        </Hint>
-        <GroundPopover />
-      </div>
+      <ThemeMenu />
+      <Divider />
+      <GroundControl />
       <OverlayToggle label="Show visual geometry" disabledReason={none} pressed={visual} onPressedChange={(v) => setDisplay({ visual: v })}>
         <ScanEye />
       </OverlayToggle>
@@ -111,8 +106,6 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
           </Hint>
         </>
       ) : null}
-      <Divider />
-      <ThemeMenu />
     </div>
   );
 
@@ -139,23 +132,64 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   );
 }
 
-function GroundPopover() {
+/** What each ground colour looks like: two checker cells, for the swatch in the menu. */
+const GROUND_COLORS: { id: GroundColor; label: string; cells: [string, string] }[] = [
+  { id: "auto", label: "Automatic", cells: ["oklch(0.955 0 0)", "oklch(0.2 0 0)"] },
+  { id: "light", label: "Light", cells: ["oklch(0.955 0 0)", "oklch(0.93 0 0)"] },
+  { id: "dark", label: "Dark", cells: ["oklch(0.2 0 0)", "oklch(0.175 0 0)"] },
+  { id: "mujoco", label: "MuJoCo blue", cells: ["oklch(0.314 0.056 250)", "oklch(0.409 0.053 249.2)"] },
+];
+
+const GROUND_KINDS: { id: GroundKind; label: string }[] = [
+  { id: "checker", label: "Checkerboard" },
+  { id: "grid", label: "Grid" },
+];
+
+/**
+ * The ground toggle, with a menu for its style and its colours. The menu opens below the toggle, its left edge under
+ * the toggle's, so that it stays over the viewport. "Automatic" colours follow the theme; the others do not.
+ */
+function GroundControl() {
+  const groundOn = useApp((s) => s.groundOn);
   const kind = useApp((s) => s.groundKind);
+  const color = useApp((s) => s.groundColor);
   const setGroundKind = useApp((s) => s.setGroundKind);
+  const setGroundColor = useApp((s) => s.setGroundColor);
   return (
     <Popover>
-      <Hint label="Ground style">
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style">
-            <ChevronDown />
-          </Button>
-        </PopoverTrigger>
-      </Hint>
-      <PopoverContent align="end" className="w-44 p-1">
-        <DropdownMenuRadioGroupShim
+      <PopoverAnchor asChild>
+        <div className="flex items-center">
+          <Hint label="Show ground">
+            <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
+              <Grid3x3 />
+            </Toggle>
+          </Hint>
+          <Hint label="Ground style and colour">
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style and colour">
+                <ChevronDown />
+              </Button>
+            </PopoverTrigger>
+          </Hint>
+        </div>
+      </PopoverAnchor>
+      <PopoverContent align="start" className="w-56 gap-0 p-1">
+        <Choices
+          label="Ground"
           value={kind}
+          options={GROUND_KINDS}
           onChange={(v) => {
             setGroundKind(v);
+            setDisplay({ groundOn: true });
+          }}
+        />
+        <Separator className="my-1" />
+        <Choices
+          label="Colour"
+          value={color}
+          options={GROUND_COLORS}
+          onChange={(v) => {
+            setGroundColor(v);
             setDisplay({ groundOn: true });
           }}
         />
@@ -165,15 +199,21 @@ function GroundPopover() {
 }
 
 // A radio list inside a popover (Blender: the chevron opens the details).
-function DropdownMenuRadioGroupShim({ value, onChange }: { value: GroundKind; onChange(v: GroundKind): void }) {
-  const items: { id: GroundKind; label: string }[] = [
-    { id: "checker", label: "Checkerboard" },
-    { id: "grid", label: "Grid" },
-  ];
+function Choices<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { id: T; label: string; cells?: [string, string] }[];
+  onChange(v: T): void;
+}) {
   return (
-    <div role="radiogroup" aria-label="Ground" className="flex flex-col">
-      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Ground</div>
-      {items.map((it) => (
+    <div role="radiogroup" aria-label={label} className="flex flex-col">
+      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+      {options.map((it) => (
         <button
           key={it.id}
           type="button"
@@ -184,6 +224,13 @@ function DropdownMenuRadioGroupShim({ value, onChange }: { value: GroundKind; on
         >
           {value === it.id ? <span className="absolute left-2.5 size-1.5 rounded-full bg-foreground" /> : null}
           {it.label}
+          {it.cells ? (
+            <span
+              aria-hidden
+              className="ml-auto size-4 rounded-sm ring-1 ring-foreground/20"
+              style={{ background: `linear-gradient(135deg, ${it.cells[0]} 50%, ${it.cells[1]} 50%)` }}
+            />
+          ) : null}
         </button>
       ))}
     </div>

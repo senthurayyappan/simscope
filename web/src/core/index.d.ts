@@ -113,6 +113,8 @@ export class Clock extends EventTarget {
 
 export type View = "iso" | "front" | "side" | "top";
 export type FollowMode = "off" | "position" | "pose" | "heading";
+/** "auto" follows the theme; the others are the same in both themes. */
+export type GroundColor = "auto" | "light" | "dark" | "mujoco";
 export type GroundStyle = "checker" | "grid" | "none";
 export type Theme = "light" | "dark";
 
@@ -149,6 +151,8 @@ export interface PlayerOptions {
   clock?: Clock;
   theme?: Theme;
   ground?: GroundStyle;
+  /** The ground's colours, apart from the theme. Default "auto": the theme's. */
+  groundColor?: GroundColor;
   view?: View;
   /** CSS colour, or "transparent"; default from the theme. */
   background?: string;
@@ -300,6 +304,8 @@ export class Player extends EventTarget {
   // Display.
   setTheme(theme: Theme, background?: string): void;
   setGround(style: GroundStyle): void;
+  /** The ground's colours, whatever the theme is; "auto" follows the theme. */
+  setGroundColor(scheme: GroundColor): void;
   setContacts(on: boolean): void;
   setCollision(on: boolean): void;
   /** Show or hide visual geoms; independent of `setCollision` and `setContacts`. */

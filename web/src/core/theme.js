@@ -54,6 +54,25 @@ export const PALETTE = {
   },
 };
 
+/** The ground's colour schemes. "auto" follows the theme; the others are the same in both themes. */
+export const GROUND_COLORS = ["auto", "light", "dark", "mujoco"];
+
+// MuJoCo's classic blue ground: its checker texture rgb1 ".1 .2 .3" and rgb2 ".2 .3 .4", with a grid line and an
+// edge-on line a step lighter.
+const MUJOCO_GROUND = {
+  checker: [[0.314, 0.056, 250], [0.409, 0.053, 249.2]],
+  grid: { base: [0.314, 0.056, 250], line: [0.5, 0.051, 248.9] },
+  horizon: [0.588, 0.049, 248.7],
+};
+
+/** The ground's colours (checker, grid, horizon) for a scheme; "auto" and anything unknown use the theme's. */
+export function groundPalette(scheme, theme) {
+  if (scheme === "light") return PALETTE.light;
+  if (scheme === "dark") return PALETTE.dark;
+  if (scheme === "mujoco") return MUJOCO_GROUND;
+  return paletteOf(theme);
+}
+
 /** The palette of a theme name (anything but "dark" is light). */
 export const paletteOf = (theme) => (theme === "dark" ? PALETTE.dark : PALETTE.light);
 

@@ -23,7 +23,7 @@ import { BlockStore, makeStream } from "./cache.js";
 import { CameraRig, VIEWS } from "./camera.js";
 import { Clock } from "./clock.js";
 import { cssColor } from "./color.js";
-import { colorOf, paletteOf } from "./theme.js";
+import { colorOf, GROUND_COLORS, paletteOf } from "./theme.js";
 import { createCrowd } from "./crowd.js";
 import { decodeMeshBlob, decoder } from "./decode.js";
 import { buildExtent, fitHeight } from "./extent.js";
@@ -110,7 +110,7 @@ export class Player extends EventTarget {
     const key = new DirectionalLight(0xffffff, 0.8 * Math.PI);
     key.position.set(3, 3, 6);
     this.scene.add(key);
-    this.ground = createGround(opts.ground || "checker", this.theme);
+    this.ground = createGround(opts.ground || "checker", this.theme, opts.groundColor);
     this.scene.add(this.ground.mesh);
     this._groundStyle = opts.ground || "checker";
     this._applyGroundVisibility();
@@ -1433,6 +1433,12 @@ export class Player extends EventTarget {
     this._groundStyle = style === "grid" || style === "none" ? style : "checker";
     this.ground.setStyle(this._groundStyle);
     this._applyGroundVisibility();
+    this.invalidate();
+  }
+
+  /** The ground's colours: "auto" (the theme's), "light", "dark" or "mujoco", whatever the theme is. */
+  setGroundColor(scheme) {
+    this.ground.setScheme(GROUND_COLORS.includes(scheme) ? scheme : "auto");
     this.invalidate();
   }
 

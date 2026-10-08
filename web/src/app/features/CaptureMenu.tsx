@@ -191,7 +191,10 @@ export function CaptureMenu() {
         </span>
       </Hint>
       {/* The menu stays open while the user works on the view (pan, zoom, hide a sidebar, move the stretch on the timeline). It closes with Escape or the camera button. */}
-      <PopoverContent align="end" className="w-80 gap-0 p-0" onInteractOutside={(e) => e.preventDefault()}>
+      <PopoverContent align="end" className="w-80 gap-0 p-0" onInteractOutside={(e) => e.preventDefault()}
+        // Escape closes the menu and nothing else (the app's Escape clears the loop region).
+        onEscapeKeyDown={(e) => e.stopPropagation()}
+      >
         <Tabs value={prefs.tab} onValueChange={(v) => set({ tab: v as Tab })} className="gap-0">
           <div className="h-10 border-b">
             <TabsList variant="line" className="h-full w-full gap-0">

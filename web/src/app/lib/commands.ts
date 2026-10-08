@@ -36,6 +36,7 @@ export function frame(what: "focus" | "all"): void {
 export function applyDisplay(p: PlayerLike): void {
   const s = state();
   p.setGround?.(s.groundOn ? s.groundKind : "none");
+  p.setGroundColor?.(s.groundColor);
   p.setVisual?.(s.visual);
   p.setContacts?.(s.contacts);
   p.setCollision?.(s.collision);
