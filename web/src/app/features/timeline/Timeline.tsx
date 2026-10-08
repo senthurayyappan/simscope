@@ -122,8 +122,10 @@ function useLanes(): LaneSpec[] {
       }
     });
     // User labels (type "") and developer markers (add_event with a type) share the lane.
+    // In a comparison the lane stays while any compared run has labels, so that picking another run does not resize the timeline.
     const labels = events;
-    if (labels.length) out.push({ id: "labels", label: "Labels", slot: null, items: [], labels, pane: active });
+    const anyLabels = labels.length > 0 || (compare && panes.some((_, i) => (infos[i]?.events?.length ?? 0) > 0));
+    if (anyLabels) out.push({ id: "labels", label: "Labels", slot: null, items: [], labels, pane: active });
     return out;
   }, [panes, infos, envs, highlights, events, active]);
 }

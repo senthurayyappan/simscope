@@ -13,6 +13,4 @@ declare module "gifenc" {
     bytes(): Uint8Array<ArrayBuffer>;
   }
   export function GIFEncoder(opts?: { initialCapacity?: number; auto?: boolean }): GifEncoder;
-  export function quantize(rgba: Uint8Array | Uint8ClampedArray, maxColors: number, opts?: { format?: "rgb565" | "rgb444" | "rgba4444" }): Palette;
-  export function applyPalette(rgba: Uint8Array | Uint8ClampedArray, palette: Palette, format?: "rgb565" | "rgb444" | "rgba4444"): Uint8Array;
 }

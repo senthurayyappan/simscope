@@ -54,6 +54,8 @@ export interface AppState {
   panes: PaneRef[];
   active: number;
   picks: PaneRef[];
+  /** Shape (width / height) of the capture frame outlined on the active pane while the capture menu is open, else null. */
+  captureGuide: number | null;
 
   manifest: Manifest | null;
   annotations: Annotations | null;
@@ -219,6 +221,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     panes: [],
     active: 0,
     picks: [],
+    captureGuide: null,
 
     manifest: null,
     annotations: null,

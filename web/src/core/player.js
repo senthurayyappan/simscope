@@ -14,6 +14,7 @@
 import {
   DirectionalLight,
   HemisphereLight,
+  OrthographicCamera,
   Scene,
   Vector3,
 } from "three";
@@ -1573,24 +1574,28 @@ export class Player extends EventTarget {
   // ---- misc ----
 
   /**
-   * An image of the viewport. With no options it is the canvas as drawn; with
-   * `scale` (times the on-screen pixels) or `width` (pixels) it is drawn again
-   * at that size, with the same framing, and no larger than the GPU allows.
+   * An image of the viewport. With no options it is the canvas as drawn. With
+   * `width` or `aspect` it is drawn again, at that many pixels wide and in
+   * that shape (width / height), whatever the size of the pane: the frame is
+   * the largest one of that shape that fits in the view, about its centre.
+   * See `captureSize` for the limits.
    *
    * @param {string} [type]  image type; "image/png" by default.
-   * @param {{scale?: number, width?: number}} [opts]
+   * @param {{width?: number, aspect?: number}} [opts]
    * @returns {Promise<Blob>}
    */
   async snapshot(type = "image/png", opts) {
-    if (opts && (opts.scale || opts.width)) {
-      const { width, height } = this.captureSize(opts);
+    if (opts && (opts.width || opts.aspect)) {
       this._update(0);
       const off = this._offscreen();
       try {
-        const size = this._fit(width, height, off.maxSize);
-        return await off.blob(this, size.width, size.height, type);
+        const wanted = this.captureSize(opts);
+        const size = this._fit(wanted.width, wanted.height, off.maxSize);
+        const camera = this._captureCamera(size.width / size.height, size.height);
+        return await off.blob(this, size.width, size.height, type, camera);
       } finally {
         off.dispose();
+        this.invalidate();
       }
     }
     this.update(0);
@@ -1601,15 +1606,17 @@ export class Player extends EventTarget {
   }
 
   /**
-   * The pixel size of a capture: `scale` times the viewport's device pixels,
-   * or `width` pixels wide at the viewport's shape. The longest side is capped.
+   * The pixel size of a capture: `width` pixels wide (the viewport's device
+   * pixels when omitted) in shape `aspect` (the viewport's when omitted). The
+   * longest side is capped.
    *
-   * @param {{scale?: number, width?: number}} [opts]
+   * @param {{width?: number, aspect?: number}} [opts]
    * @returns {{width: number, height: number}}
    */
-  captureSize({ scale = 1, width } = {}) {
-    const w = width ? width : this.cssWidth * this.dpr * scale;
-    return this._fit(w, (w * this.cssHeight) / this.cssWidth, MAX_CAPTURE_SIDE);
+  captureSize({ width, aspect } = {}) {
+    const a = aspect > 0 ? aspect : this.cssWidth / this.cssHeight;
+    const w = width > 0 ? width : this.cssWidth * this.dpr;
+    return this._fit(w, w / a, MAX_CAPTURE_SIDE);
   }
 
   _fit(w, h, max) {
@@ -1618,22 +1625,48 @@ export class Player extends EventTarget {
   }
 
   /**
-   * Draw a stretch of the run frame by frame, at `fps` and `width` pixels, for
-   * a GIF or a video. Yields `{index, count, t, width, height, data}` per
-   * frame, `data` being RGBA bytes. Frame `i` is the run at `t0 + i / fps`, so
-   * a stretch that loops joins up. The clock is paused for the capture and
-   * put back after; the cameras follow as in playback. Abort `signal` to stop.
-   *
-   * @param {{t0: number, t1: number, fps?: number, width?: number, signal?: AbortSignal}} opts
+   * The camera for a capture of shape `aspect`, drawn `pxHeight` pixels high:
+   * the view's camera with its frustum cut to the largest frame of that shape
+   * that fits in what the pane shows, about its centre. The world scale is
+   * unchanged. The ground is sized to match.
    */
-  async *captureFrames({ t0, t1, fps = 20, width = 720, signal } = {}) {
+  _captureCamera(aspect, pxHeight) {
+    const rig = this.rig;
+    const cam = (this._shotCamera ||= new OrthographicCamera(-1, 1, 1, -1, 0.05, 500));
+    cam.copy(rig.camera, false);
+    let w = rig.scale * rig.aspect, h = rig.scale;
+    if (aspect > rig.aspect) h = w / aspect;
+    else w = h * aspect;
+    cam.left = -w / 2;
+    cam.right = w / 2;
+    cam.top = h / 2;
+    cam.bottom = -h / 2;
+    cam.updateProjectionMatrix();
+    cam.updateMatrixWorld(true);
+    const tgt = rig.getTarget(_v);
+    const seen = h / cam.zoom;
+    this.ground.update(tgt.x, tgt.y, seen, aspect, Math.abs(cam.getWorldDirection(_dir).z), seen / pxHeight);
+    return cam;
+  }
+
+  /**
+   * Draw a stretch of the run frame by frame, at `fps`, `width` pixels wide
+   * and in shape `aspect`, for a GIF or a video. Yields
+   * `{index, count, t, width, height, data}` per frame, `data` being RGBA
+   * bytes. Frame `i` is the run at `t0 + i / fps`, so a stretch that loops
+   * joins up. The clock is paused for the capture and put back after; the
+   * cameras follow as in playback. Abort `signal` to stop.
+   *
+   * @param {{t0: number, t1: number, fps?: number, width?: number, aspect?: number, signal?: AbortSignal}} opts
+   */
+  async *captureFrames({ t0, t1, fps = 20, width = 720, aspect, signal } = {}) {
     this._need("captureFrames");
     if (this._capturing) fail("a capture is already running");
     if (!(t1 > t0) || !(fps > 0)) fail("captureFrames(): need t1 > t0 and fps > 0");
     const clock = this.clock;
     const count = Math.max(1, Math.round((t1 - t0) * fps));
     const off = this._offscreen();
-    const wanted = this.captureSize({ width });
+    const wanted = this.captureSize({ width, aspect });
     const size = this._fit(wanted.width, wanted.height, off.maxSize);
     const saved = { time: clock.time, playing: clock.playing };
     this._capturing = true;
@@ -1651,7 +1684,8 @@ export class Player extends EventTarget {
             if (!this.camMoving && this.fstate.settled) break;
           }
         } else this._update(1 / fps);
-        const data = off.pixels(this, size.width, size.height);
+        const camera = this._captureCamera(size.width / size.height, size.height);
+        const data = off.pixels(this, size.width, size.height, camera);
         yield { index: i, count, t, width: size.width, height: size.height, data };
       }
     } finally {

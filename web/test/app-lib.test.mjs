@@ -395,38 +395,90 @@ test("capture: the GIF stretch is the loop region or the whole run, and at most 
   assert.equal(fileName("", "", "png"), "simscope.png");
 });
 
-test("capture: encodeGif writes one looping GIF frame per captured frame", async () => {
+test("capture: shapes have fixed sizes", async () => {
+  const { aspectOf, sizeOf, SHAPES } = await import("../src/app/lib/capture.ts");
+  assert.deepEqual(SHAPES.map((s) => s.id), ["16:9", "4:3", "1:1"]);
+  assert.deepEqual(sizeOf(1920, "16:9"), { width: 1920, height: 1080 });
+  assert.deepEqual(sizeOf(1920, "4:3"), { width: 1920, height: 1440 });
+  assert.deepEqual(sizeOf(1920, "1:1"), { width: 1920, height: 1920 });
+  assert.equal(aspectOf("4:3"), 4 / 3);
+});
+
+test("capture: encodeGif writes one looping GIF frame per captured frame, with one palette", async () => {
   const { encodeGif } = await import("../src/app/lib/capture.ts");
   const w = 4, h = 4;
-  const frame = (i, rgb) => {
+  const frame = (i, count, rgb) => {
     const data = new Uint8ClampedArray(w * h * 4);
     for (let p = 0; p < w * h; p++) data.set([...rgb, 255], p * 4);
-    return { index: i, count: 3, t: i / 10, width: w, height: h, data };
+    return { index: i, count, t: i / 10, width: w, height: h, data };
   };
-  let asked = null;
+  const asked = [];
   const player = {
     async *captureFrames(opts) {
-      asked = opts;
-      yield frame(0, [255, 0, 0]);
-      yield frame(1, [0, 255, 0]);
-      yield frame(2, [0, 0, 255]);
+      asked.push(opts);
+      const colours = [[255, 0, 0], [0, 255, 0], [0, 0, 255]];
+      const n = asked.length === 1 ? 1 : 3;
+      for (let i = 0; i < n; i++) yield frame(i, n, colours[i]);
     },
   };
   const done = [];
-  const blob = await encodeGif(player, { t0: 1, t1: 1.3, fps: 10, width: 4, onProgress: (d, n) => done.push([d, n]) });
-  assert.equal(asked.t0, 1);
-  assert.equal(asked.fps, 10);
-  assert.deepEqual(done, [[1, 3], [2, 3], [3, 3]]);
+  const blob = await encodeGif(player, { t0: 1, t1: 1.3, fps: 10, width: 8, shape: "4:3", onProgress: (p) => done.push([p.phase, p.done, p.total]) });
+  assert.equal(asked.length, 2, "a pass for the colours, a pass for the frames");
+  assert.equal(asked[1].t0, 1);
+  assert.equal(asked[1].fps, 10);
+  assert.equal(asked[1].width, 8);
+  assert.equal(asked[1].aspect, 4 / 3);
+  assert.ok(asked[0].width <= asked[1].width && asked[0].fps <= asked[1].fps, "the first pass is the smaller one");
+  assert.deepEqual(done, [["colours", 1, 1], ["frames", 1, 3], ["frames", 2, 3], ["frames", 3, 3]]);
   assert.equal(blob.type, "image/gif");
   const bytes = new Uint8Array(await blob.arrayBuffer());
   assert.equal(String.fromCharCode(...bytes.slice(0, 6)), "GIF89a");
   assert.equal(bytes.at(-1), 0x3b, "the trailer");
   assert.equal(bytes[6] | (bytes[7] << 8), w);
   assert.equal(bytes[8] | (bytes[9] << 8), h);
+  assert.ok(bytes[10] & 0x80, "a global colour table");
   // Graphic control extension: 0x21 0xF9 0x04 flags delay(2) ...; a delay of 10 fps is 10 centiseconds.
   const delays = [];
-  for (let i = 0; i < bytes.length - 6; i++) if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9 && bytes[i + 2] === 4) delays.push(bytes[i + 4] | (bytes[i + 5] << 8));
+  let locals = 0;
+  for (let i = 0; i < bytes.length - 10; i++) {
+    if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9 && bytes[i + 2] === 4) delays.push(bytes[i + 4] | (bytes[i + 5] << 8));
+    if (bytes[i] === 0x2c && i + 9 < bytes.length && (bytes[i + 9] & 0x80) && bytes[i + 5] === w) locals++;
+  }
   assert.deepEqual(delays, [10, 10, 10]);
-  // NETSCAPE2.0 application extension: loop forever.
-  assert.ok(new TextDecoder("latin1").decode(bytes).includes("NETSCAPE2.0"));
+  assert.equal(locals, 0, "no frame has a colour table of its own");
+  assert.ok(new TextDecoder("latin1").decode(bytes).includes("NETSCAPE2.0"), "loops forever");
+});
+
+test("quantize: near-identical darks keep their own palette entries, and a palette is the same for every frame", async () => {
+  const { buildPalette, indexFrame, sampleColors } = await import("../src/app/lib/quantize.ts");
+  const px = (n, rgb) => Array.from({ length: n }, () => [...rgb, 255]).flat();
+  // A dark background, a ground a few levels lighter, and a mid fade between them, as in the viewer.
+  const frame = Uint8ClampedArray.from([...px(500, [25, 25, 25]), ...px(300, [31, 31, 31]), ...px(100, [28, 28, 28]), ...px(5, [200, 120, 40])]);
+  const hist = new Map();
+  sampleColors(frame, hist, 1);
+  assert.equal(hist.size, 4);
+  const palette = buildPalette(hist);
+  assert.ok(Number.isInteger(Math.log2(palette.length)), "a power of two");
+  const idx = indexFrame(frame, palette, new Map());
+  const at = (i) => palette[idx[i]].join(",");
+  assert.equal(at(0), "25,25,25");
+  assert.equal(at(500), "31,31,31");
+  assert.equal(at(800), "28,28,28");
+  assert.equal(at(900), "200,120,40");
+  assert.equal(new Set([idx[0], idx[500], idx[800]]).size, 3, "three distinct entries for three nearly equal greys");
+});
+
+test("quantize: many colours are shared out in 256 entries, most common ones exactly", async () => {
+  const { buildPalette, indexFrame, sampleColors } = await import("../src/app/lib/quantize.ts");
+  const data = [];
+  for (let r = 0; r < 32; r++) for (let g = 0; g < 32; g++) for (let b = 0; b < 4; b++) data.push(r * 8, g * 8, b * 64, 255);
+  for (let i = 0; i < 2000; i++) data.push(10, 20, 30, 255); // the most common colour
+  const frame = Uint8ClampedArray.from(data);
+  const hist = new Map();
+  sampleColors(frame, hist, 1);
+  const palette = buildPalette(hist);
+  assert.equal(palette.length, 256);
+  const idx = indexFrame(frame, palette, new Map());
+  assert.deepEqual(palette[idx[idx.length - 1]], [10, 20, 30]);
+  assert.deepEqual(buildPalette(hist), palette, "deterministic");
 });

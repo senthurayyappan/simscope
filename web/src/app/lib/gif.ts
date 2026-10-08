@@ -4,8 +4,8 @@
 
 import * as ns from "gifenc";
 
-type Codec = Pick<typeof ns, "GIFEncoder" | "quantize" | "applyPalette">;
+type Codec = Pick<typeof ns, "GIFEncoder">;
 
 const codec: Codec = "GIFEncoder" in ns ? ns : (ns as unknown as { default: Codec }).default;
 
-export const { GIFEncoder, quantize, applyPalette } = codec;
+export const { GIFEncoder } = codec;

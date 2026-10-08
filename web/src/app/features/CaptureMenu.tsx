@@ -3,32 +3,38 @@ import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Hint } from "@/components/ui/tooltip";
-import { GIF_FPS, GIF_MAX_SECONDS, GIF_WIDTHS, gifFrames, gifWindow, saveGif, saveScreenshot, SHOT_SCALES } from "@/lib/capture";
+import { aspectOf, GIF_FPS, GIF_MAX_SECONDS, GIF_WIDTHS, gifFrames, gifWindow, saveGif, saveScreenshot, SHAPES, SHOT_WIDTHS, sizeOf, type ShapeId } from "@/lib/capture";
 import { activePlayer, getClock, onFrame } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
 import { readStore, writeStore } from "@/lib/utils";
 
 const PREFS = "simscope.capture";
 
+type Tab = "image" | "gif";
+
 interface Prefs {
-  scale: number;
+  tab: Tab;
+  shape: ShapeId;
+  shotWidth: number;
   fps: number;
-  width: number;
+  gifWidth: number;
 }
 
-const DEFAULTS: Prefs = { scale: 2, fps: 20, width: 720 };
+const DEFAULTS: Prefs = { tab: "image", shape: "16:9", shotWidth: 1920, fps: 20, gifWidth: 720 };
 
 function readPrefs(): Prefs {
   try {
     const raw = JSON.parse(readStore(PREFS) ?? "{}") as Partial<Prefs>;
-    const pick = <T extends number>(list: readonly T[], v: unknown, fallback: T) => (list.includes(v as T) ? (v as T) : fallback);
+    const pick = <T,>(list: readonly T[], v: unknown, fallback: T) => (list.includes(v as T) ? (v as T) : fallback);
     return {
-      scale: pick(SHOT_SCALES, raw.scale, DEFAULTS.scale),
+      tab: pick(["image", "gif"] as const, raw.tab, DEFAULTS.tab),
+      shape: pick(SHAPES.map((s) => s.id), raw.shape, DEFAULTS.shape),
+      shotWidth: pick(SHOT_WIDTHS, raw.shotWidth, DEFAULTS.shotWidth),
       fps: pick(GIF_FPS, raw.fps, DEFAULTS.fps),
-      width: pick(GIF_WIDTHS, raw.width, DEFAULTS.width),
+      gifWidth: pick(GIF_WIDTHS, raw.gifWidth, DEFAULTS.gifWidth),
     };
   } catch {
     return DEFAULTS;
@@ -53,16 +59,64 @@ function useStretch(open: boolean) {
   return v;
 }
 
-const fmt = (t: number) => `${t.toFixed(2)} s`;
+const secs = (t: number) => `${t.toFixed(2)} s`;
 
-/** Capture the viewport: a PNG at a chosen scale, or a short GIF of the stretch selected on the timeline. */
+/** One setting: its name on the left, its choices on the right. */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function Choice<T extends string | number>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  show = String,
+}: {
+  label: string;
+  value: T;
+  options: readonly T[];
+  onChange(v: T): void;
+  disabled?: boolean;
+  show?(v: T): string;
+}) {
+  return (
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      size="sm"
+      spacing={0}
+      value={String(value)}
+      onValueChange={(v) => {
+        const hit = options.find((o) => String(o) === v);
+        if (hit !== undefined) onChange(hit);
+      }}
+      aria-label={label}
+      disabled={disabled}
+    >
+      {options.map((o) => (
+        <ToggleGroupItem key={String(o)} value={String(o)} className="min-w-12 px-2 tabular-nums data-[state=on]:bg-accent data-[state=on]:text-accent-foreground">
+          {show(o)}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+}
+
+/** Capture the viewport: a PNG, or a short GIF of the stretch selected on the timeline. */
 export function CaptureMenu() {
   const run = useApp((s) => s.panes[s.active]?.name ?? "");
   const compare = useApp((s) => s.panes.length > 1);
   const hasRun = useApp((s) => s.panes.length > 0);
   const [open, setOpen] = useState(false);
   const [prefs, setPrefs] = useState(readPrefs);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [progress, setProgress] = useState<{ phase: "colours" | "frames"; done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
   const stretch = useStretch(open);
@@ -73,19 +127,24 @@ export function CaptureMenu() {
     writeStore(PREFS, JSON.stringify(next));
   };
 
+  // While the menu is open the active pane outlines the frame that will be saved.
+  useEffect(() => {
+    useApp.setState({ captureGuide: open ? aspectOf(prefs.shape) : null });
+    return () => useApp.setState({ captureGuide: null });
+  }, [open, prefs.shape]);
+
   const win = gifWindow(stretch.duration, stretch.a >= 0 ? [stretch.a, stretch.b] : null);
   const frames = win.problem ? 0 : gifFrames(win.t1 - win.t0, prefs.fps);
-  const player = activePlayer();
-  const shot = player?.captureSize?.({ scale: prefs.scale });
+  const shot = sizeOf(prefs.shotWidth, prefs.shape);
+  const gif = sizeOf(prefs.gifWidth, prefs.shape);
   const busy = progress !== null;
-  const gifHeight = player?.captureSize?.({ width: prefs.width }).height ?? "";
 
   const shoot = async () => {
     const p = activePlayer();
     if (!p) return;
     setError(null);
     try {
-      await saveScreenshot(p, run, prefs.scale);
+      await saveScreenshot(p, run, prefs.shotWidth, prefs.shape);
     } catch (e) {
       setError(e instanceof Error ? e.message : "The screenshot failed");
     }
@@ -104,9 +163,9 @@ export function CaptureMenu() {
     setError(null);
     const ctl = new AbortController();
     abort.current = ctl;
-    setProgress({ done: 0, total: frames });
+    setProgress({ phase: "colours", done: 0, total: 1 });
     try {
-      await saveGif(p, run, { t0: win.t0, t1: win.t1, fps: prefs.fps, width: prefs.width, signal: ctl.signal, onProgress: (done, total) => setProgress({ done, total }) });
+      await saveGif(p, run, { t0: win.t0, t1: win.t1, fps: prefs.fps, width: prefs.gifWidth, shape: prefs.shape, signal: ctl.signal, onProgress: setProgress });
     } catch (e) {
       if (!(e instanceof DOMException && e.name === "AbortError")) setError(e instanceof Error ? e.message : "The GIF failed");
     } finally {
@@ -115,8 +174,10 @@ export function CaptureMenu() {
     }
   };
 
-  // A capture owns the player: leaving the menu open is fine, but a closed menu must not keep one running unseen.
+  // A capture owns the player: do not leave one running when the menu goes away.
   useEffect(() => () => abort.current?.abort(), []);
+
+  const share = progress ? (progress.phase === "colours" ? 0 : progress.done / progress.total) : 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -129,92 +190,99 @@ export function CaptureMenu() {
           </PopoverTrigger>
         </span>
       </Hint>
-      <PopoverContent align="end" className="w-72 gap-0 p-0">
-        <section className="flex flex-col gap-2 p-3">
-          <h3 className="text-sm font-medium">Screenshot</h3>
-          <div className="flex items-center justify-between gap-2">
-            <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={String(prefs.scale)} onValueChange={(v) => v && set({ scale: Number(v) })} aria-label="Screenshot scale">
-              {SHOT_SCALES.map((s) => (
-                <ToggleGroupItem key={s} value={String(s)} aria-label={`${s} times`} className="px-2.5 tabular-nums">
-                  {s}×
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-            <span className="text-xs text-muted-foreground tabular-nums">{shot ? `${shot.width} × ${shot.height}` : ""}</span>
+      <PopoverContent align="end" className="w-80 gap-0 p-0">
+        <Tabs value={prefs.tab} onValueChange={(v) => set({ tab: v as Tab })} className="gap-0">
+          <div className="flex h-10 items-center border-b px-2">
+            <TabsList variant="line" className="h-full gap-0">
+              <TabsTrigger value="image" disabled={busy}>
+                Screenshot
+              </TabsTrigger>
+              <TabsTrigger value="gif" disabled={busy}>
+                GIF
+              </TabsTrigger>
+            </TabsList>
           </div>
-          <Button variant="secondary" size="sm" onClick={shoot} disabled={busy}>
-            <Download />
-            Save PNG
-          </Button>
-          {compare ? <p className="text-xs text-muted-foreground">Captures the active run.</p> : null}
-        </section>
-        <Separator />
-        <section className="flex flex-col gap-2 p-3">
-          <h3 className="text-sm font-medium">GIF</h3>
-          <div className="flex items-baseline justify-between gap-2 text-xs">
-            <span className="text-muted-foreground">{stretch.a >= 0 ? "Selected stretch" : "Whole run"}</span>
-            <span className="tabular-nums">{win.problem && !(stretch.duration > 0) ? "" : `${fmt(win.t0)} to ${fmt(win.t1)}`}</span>
-          </div>
-          {win.problem ? (
-            <>
-              <p className="text-xs text-muted-foreground">{win.problem}.</p>
-              {stretch.duration > GIF_MAX_SECONDS ? (
+
+          <TabsContent value="image" className="flex flex-col gap-3 p-4">
+            <Field label="Shape">
+              <Choice label="Shape" value={prefs.shape} options={SHAPES.map((s) => s.id)} onChange={(shape) => set({ shape })} />
+            </Field>
+            <Field label="Width">
+              <Choice label="Width in pixels" value={prefs.shotWidth} options={SHOT_WIDTHS} onChange={(shotWidth) => set({ shotWidth })} />
+            </Field>
+            <p className="text-xs text-muted-foreground tabular-nums">
+              {shot.width} × {shot.height} pixels
+            </p>
+            <Button size="sm" onClick={shoot}>
+              <Download />
+              Save PNG
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="gif" className="flex flex-col gap-3 p-4">
+            <div className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2">
+              <div className="flex items-baseline justify-between gap-2 text-xs">
+                <span className="text-muted-foreground">{stretch.a >= 0 ? "Selected stretch" : "Whole run"}</span>
+                <span className="tabular-nums">{stretch.duration > 0 ? `${secs(win.t0)} to ${secs(win.t1)}` : ""}</span>
+              </div>
+              {win.problem ? <p className="text-xs text-muted-foreground">{win.problem}.</p> : null}
+            </div>
+            {win.problem ? (
+              stretch.duration > GIF_MAX_SECONDS ? (
                 <Button variant="outline" size="sm" onClick={pickStretch}>
                   Select {GIF_MAX_SECONDS} s from the playhead
                 </Button>
+              ) : null
+            ) : (
+              <>
+                <Field label="Shape">
+                  <Choice label="Shape" value={prefs.shape} options={SHAPES.map((s) => s.id)} onChange={(shape) => set({ shape })} disabled={busy} />
+                </Field>
+                <Field label="Width">
+                  <Choice label="Width in pixels" value={prefs.gifWidth} options={GIF_WIDTHS} onChange={(gifWidth) => set({ gifWidth })} disabled={busy} />
+                </Field>
+                <Field label="Frame rate">
+                  <Choice label="Frames per second" value={prefs.fps} options={GIF_FPS} onChange={(fps) => set({ fps })} disabled={busy} show={(f) => `${f}/s`} />
+                </Field>
+                <p className="text-xs text-muted-foreground tabular-nums">
+                  {frames} frames of {gif.width} × {gif.height}
+                </p>
+              </>
+            )}
+            {busy ? (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
+                    <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${share * 100}%` }} />
+                  </div>
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                    <Loader2 className="size-3 animate-spin" />
+                    {progress.phase === "colours" ? "Choosing colours" : `Frame ${progress.done} of ${progress.total}`}
+                  </span>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>
+                  Cancel
+                </Button>
+              </div>
+            ) : win.problem ? null : (
+              <Button size="sm" onClick={record}>
+                <Download />
+                Save GIF
+              </Button>
+            )}
+          </TabsContent>
+
+          {compare || error ? (
+            <div className="flex flex-col gap-1 border-t px-4 py-2.5">
+              {compare ? <p className="text-xs text-muted-foreground">Captures the active run.</p> : null}
+              {error ? (
+                <p role="alert" className="text-xs text-destructive">
+                  {error}
+                </p>
               ) : null}
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between gap-2">
-                <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={String(prefs.fps)} onValueChange={(v) => v && set({ fps: Number(v) })} aria-label="Frame rate" disabled={busy}>
-                  {GIF_FPS.map((f) => (
-                    <ToggleGroupItem key={f} value={String(f)} aria-label={`${f} frames per second`} className="px-2 tabular-nums">
-                      {f}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-                <span className="text-xs text-muted-foreground">frames per second</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={String(prefs.width)} onValueChange={(v) => v && set({ width: Number(v) })} aria-label="Width" disabled={busy}>
-                  {GIF_WIDTHS.map((w) => (
-                    <ToggleGroupItem key={w} value={String(w)} aria-label={`${w} pixels wide`} className="px-2 tabular-nums">
-                      {w}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
-                <span className="text-xs text-muted-foreground">pixels wide</span>
-              </div>
-              <p className="text-xs text-muted-foreground tabular-nums">
-                {frames} frames of {prefs.width} × {gifHeight}
-              </p>
-            </>
-          )}
-          {busy ? (
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" className="flex-1" disabled>
-                <Loader2 className="animate-spin" />
-                <span className="tabular-nums">
-                  {progress.done} of {progress.total} frames
-                </span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>
-                Cancel
-              </Button>
             </div>
-          ) : (
-            <Button variant="secondary" size="sm" onClick={record} disabled={!!win.problem}>
-              <Download />
-              Save GIF
-            </Button>
-          )}
-          {error ? (
-            <p role="alert" className="text-xs text-destructive">
-              {error}
-            </p>
           ) : null}
-        </section>
+        </Tabs>
       </PopoverContent>
     </Popover>
   );

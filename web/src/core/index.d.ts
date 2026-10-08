@@ -325,7 +325,7 @@ export class Player extends EventTarget {
   summaries(): Promise<SummariesDoc | null>;
   envelope(stream: string, component?: number): Promise<EnvelopeDoc | null>;
 
-  /** An image of the viewport. With `scale` or `width` it is drawn again at that size, with the same framing. */
+  /** An image of the viewport. With `width` or `aspect` it is drawn again at that size and shape, whatever the pane is, about the centre of the view. */
   snapshot(type?: string, opts?: CaptureSize): Promise<Blob>;
   /** The pixel size of a capture of `opts` (the longest side is capped). */
   captureSize(opts?: CaptureSize): { width: number; height: number };
@@ -340,10 +340,10 @@ export class Player extends EventTarget {
   addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
 }
 
-/** A capture is `scale` times the viewport's device pixels, or `width` pixels wide at its shape. */
+/** A capture is `width` pixels wide in shape `aspect` (width / height); each defaults to the viewport's. */
 export interface CaptureSize {
-  scale?: number;
   width?: number;
+  aspect?: number;
 }
 
 export interface CaptureOptions {
@@ -351,6 +351,7 @@ export interface CaptureOptions {
   t1: number;
   fps?: number;
   width?: number;
+  aspect?: number;
   signal?: AbortSignal;
 }
 

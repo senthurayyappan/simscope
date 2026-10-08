@@ -2,7 +2,8 @@
 // stretch of the run. The player draws the frames (core/player.js); this file
 // only chooses the stretch, encodes, and hands the bytes to the browser.
 
-import { applyPalette, GIFEncoder, quantize } from "./gif.ts";
+import { GIFEncoder } from "./gif.ts";
+import { buildPalette, indexFrame, sampleColors } from "./quantize.ts";
 
 import type { PlayerLike } from "./core";
 
@@ -11,7 +12,22 @@ export const GIF_MAX_SECONDS = 5;
 /** Frame rates whose delay is a whole number of centiseconds, the unit a GIF counts in. */
 export const GIF_FPS = [10, 20, 25] as const;
 export const GIF_WIDTHS = [480, 720, 960] as const;
-export const SHOT_SCALES = [1, 2, 4] as const;
+/** Widths of a screenshot, in pixels. */
+export const SHOT_WIDTHS = [1280, 1920, 3840] as const;
+/** The shapes of a capture. A capture has a fixed size, whatever the pane it is taken from is. */
+export const SHAPES = [
+  { id: "16:9", aspect: 16 / 9 },
+  { id: "4:3", aspect: 4 / 3 },
+  { id: "1:1", aspect: 1 },
+] as const;
+export type ShapeId = (typeof SHAPES)[number]["id"];
+
+export const aspectOf = (id: ShapeId): number => SHAPES.find((s) => s.id === id)?.aspect ?? 16 / 9;
+
+/** Pixels of a capture `width` wide in shape `id`. */
+export function sizeOf(width: number, id: ShapeId): { width: number; height: number } {
+  return { width, height: Math.round(width / aspectOf(id)) };
+}
 
 const MIN_SECONDS = 0.1;
 const EPS = 1e-6;
@@ -66,10 +82,10 @@ export function download(blob: Blob, name: string): void {
 
 const seconds = (t: number) => `${t.toFixed(2).replace(/\.?0+$/, "")}s`;
 
-/** Save the viewport as a PNG, `scale` times the pixels on screen. */
-export async function saveScreenshot(player: PlayerLike, run: string, scale: number): Promise<void> {
-  const blob = await player.snapshot("image/png", { scale });
-  download(blob, fileName(run, `${seconds(player.clock.time)}${scale > 1 ? `-${scale}x` : ""}`, "png"));
+/** Save the viewport as a PNG, `width` pixels wide in shape `shape`. */
+export async function saveScreenshot(player: PlayerLike, run: string, width: number, shape: ShapeId): Promise<void> {
+  const blob = await player.snapshot("image/png", { width, aspect: aspectOf(shape) });
+  download(blob, fileName(run, `${seconds(player.clock.time)}-${width}w`, "png"));
 }
 
 export interface GifOptions {
@@ -77,18 +93,33 @@ export interface GifOptions {
   t1: number;
   fps: number;
   width: number;
+  shape: ShapeId;
   signal?: AbortSignal;
-  onProgress?(done: number, total: number): void;
+  onProgress?(p: { phase: "colours" | "frames"; done: number; total: number }): void;
 }
 
-/** Draw and encode a GIF of `t0..t1`. It loops, and its last frame leads into its first. */
-export async function encodeGif(player: PlayerLike, { t0, t1, fps, width, signal, onProgress }: GifOptions): Promise<Blob> {
+/**
+ * Draw and encode a GIF of `t0..t1`. It loops, and its last frame leads into its first.
+ *
+ * One palette serves every frame (see quantize.ts), so the run is drawn twice:
+ * first a few small frames to choose the colours, then every frame to encode.
+ */
+export async function encodeGif(player: PlayerLike, { t0, t1, fps, width, shape, signal, onProgress }: GifOptions): Promise<Blob> {
+  const aspect = aspectOf(shape);
+  const hist = new Map<number, number>();
+  for await (const f of player.captureFrames({ t0, t1, fps: Math.max(2, Math.round(fps / 4)), width: Math.round(width / 2), aspect, signal })) {
+    sampleColors(f.data, hist);
+    onProgress?.({ phase: "colours", done: f.index + 1, total: f.count });
+    await new Promise((done) => setTimeout(done, 0));
+  }
+  const palette = buildPalette(hist);
+  const cache = new Map<number, number>();
   const gif = GIFEncoder();
   const delay = Math.round(1000 / fps);
-  for await (const f of player.captureFrames({ t0, t1, fps, width, signal })) {
-    const palette = quantize(f.data, 256);
-    gif.writeFrame(applyPalette(f.data, palette), f.width, f.height, { palette, delay });
-    onProgress?.(f.index + 1, f.count);
+  for await (const f of player.captureFrames({ t0, t1, fps, width, aspect, signal })) {
+    // The first frame's palette is the file's; the others use it.
+    gif.writeFrame(indexFrame(f.data, palette, cache), f.width, f.height, f.index === 0 ? { palette, delay } : { delay });
+    onProgress?.({ phase: "frames", done: f.index + 1, total: f.count });
     // Let the page paint and answer a click on Cancel between frames.
     await new Promise((done) => setTimeout(done, 0));
   }

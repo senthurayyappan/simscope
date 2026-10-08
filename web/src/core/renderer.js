@@ -160,17 +160,17 @@ class OffscreenRenderer {
     this.copy = null;
   }
 
-  /** Draw `player`'s scene, with its camera, at `w` x `h` pixels; returns the canvas. */
-  draw(player, w, h) {
+  /** Draw `player`'s scene, through `camera`, at `w` x `h` pixels; returns the canvas. */
+  draw(player, w, h, camera) {
     this.renderer.setSize(w, h, false);
     this.renderer.setClearColor(0x000000, player.transparent ? 0 : 1);
-    this.renderer.render(player.scene, player.camera);
+    this.renderer.render(player.scene, camera);
     return this.canvas;
   }
 
   /** The drawn frame as RGBA bytes, top row first. */
-  pixels(player, w, h) {
-    const gl = this.draw(player, w, h);
+  pixels(player, w, h, camera) {
+    const gl = this.draw(player, w, h, camera);
     if (!this.copy) this.copy = this.canvas.ownerDocument.createElement("canvas").getContext("2d", { willReadFrequently: true });
     const ctx = this.copy;
     if (ctx.canvas.width !== w || ctx.canvas.height !== h) {
@@ -183,8 +183,8 @@ class OffscreenRenderer {
   }
 
   /** The drawn frame as an image file. */
-  blob(player, w, h, type) {
-    const gl = this.draw(player, w, h);
+  blob(player, w, h, type, camera) {
+    const gl = this.draw(player, w, h, camera);
     return new Promise((resolve, reject) => gl.toBlob((b) => (b ? resolve(b) : reject(new Error("simscope: snapshot failed"))), type));
   }
 

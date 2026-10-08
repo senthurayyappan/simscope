@@ -136,15 +136,19 @@ Use a detector for something the data can find in every rollout. Use an event fo
 
 The camera button on the viewport toolbar opens the capture menu. It works in the served app and in a full export. It captures the active pane.
 
-A screenshot is a PNG. Pick 1×, 2×, or 4× the pixels on screen. The framing, theme, and overlays match what you see. The longest side is capped at 8192 pixels.
+A capture has a fixed size, so it does not depend on your window or your screen. Pick a shape (16:9, 4:3, or 1:1) and a width. While the menu is open, the pane outlines the frame it will save: the largest frame of that shape that fits in the view, centred on it. Pan, zoom, or orbit to change the framing.
+
+A screenshot is a PNG, 1280, 1920, or 3840 pixels wide. The longest side is capped at 8192 pixels, or at what your GPU allows.
 
 A GIF is at most 5 seconds long, so it stays small enough to share. It shows the loop region when there is one, and the whole run when the run is 5 seconds or shorter. For a longer run:
 
 1. Drag on the timeline ruler to select a stretch. Or press **Select 5 s from the playhead** in the capture menu.
 2. Drag inside the selection to slide it along the timeline. Drag an edge to resize it.
-3. Pick a frame rate (10, 20, or 25) and a width, then save.
+3. Pick a width (480, 720, or 960 pixels) and a frame rate (10, 20, or 25 per second), then save.
 
 The GIF plays at real time and loops, and its last frame leads into its first. The camera follows as in playback. The clock pauses while the GIF renders and returns to where it was. You can cancel at any time.
+
+A GIF has 256 colours, shared by every frame. The viewer draws the run twice to choose them, so a dark ground does not flicker or fade into the background.
 
 ## Exports
 
