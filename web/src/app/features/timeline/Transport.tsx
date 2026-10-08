@@ -48,12 +48,12 @@ export function Transport({
       <div className="flex shrink-0 items-center gap-1">
         <Hint label="Go to start">
           <Button variant="ghost" size="icon-sm" className="@max-[48rem]:hidden" disabled={!hasRun} onClick={() => seekTo(0)} aria-label="Go to start">
-            <SkipBack />
+            <SkipBack className="fill-current" />
           </Button>
         </Hint>
         <Hint label="Step back" keys="J">
           <Button variant="ghost" size="icon-sm" disabled={!hasRun} onClick={() => stepFrames(-1)} aria-label="Step back">
-            <StepBack />
+            <StepBack className="fill-current" />
           </Button>
         </Hint>
         <Hint label={snap.playing ? "Pause" : "Play"} keys="K">
@@ -63,12 +63,12 @@ export function Transport({
         </Hint>
         <Hint label="Step forward" keys="L">
           <Button variant="ghost" size="icon-sm" disabled={!hasRun} onClick={() => stepFrames(1)} aria-label="Step forward">
-            <StepForward />
+            <StepForward className="fill-current" />
           </Button>
         </Hint>
         <Hint label="Go to end">
           <Button variant="ghost" size="icon-sm" className="@max-[48rem]:hidden" disabled={!hasRun} onClick={() => seekTo(clock.duration)} aria-label="Go to end">
-            <SkipForward />
+            <SkipForward className="fill-current" />
           </Button>
         </Hint>
       </div>

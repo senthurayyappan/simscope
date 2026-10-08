@@ -307,8 +307,10 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
 }
 
 /**
- * A marker: the plain lucide icon in its colour, no ring and no disc behind it.
- * The centre snaps to whole pixels so the 1.2 px strokes stay crisp at 1x and 2x.
+ * A marker: the lucide icon as a solid shape in its colour, no ring and no disc
+ * behind it. The fill makes it read at 14 px; the round-joined stroke keeps the
+ * corners soft. The centre snaps to whole pixels so the edges stay crisp at 1x
+ * and 2x.
  */
 function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: number, color: string, size = GLYPH) {
   ctx.save();
@@ -316,9 +318,12 @@ function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: numb
   ctx.scale(size / 24, size / 24);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+  ctx.fillStyle = color;
   ctx.strokeStyle = color;
   ctx.lineWidth = 2.1;
-  ctx.stroke(kindIcon(kind));
+  const icon = kindIcon(kind);
+  ctx.fill(icon);
+  ctx.stroke(icon);
   ctx.restore();
 }
 
@@ -390,7 +395,7 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
     });
   }
 
-  // Labels (D26): a tag glyph with the name when there is room.
+  // Labels (D26): a tag glyph; its name shows in the hover card, not on the lane.
   for (const m of lane.labels ?? []) {
     const cx = xOf(m.t0, s);
     if (cx < GUTTER - 12 || cx > s.width + 12) continue;
@@ -403,14 +408,7 @@ function drawLane(ctx: CanvasRenderingContext2D, s: DrawState, pal: Palette, lan
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-    glyph(ctx, "label", cx, cy, pal.fg);
-    ctx.fillStyle = pal.fg;
-    ctx.font = `11px ${pal.sans}`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    const room = s.width - RIGHT_PAD - (cx + 10);
-    const text = m.label || m.type;
-    if (text && room > 30) ctx.fillText(fit(ctx, text, Math.min(room, 140)), cx + 10, cy + 0.5);
+    glyph(ctx, "label", cx, cy, pal.fg, s.hoverHit?.label === m ? GLYPH + 2 : GLYPH);
     hits.push({ lane: lane.id, pane: lane.pane, x: cx, y: cy, r: 12, label: m });
   }
 }
