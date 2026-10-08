@@ -244,7 +244,7 @@ export function CaptureMenu() {
                   </div>
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
                     <Loader2 className="size-3 animate-spin" />
-                    {progress.phase === "colours" ? "Choosing colours" : `Frame ${progress.done} of ${progress.total}`}
+                    {progress.phase === "colours" ? "Choosing colors" : `Frame ${progress.done} of ${progress.total}`}
                   </span>
                 </div>
                 <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>

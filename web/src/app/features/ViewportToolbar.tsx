@@ -164,9 +164,9 @@ function GroundControl() {
               <Grid3x3 />
             </Toggle>
           </Hint>
-          <Hint label="Ground style and colour">
+          <Hint label="Ground style and color">
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style and colour">
+              <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style and color">
                 <ChevronDown />
               </Button>
             </PopoverTrigger>
@@ -185,7 +185,7 @@ function GroundControl() {
         />
         <Separator className="my-1" />
         <Choices
-          label="Colour"
+          label="Color"
           value={color}
           options={GROUND_COLORS}
           onChange={(v) => {
