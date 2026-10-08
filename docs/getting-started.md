@@ -134,7 +134,9 @@ Use a detector for something the data can find in every rollout. Use an event fo
 
 ## Screenshots and GIFs
 
-The camera button on the viewport toolbar opens the capture menu. It works in the served app and in a full export. It captures the active pane.
+The viewport has two groups of controls. View options (ground, geometry, contacts, theme, and for a comparison the arrangement) sit at the top left. Capture and Export sit at the top right.
+
+The camera button opens the capture menu. It works in the served app and in a full export. It captures the active pane. The menu stays open while you pan, zoom, hide a sidebar, or move the stretch on the timeline. Close it with the camera button or Escape.
 
 A capture has a fixed size, so it does not depend on your window or your screen. Pick a shape (16:9, 4:3, or 1:1) and a width. While the menu is open, the pane outlines the frame it will save: the largest frame of that shape that fits in the view, centred on it. Pan, zoom, or orbit to change the framing.
 

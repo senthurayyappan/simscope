@@ -1,5 +1,7 @@
 import { Columns2, LayoutGrid, Rows2 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Hint } from "@/components/ui/tooltip";
 import { ARRANGE_LABELS, effectiveArrangement, isArrangement, type Arrangement } from "@/lib/panes";
@@ -10,14 +12,50 @@ const ICONS: Record<Arrangement, typeof Columns2> = { side: Columns2, stack: Row
 /**
  * How compared runs share the viewport: side by side, stacked, or a grid
  * (contracts §10.1). `count` is the number of runs the choice is for, which
- * only matters for the default shown before the user has chosen.
+ * only matters for the default shown before the user has chosen. Three
+ * buttons when the viewport is wide enough, one menu button when it is not.
  */
 export function ArrangeToggle({ count }: { count: number }) {
   const choice = useApp((s) => s.arrange);
   const setArrange = useApp((s) => s.setArrange);
   const value = effectiveArrangement(count, choice);
+  const Current = ICONS[value];
   return (
-    <ToggleGroup type="single" value={value} onValueChange={(v) => isArrangement(v) && setArrange(v)} aria-label="Arrange compared runs" className="shrink-0">
+    <>
+      <div className="hidden @min-[28rem]/vp:block">
+        <Buttons value={value} onChange={setArrange} />
+      </div>
+      <div className="@min-[28rem]/vp:hidden">
+        <DropdownMenu>
+          <Hint label="Arrange compared runs">
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-sm" aria-label="Arrange compared runs">
+                <Current />
+              </Button>
+            </DropdownMenuTrigger>
+          </Hint>
+          <DropdownMenuContent align="start" className="w-44">
+            <DropdownMenuRadioGroup value={value} onValueChange={(v) => isArrangement(v) && setArrange(v)}>
+              {(Object.keys(ICONS) as Arrangement[]).map((id) => {
+                const Icon = ICONS[id];
+                return (
+                  <DropdownMenuRadioItem key={id} value={id}>
+                    <Icon />
+                    {ARRANGE_LABELS[id]}
+                  </DropdownMenuRadioItem>
+                );
+              })}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </>
+  );
+}
+
+function Buttons({ value, onChange }: { value: Arrangement; onChange(a: Arrangement): void }) {
+  return (
+    <ToggleGroup type="single" value={value} onValueChange={(v) => isArrangement(v) && onChange(v)} aria-label="Arrange compared runs" className="shrink-0">
       {(Object.keys(ICONS) as Arrangement[]).map((a) => {
         const Icon = ICONS[a];
         return (

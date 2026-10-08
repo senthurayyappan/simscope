@@ -190,7 +190,8 @@ export function CaptureMenu() {
           </PopoverTrigger>
         </span>
       </Hint>
-      <PopoverContent align="end" className="w-80 gap-0 p-0">
+      {/* The menu stays open while the user works on the view (pan, zoom, hide a sidebar, move the stretch on the timeline). It closes with Escape or the camera button. */}
+      <PopoverContent align="end" className="w-80 gap-0 p-0" onInteractOutside={(e) => e.preventDefault()}>
         <Tabs value={prefs.tab} onValueChange={(v) => set({ tab: v as Tab })} className="gap-0">
           <div className="h-10 border-b">
             <TabsList variant="line" className="h-full w-full gap-0">

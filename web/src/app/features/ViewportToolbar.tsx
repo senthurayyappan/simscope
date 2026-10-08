@@ -50,7 +50,13 @@ function OverlayToggle({
   );
 }
 
-/** Blender-style overlay buttons, then Export and Theme (V1). Camera controls live in the timeline bar. */
+const PILL = "pointer-events-auto flex items-center gap-0.5 rounded-lg bg-popover p-0.5 shadow-md ring-1 ring-foreground/10";
+
+/**
+ * Two groups of controls (V1). View options sit at the top left of the viewport: Blender-style overlay buttons, how
+ * compared runs are laid out, and the theme. Capture and Export sit at the top right. Camera controls live in the
+ * timeline bar. A comparison has one bar above its panes, with the groups at its two ends.
+ */
 export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   const info = useApp((s) => s.infos[s.active]);
   const panes = useApp((s) => s.panes.length);
@@ -64,55 +70,72 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   const hasExport = useApp((s) => s.api?.mode === "http");
   const none = hasRun ? undefined : "Open a run first";
 
-  return (
-    <div className={inline ? "" : "pointer-events-none absolute right-3 top-3 z-20"}>
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg bg-popover p-0.5 shadow-md ring-1 ring-foreground/10">
-        <div className="flex items-center">
-          <Hint label="Show ground">
-            <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
-              <Grid3x3 />
+  const view = (
+    <div className={PILL}>
+      <div className="flex items-center">
+        <Hint label="Show ground">
+          <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
+            <Grid3x3 />
+          </Toggle>
+        </Hint>
+        <GroundPopover />
+      </div>
+      <OverlayToggle label="Show visual geometry" disabledReason={none} pressed={visual} onPressedChange={(v) => setDisplay({ visual: v })}>
+        <ScanEye />
+      </OverlayToggle>
+      <OverlayToggle
+        label="Show collision geometry"
+        disabledReason={none ?? (info && !info.hasCollision ? "No collision geometry in this run" : undefined)}
+        pressed={collision}
+        onPressedChange={(v) => setDisplay({ collision: v })}
+      >
+        <Box />
+      </OverlayToggle>
+      <OverlayToggle
+        label="Show contact forces"
+        keys="C"
+        disabledReason={none ?? (info && !info.hasContacts ? "No contact data in this run" : undefined)}
+        pressed={contacts}
+        onPressedChange={(v) => setDisplay({ contacts: v })}
+      >
+        <Footprints />
+      </OverlayToggle>
+      {compare ? (
+        <>
+          <Divider />
+          <ArrangeToggle count={panes} />
+          <Hint label="Sync cameras">
+            <Toggle size="icon-sm" pressed={cameraSync} onPressedChange={(v) => useApp.setState({ cameraSync: v })} aria-label="Sync cameras">
+              <Link2 />
             </Toggle>
           </Hint>
-          <GroundPopover />
-        </div>
-        <OverlayToggle label="Show visual geometry" disabledReason={none} pressed={visual} onPressedChange={(v) => setDisplay({ visual: v })}>
-          <ScanEye />
-        </OverlayToggle>
-        <OverlayToggle
-          label="Show collision geometry"
-          disabledReason={none ?? (info && !info.hasCollision ? "No collision geometry in this run" : undefined)}
-          pressed={collision}
-          onPressedChange={(v) => setDisplay({ collision: v })}
-        >
-          <Box />
-        </OverlayToggle>
-        <OverlayToggle
-          label="Show contact forces"
-          keys="C"
-          disabledReason={none ?? (info && !info.hasContacts ? "No contact data in this run" : undefined)}
-          pressed={contacts}
-          onPressedChange={(v) => setDisplay({ contacts: v })}
-        >
-          <Footprints />
-        </OverlayToggle>
-        {compare ? (
-          <>
-            <Divider />
-            <ArrangeToggle count={panes} />
-            <Hint label="Sync cameras">
-              <Toggle size="icon-sm" pressed={cameraSync} onPressedChange={(v) => useApp.setState({ cameraSync: v })} aria-label="Sync cameras">
-                <Link2 />
-              </Toggle>
-            </Hint>
-          </>
-        ) : null}
-        <Divider />
-        <CaptureMenu />
-        {hasExport ? <ExportMenu /> : null}
-        <Divider />
-        <ThemeMenu />
-      </div>
+        </>
+      ) : null}
+      <Divider />
+      <ThemeMenu />
     </div>
+  );
+
+  const out = (
+    <div className={PILL}>
+      <CaptureMenu />
+      {hasExport ? <ExportMenu compare={compare} /> : null}
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="flex w-full items-center justify-between gap-2">
+        {view}
+        {out}
+      </div>
+    );
+  }
+  return (
+    <>
+      <div className="pointer-events-none absolute left-3 top-3 z-20">{view}</div>
+      <div className="pointer-events-none absolute right-3 top-3 z-20">{out}</div>
+    </>
   );
 }
 
@@ -167,7 +190,7 @@ function DropdownMenuRadioGroupShim({ value, onChange }: { value: GroundKind; on
   );
 }
 
-function ExportMenu() {
+function ExportMenu({ compare }: { compare: boolean }) {
   const api = useApp((s) => s.api);
   const panes = useApp((s) => s.panes);
   const arrange = useApp((s) => s.arrange);
@@ -192,7 +215,8 @@ function ExportMenu() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2" aria-label="Export">
               <Download />
-              <span className="@max-[29rem]/vp:hidden">Export</span>
+              {/* A comparison has more controls on its bar, so its label needs more room. */}
+              <span className={compare ? "@max-[31rem]/vp:hidden" : "@max-[29rem]/vp:hidden"}>Export</span>
               <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
