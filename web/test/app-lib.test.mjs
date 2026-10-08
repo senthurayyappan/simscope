@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildSections, dateBucket, flatOrder, matchesQuery, nextUnrated, shortName, stepRun, SECTION_LIMIT } from "../src/app/lib/filters.ts";
+import { isSoloExport } from "../src/app/lib/boot.ts";
 import { kindVar, validColor } from "../src/app/lib/palette.ts";
 import { formatCount, formatDuration, formatTimecode, formatValue, lastFrameTime, parseTime } from "../src/app/lib/format.ts";
 import { isTypingTarget, resolveKey } from "../src/app/lib/keys.ts";
@@ -367,4 +368,12 @@ test("rename: name rules, server errors as one line, re-keying by run name", () 
   assert.deepEqual(renameKey({ a: 1, b: 2 }, "a", "x"), { b: 2, x: 1 });
   const rec = { a: 1 };
   assert.equal(renameKey(rec, "nope", "x"), rec);
+});
+
+test("a full export of exactly one run drops the library; a served app or a multi-run export keeps it", () => {
+  assert.equal(isSoloExport({ mode: "pack", runs: ["a"] }), true);
+  assert.equal(isSoloExport({ mode: "pack", runs: ["a", "b"] }), false);
+  assert.equal(isSoloExport({ mode: "pack", runs: [] }), false);
+  assert.equal(isSoloExport({ mode: "pack" }), false);
+  assert.equal(isSoloExport({ mode: "http", runs: ["a"] }), false, "a served library is always browsable");
 });
