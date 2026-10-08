@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   MenuHint,
 } from "@/components/ui/dropdown-menu";
@@ -64,7 +65,7 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
 
   return (
     <div className={inline ? "" : "pointer-events-none absolute right-3 top-3 z-20"}>
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border bg-background/90 p-0.5">
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg bg-popover p-0.5 shadow-md ring-1 ring-foreground/10">
         <div className="flex items-center">
           <Hint label="Show ground">
             <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
@@ -125,7 +126,7 @@ function GroundPopover() {
       <Hint label="Ground style">
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style">
-            <ChevronDown className="size-3.5" />
+            <ChevronDown />
           </Button>
         </PopoverTrigger>
       </Hint>
@@ -177,12 +178,10 @@ function ExportMenu() {
   const layout = runs.length > 1 ? "compare" : "single";
   const item = (ui: "lean" | "full", title: string, hint: string, Icon: typeof Download) => (
     <DropdownMenuItem asChild>
-      <a href={api?.exportUrl({ runs, layout, ui, arrange: effectiveArrangement(runs.length, arrange) }) ?? "#"} download className="flex-col items-start gap-0">
-        <span className="flex items-center gap-2">
-          <Icon />
+      <a href={api?.exportUrl({ runs, layout, ui, arrange: effectiveArrangement(runs.length, arrange) }) ?? "#"} download className="items-start gap-3 py-2">
+        <Icon className="mt-0.5" />
+        <span>
           {title}
-        </span>
-        <span className="pl-6">
           <MenuHint>{hint}</MenuHint>
         </span>
       </a>
@@ -193,16 +192,17 @@ function ExportMenu() {
       <Hint label={disabled ? "Open a run first" : runs.length > 1 ? "Export the compared runs" : "Export this run"}>
         <span>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2">
+            <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2" aria-label="Export">
               <Download />
-              Export
-              <ChevronDown className="size-3.5" />
+              <span className="@max-[29rem]/vp:hidden">Export</span>
+              <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
         </span>
       </Hint>
       <DropdownMenuContent align="end" className="w-72">
         {item("lean", "Player page", runs.length > 1 ? `A small HTML file that plays these ${runs.length} runs side by side. Works offline.` : "A small HTML file that plays this run. Works offline.", FileCode2)}
+        <DropdownMenuSeparator />
         {item("full", "Full viewer", runs.length > 1 ? `The complete viewer in one HTML file, with these ${runs.length} runs. Works offline.` : "The complete viewer in one HTML file. Works offline.", Download)}
       </DropdownMenuContent>
     </DropdownMenu>

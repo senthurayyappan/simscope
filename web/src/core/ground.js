@@ -7,8 +7,13 @@
 // few view-heights around the camera target that fades to nothing at its
 // rim, so it never shows an edge and never runs out, at any zoom. Replaces
 // the 30 m line grid.
+//
+// Seen edge-on (the side and front views) a plane has no area, so the checker
+// vanishes; a thin grey line along each axis, faded in as the view flattens,
+// keeps the ground's height readable. It is two upright strips a pixel and a
+// half thick (a GL line is one device pixel, too faint on a high-DPI screen).
 
-import { Color, Mesh, PlaneGeometry, ShaderMaterial } from "three";
+import { BufferGeometry, Color, DoubleSide, Float32BufferAttribute, Mesh, MeshBasicMaterial, PlaneGeometry, ShaderMaterial } from "three";
 
 import { colorOf, paletteOf } from "./theme.js";
 
@@ -88,12 +93,23 @@ export function createGround(style = "checker", theme = "light") {
   const mesh = new Mesh(geometry, material);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;
+  // The ground line: an upright strip along x and one along y through the view's centre, a unit long and high
+  // each way (scaled in update()).
+  const lineGeometry = new BufferGeometry();
+  lineGeometry.setAttribute("position", new Float32BufferAttribute([-1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, -1, 1, 0, 1, -1, 0, 1, 0, -1, -1, 0, 1, -1, 0, 1, 1, 0, -1, -1, 0, 1, 1, 0, -1, 1], 3));
+  const lineMaterial = new MeshBasicMaterial({ transparent: true, depthWrite: false, side: DoubleSide });
+  const line = new Mesh(lineGeometry, lineMaterial);
+  line.frustumCulled = false;
+  line.renderOrder = -9;
+  line.visible = false;
+  mesh.add(line);
   const u = material.uniforms;
   const state = { style, theme, z: 0 };
 
   function restyle() {
     mesh.visible = state.style !== "none";
     const pal = paletteOf(state.theme);
+    lineMaterial.color.copy(colorOf(pal.horizon));
     if (state.style === "grid") {
       u.uMode.value = 1;
       setLch(u.uA.value, pal.grid.base);
@@ -125,16 +141,28 @@ export function createGround(style = "checker", theme = "light") {
       mesh.position.z = z;
       u.uTile.value = tile > 0 ? tile : DEFAULT_TILE;
     },
-    /** Follow the view: centre under the target, a few view-heights wide. */
-    update(cx, cy, viewHeight, aspect) {
+    /**
+     * Follow the view: centre under the target, a few view-heights wide.
+     * `up` is how much the view looks down (|z| of the view direction, 0 edge-on, 1 from above): it fades the ground line,
+     * whose thickness is `worldPerPx` (metres per CSS pixel) times 1.5.
+     */
+    update(cx, cy, viewHeight, aspect, up = 1, worldPerPx = 0) {
       const span = viewHeight * Math.max(1, aspect);
       u.uCenter.value[0] = cx;
       u.uCenter.value[1] = cy;
       u.uHalf.value = Math.max(40, span * 3);
+      const t = Math.min(Math.max((up - 0.02) / 0.16, 0), 1);
+      const fade = 1 - t * t * (3 - 2 * t);
+      line.visible = fade > 0.01;
+      lineMaterial.opacity = fade;
+      line.position.set(cx, cy, 0);
+      line.scale.set(u.uHalf.value, u.uHalf.value, Math.max(0.75 * worldPerPx, 1e-4));
     },
     dispose() {
       geometry.dispose();
       material.dispose();
+      lineGeometry.dispose();
+      lineMaterial.dispose();
     },
   };
 }

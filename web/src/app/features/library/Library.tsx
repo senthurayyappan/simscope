@@ -1,6 +1,6 @@
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { defaultRangeExtractor, useVirtualizer, type Range } from "@tanstack/react-virtual";
-import { ArrowUpDown, ChevronDown, ChevronRight, Ellipsis, FolderPlus, PanelLeftClose, Search, SearchX, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Ellipsis, FolderPlus, PanelLeftClose, Search, SearchX, X } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
 
 import { Button } from "@/components/ui/button";
@@ -254,12 +254,12 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
   return (
     <Sidebar>
       <SidebarHeader className="gap-2 p-2 pb-1">
-        <div className="flex h-8 items-center gap-2 px-1">
+        <div className="flex h-8 items-center gap-2 pl-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="flex items-center gap-2">
-                <Logo className="size-[18px]" />
-                <span className="text-sm font-semibold">simscope</span>
+                <Logo />
+                <span className="text-base font-semibold">simscope</span>
               </span>
             </TooltipTrigger>
             <TooltipContent side="right">{s.library?.name ?? "Library"}</TooltipContent>
@@ -302,9 +302,8 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="px-2 text-muted-foreground">
-                <ArrowUpDown className="size-3.5" />
                 {SORT_LABELS[s.sort]}
-                <ChevronDown className="size-3.5" />
+                <ChevronDown />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -336,7 +335,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
         ) : noGroupView ? null : items.length === 0 ? (
           <Empty icon="search" text={`No runs match “${deferred.trim()}”.`} action={<Button variant="outline" size="sm" onClick={() => act.setQuery("")}>Clear search</Button>} />
         ) : (
-          <div className="relative w-full px-1" style={{ height: virt.getTotalSize() }}>
+          <div className="relative w-full" style={{ height: virt.getTotalSize() }}>
             {virt.getVirtualItems().map((v) => {
               const it = items[v.index];
               const isSticky = v.index === stickyIdx.current && it.kind === "header";
@@ -344,7 +343,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
               const editing = it.kind === "row" && s.renaming?.name === it.run.name && (it.section.kind === "pinned") === it.run.favorite;
               const style: React.CSSProperties = isSticky
                 ? { position: "sticky", top: 0, zIndex: 2, height: v.size }
-                : { position: "absolute", top: 0, left: 4, right: 4, height: v.size, transform: `translateY(${v.start}px)`, zIndex: editing ? 3 : undefined };
+                : { position: "absolute", top: 0, left: 8, right: 8, height: v.size, transform: `translateY(${v.start}px)`, zIndex: editing ? 3 : undefined };
               return (
                 <div key={`${v.index}:${it.kind}:${it.kind === "row" ? `${it.section.id}/${it.run.name}` : it.kind === "new-group" ? "" : it.section.id}`} style={style}>
                   {it.kind === "header" ? (
@@ -452,7 +451,7 @@ function SectionHeader({
     };
     return (
       <div className="flex h-full items-end bg-sidebar">
-        <div className="flex h-8 w-full items-center px-1">
+        <div className="flex h-8 w-full items-center px-2">
           <InlineName initial={section.title} label="Group name" onSave={save} onCancel={() => setEditing(false)} />
         </div>
       </div>
@@ -465,9 +464,9 @@ function SectionHeader({
         onClick={() => toggleFolded(section.id)}
         onDoubleClick={() => editable && setEditing(true)}
         aria-expanded={!folded}
-        className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-md px-1 text-left text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+        className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
-        <Chevron className="size-3.5 shrink-0" />
+        <Chevron className="size-4 shrink-0" />
         {cut ? (
           <Tooltip>
             <TooltipTrigger asChild>{title}</TooltipTrigger>
@@ -490,7 +489,7 @@ function SectionHeader({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
-      <SidebarMenuBadge>{section.runs.length}</SidebarMenuBadge>
+      <SidebarMenuBadge className="mr-2 min-w-0 px-0">{section.runs.length}</SidebarMenuBadge>
       </div>
     </div>
   );

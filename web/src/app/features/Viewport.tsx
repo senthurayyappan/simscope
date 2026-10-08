@@ -29,9 +29,9 @@ export function Viewport() {
   const { cols, rows } = arrangementGrid(count, effectiveArrangement(count, choice));
 
   return (
-    <div className="flex size-full flex-col overflow-hidden bg-viewport">
+    <div className="@container/vp flex size-full flex-col overflow-hidden bg-viewport">
       {count > 1 ? (
-        <div className="flex h-11 shrink-0 items-center justify-end border-b bg-background px-2">
+        <div className="flex h-11 shrink-0 items-center justify-end border-b bg-card px-2">
           <ViewportToolbar inline />
         </div>
       ) : null}

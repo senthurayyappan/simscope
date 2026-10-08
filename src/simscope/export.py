@@ -538,7 +538,9 @@ def _content(
     ``single`` is one bare player. ``grid`` is a titled player per run.
     ``compare`` is the box the runtime turns into the shared layout.
     """
-    flags = " ".join(["autoplay"] * autoplay + ["loop"] * loop)
+    flags = " ".join(
+        ["autoplay"] * autoplay + ["loop"] * loop + ["themetoggle"]
+    )
     if layout == "single":
         return _player(names[0], flags)
     if layout == "grid":

@@ -10,7 +10,7 @@
 
 import { oklchHex } from "../core/theme.js";
 
-// ---- icons: lucide (ISC), 24 x 24, stroke 2 ----
+// ---- icons: lucide (ISC), 24 x 24, stroke 2 (`contact` is lucide's footprints, as the app's contacts toggle) ----
 
 const ICONS = {
   play: '<polygon points="6 3 20 12 6 21 6 3"/>',
@@ -20,18 +20,25 @@ const ICONS = {
   repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon: '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>',
+  video: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  contact: '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
 };
+
+// The transport and camera icons are solid, as in the app (UI guidelines: the timeline's icons are filled).
+const SOLID = new Set(["play", "pause", "back", "forward", "video"]);
 
 /** Markup of a 16 px lucide icon (stroke follows the text colour). */
 export function icon(name) {
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="${SOLID.has(name) ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
 // ---- tokens: shadcn neutral, as the app's (C1, C5) ----
 
 const L = oklchHex;
 const light = { viewport: L(0.97), bg: L(1), fg: L(0.145), muted: L(0.97), mutedFg: L(0.556), border: L(0.922), ring: L(0.708) };
-const dark = { viewport: L(0.18), bg: L(0.205), fg: L(0.985), muted: L(0.269), mutedFg: L(0.708), border: "rgb(255 255 255 / 10%)", ring: L(0.556) };
+const dark = { viewport: L(0.15), bg: L(0.205), fg: L(0.985), muted: L(0.269), mutedFg: L(0.708), border: "rgb(255 255 255 / 10%)", ring: L(0.556) };
 const vars = (t) => `--ss-viewport:${t.viewport};--ss-bg:${t.bg};--ss-fg:${t.fg};--ss-muted:${t.muted};--ss-muted-fg:${t.mutedFg};--ss-border:${t.border};--ss-ring:${t.ring};`;
 
 /** Token declarations for a light and a dark scope; callers wrap them in their own selectors. */
@@ -45,12 +52,18 @@ export const BAR_CSS = `
   background: var(--ss-bg); color: var(--ss-fg); border-top: 1px solid var(--ss-border); font: 12px/16px ${FONT}; user-select: none; }
 .ss-bar[hidden], .ss-bar [hidden] { display: none; }
 .ss-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; box-sizing: border-box; height: 28px; min-width: 28px; padding: 0 6px;
-  margin: 0; border: 0; border-radius: 6px; background: transparent; color: var(--ss-fg); font: inherit; cursor: pointer; }
+  margin: 0; border: 0; border-radius: 8px; background: transparent; color: var(--ss-fg); font: inherit; cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s; }
+.ss-btn:active:not([aria-haspopup]) { transform: translateY(1px); }
 .ss-btn:hover { background: var(--ss-muted); }
 .ss-btn[aria-pressed="true"], .ss-btn[aria-expanded="true"] { background: var(--ss-muted); }
-.ss-btn:disabled { opacity: 0.4; cursor: default; background: transparent; }
+.ss-btn:disabled, .ss-btn[aria-disabled="true"] { opacity: 0.4; cursor: default; background: transparent; }
 .ss-btn:focus-visible, .ss-scrub:focus-visible { outline: 2px solid var(--ss-ring); outline-offset: -1px; }
 .ss-btn.ss-text { font-variant-numeric: tabular-nums; font-weight: 500; }
+/* The play button is the app's: a round 32 px button on the secondary fill, with a solid icon. */
+.ss-btn.ss-play { width: 32px; height: 32px; border-radius: 50%; background: var(--ss-muted); color: var(--ss-fg); }
+.ss-btn.ss-play:hover { background: color-mix(in srgb, var(--ss-muted), var(--ss-fg) 8%); }
+.ss-btn.ss-play:disabled, .ss-btn.ss-play[aria-disabled="true"] { background: var(--ss-muted); }
 .ss-scrub { --p: 0%; flex: 1; min-width: 40px; height: 28px; margin: 0 4px; padding: 0; background: transparent; cursor: pointer;
   -webkit-appearance: none; appearance: none; }
 .ss-scrub:disabled { cursor: default; opacity: 0.4; }
@@ -66,17 +79,26 @@ export const BAR_CSS = `
 .ss-time { flex: none; min-width: 7.5em; text-align: right; color: var(--ss-muted-fg); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ss-wrap { position: relative; flex: none; }
 .ss-menu { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 5; box-sizing: border-box; min-width: 88px; padding: 4px;
-  background: var(--ss-bg); border: 1px solid var(--ss-border); border-radius: 8px; box-shadow: 0 4px 12px rgb(0 0 0 / 12%); }
-.ss-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; height: 28px; padding: 0 8px;
-  border: 0; border-radius: 4px; background: transparent; color: var(--ss-fg); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; text-align: left; }
+  background: var(--ss-bg); border: 0; border-radius: 10px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ss-fg) 10%, transparent), 0 4px 12px rgb(0 0 0 / 12%); }
+.ss-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; height: 32px; padding: 0 8px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--ss-fg); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; text-align: left; }
 .ss-item:hover { background: var(--ss-muted); }
 .ss-item svg { visibility: hidden; }
 .ss-item[aria-checked="true"] svg { visibility: visible; }
+.ss-group { padding: 6px 8px; color: var(--ss-muted-fg); }
+.ss-row { display: flex; gap: 2px; }
+.ss-item.ss-opt { flex: none; width: auto; justify-content: center; padding: 0 8px; height: 28px; }
+.ss-opt[aria-checked="true"] { background: var(--ss-muted); font-weight: 500; }
+.ss-sep { height: 1px; margin: 4px -4px; background: var(--ss-border); }
 @container (max-width: 440px) { .ss-step { display: none; } }
 @container (max-width: 320px) { .ss-time { min-width: 0; } .ss-loop { display: none; } }
 `;
 
 export const SPEEDS = [0.25, 0.5, 1, 2, 4];
+
+const VIEW_LABELS = [["iso", "Iso"], ["front", "Front"], ["side", "Side"], ["top", "Top"]];
+const FOLLOW_LABELS = [["off", "Off"], ["position", "Position"], ["pose", "Pose"], ["heading", "Heading"]];
 
 /** `3.25 / 7.98 s` */
 export function readout(t, total) {
@@ -86,11 +108,31 @@ export function readout(t, total) {
 export const speedLabel = (x) => `${x}×`;
 
 /**
- * The bar's markup. `extra` adds buttons to the right (the element's
- * collision toggle). Every control is an icon button with an `aria-label`
- * and a tooltip; the only text is the readout and the speed.
+ * Enable or disable a view toggle that needs data in the run. A disabled one stays in the bar
+ * and says why in its tooltip (UI guidelines I6); `aria-disabled` keeps the tooltip reachable.
  */
-export function barHTML(extra = "") {
+export function setAvailable(button, available, label, reason) {
+  button.setAttribute("aria-disabled", String(!available));
+  button.title = available ? label : reason;
+}
+
+/** The camera menu: the view presets, a frame action and the follow modes, in two rows of options. */
+function cameraHTML() {
+  const opts = (attr, list) =>
+    `<div class="ss-row">${list.map(([id, text]) => `<button type="button" class="ss-item ss-opt ss-cam-item" role="menuitemradio" aria-checked="false" data-${attr}="${id}">${text}</button>`).join("")}</div>`;
+  return `<div class="ss-wrap ss-camwrap"><button type="button" class="ss-btn ss-cam" aria-label="Camera" title="Camera" aria-haspopup="menu" aria-expanded="false">${icon("video")}</button>`
+    + `<div class="ss-menu ss-cam-menu" role="menu" hidden><div class="ss-group">View</div>${opts("view", VIEW_LABELS)}`
+    + '<button type="button" class="ss-item ss-cam-item" role="menuitem" data-frame="1">Frame</button><div class="ss-sep" role="separator"></div>'
+    + `<div class="ss-group">Follow</div>${opts("follow", FOLLOW_LABELS)}</div></div>`;
+}
+
+/**
+ * The bar's markup. Every control is an icon button with an `aria-label`
+ * and a tooltip; the only text is the readout, the speed and the camera menu.
+ * The camera menu, the collision and contacts toggles and the theme button
+ * come last: they are about the view, not the clock.
+ */
+export function barHTML() {
   const btn = (cls, label, inner, attrs = "") => `<button type="button" class="ss-btn ${cls}" aria-label="${label}" title="${label}"${attrs}>${inner}</button>`;
   return [
     btn("ss-play", "Play", icon("play"), " disabled"),
@@ -99,15 +141,19 @@ export function barHTML(extra = "") {
     '<input class="ss-scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" disabled>',
     '<span class="ss-time">0.00 / 0.00 s</span>',
     btn("ss-loop", "Loop", icon("repeat"), ' aria-pressed="false"'),
-    `<div class="ss-wrap">${btn("ss-text ss-speed", "Speed", speedLabel(1), ' aria-haspopup="menu" aria-expanded="false"')}<div class="ss-menu" role="menu" hidden>${SPEEDS.map((s) => `<button type="button" class="ss-item" role="menuitemradio" aria-checked="false" data-speed="${s}">${speedLabel(s)}${icon("check")}</button>`).join("")}</div></div>`,
-    extra,
+    `<div class="ss-wrap">${btn("ss-text ss-speed", "Speed", speedLabel(1), ' aria-haspopup="menu" aria-expanded="false"')}<div class="ss-menu" role="menu" hidden>${SPEEDS.map((s) => `<button type="button" class="ss-item ss-speed-item" role="menuitemradio" aria-checked="false" data-speed="${s}">${speedLabel(s)}${icon("check")}</button>`).join("")}</div></div>`,
+    cameraHTML(),
+    btn("ss-col", "Collision geometry", icon("box"), ' aria-pressed="false" aria-disabled="true"'),
+    btn("ss-contacts", "Contact forces", icon("contact"), ' aria-pressed="false" aria-disabled="true"'),
+    btn("ss-theme", "Switch theme", icon("sun"), " hidden"),
   ].join("");
 }
 
 /**
  * Find the bar's parts under `root` (a node with `querySelector`).
  *
- * @returns {object} play, back, fwd, scrub, time, loop, speed, menu, items.
+ * @returns {object} play, back, fwd, scrub, time, loop, speed, menu, items,
+ *   and the camera's wrap, button, menu and options (cam*), and contacts.
  */
 export function barParts(root) {
   const q = (s) => root.querySelector(s);
@@ -121,7 +167,14 @@ export function barParts(root) {
     loop: q(".ss-loop"),
     speed: q(".ss-speed"),
     menu: q(".ss-menu"),
-    items: [...root.querySelectorAll(".ss-item")],
+    items: [...root.querySelectorAll(".ss-speed-item")],
+    camWrap: q(".ss-camwrap"),
+    cam: q(".ss-cam"),
+    camMenu: q(".ss-cam-menu"),
+    camItems: [...root.querySelectorAll(".ss-cam-item")],
+    col: q(".ss-col"),
+    contacts: q(".ss-contacts"),
+    theme: q(".ss-theme"),
   };
 }
 
@@ -129,14 +182,21 @@ export function barParts(root) {
  * Wire a bar to a clock.
  *
  * @param {object} parts  from `barParts`.
- * @param {{stepDt?: () => number, onLoop?: (on: boolean) => void, outside?: EventTarget}} [opts]
+ * @param {object} [opts]
  *   `stepDt`: seconds per frame for the step buttons (default 0.02). `onLoop`:
  *   called instead of setting `clock.loop` (the element reflects its `loop`
- *   attribute). `outside`: where to listen for a click away from the speed menu.
+ *   attribute). `outside`: where to listen for a click away from a menu.
+ *   `camera`: `{view(): string|null, setView(name), frame(), follow(): string,
+ *   setFollow(mode)}`; without it the camera menu is hidden (`view()` is null
+ *   after the user orbits: no preset is current). `contacts`: `{on(): boolean,
+ *   set(on)}` for the contacts toggle and `collision` likewise for the collision toggle;
+ *   the caller enables them once the run has the data (`setAvailable`). `theme`: `{dark(): boolean, toggle()}` for
+ *   the light/dark button, which the caller shows (`parts.theme.hidden`).
  * @returns {{setClock(clock): void, paint(): void, dispose(): void}}
  */
 export function bindBar(parts, opts = {}) {
-  const { play, back, fwd, scrub, time, loop, speed, menu, items } = parts;
+  const { play, back, fwd, scrub, time, loop, speed, menu, items, cam, camMenu, camItems, col, contacts, theme } = parts;
+  const { camera, collision: collisionOpt, contacts: contactsOpt, theme: themeOpt } = opts;
   const stepDt = opts.stepDt || (() => 0.02);
   let clock = null;
   let dragging = false;
@@ -160,12 +220,42 @@ export function bindBar(parts, opts = {}) {
     const x = clock ? clock.speed : 1;
     speed.textContent = speedLabel(x);
     for (const it of items) it.setAttribute("aria-checked", String(Number(it.getAttribute("data-speed")) === x));
+    if (camera) {
+      const view = camera.view();
+      const follow = camera.follow();
+      for (const it of camItems) {
+        const v = it.getAttribute("data-view");
+        const f = it.getAttribute("data-follow");
+        if (v !== null) it.setAttribute("aria-checked", String(v === view));
+        else if (f !== null) it.setAttribute("aria-checked", String(f === follow));
+      }
+    }
+    if (contactsOpt) contacts.setAttribute("aria-pressed", String(contactsOpt.on()));
+    if (collisionOpt) col.setAttribute("aria-pressed", String(collisionOpt.on()));
+    if (themeOpt) {
+      const dark = themeOpt.dark();
+      theme.innerHTML = icon(dark ? "moon" : "sun");
+      theme.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+      theme.title = dark ? "Switch to light theme" : "Switch to dark theme";
+    }
     paint();
   };
-  const closeMenu = () => {
-    menu.hidden = true;
-    speed.setAttribute("aria-expanded", "false");
+  // The speed and camera menus: opening one closes the other.
+  const menus = [{ button: speed, panel: menu }, { button: cam, panel: camMenu }];
+  const closeMenus = (except) => {
+    for (const m of menus) {
+      if (m === except) continue;
+      m.panel.hidden = true;
+      m.button.setAttribute("aria-expanded", "false");
+    }
   };
+  const toggleMenu = (m) => {
+    const open = m.panel.hidden;
+    closeMenus(m);
+    m.panel.hidden = !open;
+    m.button.setAttribute("aria-expanded", String(open));
+  };
+  if (!camera) parts.camWrap.hidden = true;
 
   const on = (node, type, fn) => {
     node.addEventListener(type, fn);
@@ -193,15 +283,42 @@ export function bindBar(parts, opts = {}) {
       else clock.loop = !clock.loop;
       paintState();
     }),
-    on(speed, "click", () => {
-      const open = menu.hidden;
-      menu.hidden = !open;
-      speed.setAttribute("aria-expanded", String(open));
+    on(speed, "click", () => toggleMenu(menus[0])),
+    on(cam, "click", () => toggleMenu(menus[1])),
+    on(theme, "click", () => {
+      if (!themeOpt) return;
+      themeOpt.toggle();
+      paintState();
+    }),
+    on(col, "click", () => {
+      if (!collisionOpt || col.getAttribute("aria-disabled") === "true") return;
+      collisionOpt.set(!collisionOpt.on());
+      paintState();
+    }),
+    on(contacts, "click", () => {
+      if (!contactsOpt || contacts.getAttribute("aria-disabled") === "true") return;
+      contactsOpt.set(!contactsOpt.on());
+      paintState();
     }),
     ...items.map((it) =>
       on(it, "click", () => {
         if (clock) clock.speed = Number(it.getAttribute("data-speed"));
-        closeMenu();
+        closeMenus();
+        paintState();
+      }),
+    ),
+    // A view or a follow mode keeps the menu open, so both can be set in one visit; Frame closes it.
+    ...camItems.map((it) =>
+      on(it, "click", () => {
+        if (!camera) return;
+        const v = it.getAttribute("data-view");
+        const f = it.getAttribute("data-follow");
+        if (v !== null) camera.setView(v);
+        else if (f !== null) camera.setFollow(f);
+        else {
+          camera.frame();
+          closeMenus();
+        }
         paintState();
       }),
     ),
@@ -211,9 +328,11 @@ export function bindBar(parts, opts = {}) {
     offs.push(
       on(outside, "pointerdown", (e) => {
         const path = e.composedPath ? e.composedPath() : [];
-        if (!menu.hidden && !path.includes(menu) && !path.includes(speed)) closeMenu();
+        for (const m of menus) {
+          if (!m.panel.hidden && !path.includes(m.panel) && !path.includes(m.button)) closeMenus();
+        }
       }),
-      on(outside, "keydown", (e) => e.key === "Escape" && closeMenu()),
+      on(outside, "keydown", (e) => e.key === "Escape" && closeMenus()),
     );
   }
 

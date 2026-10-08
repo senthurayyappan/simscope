@@ -43,7 +43,7 @@ class Node extends EventTarget {
     let m;
     while ((m = re.exec(html))) {
       const [, close, tag, attrs, self] = m;
-      if (["svg", "polygon", "rect", "line", "path"].includes(tag)) continue;
+      if (["svg", "polygon", "rect", "line", "path", "circle"].includes(tag)) continue;
       if (close) {
         if (stack.length > 1) stack.pop();
         continue;

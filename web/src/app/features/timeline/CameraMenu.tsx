@@ -1,4 +1,4 @@
-import { ChevronDown, Crosshair, Video } from "lucide-react";
+import { ChevronDown, Video } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-  MenuHint,
 } from "@/components/ui/dropdown-menu";
 import { Hint } from "@/components/ui/tooltip";
 import { frame, setView } from "@/lib/commands";
@@ -25,11 +24,11 @@ const VIEWS: { id: ViewName; label: string }[] = [
   { id: "top", label: "Top" },
 ];
 
-const FOLLOW: { id: FollowMode; label: string; hint?: string }[] = [
+const FOLLOW: { id: FollowMode; label: string; hint?: string; title?: string }[] = [
   { id: "off", label: "Off" },
-  { id: "position", label: "Position", hint: "Track x and y" },
-  { id: "pose", label: "Pose", hint: "Track x, y and z" },
-  { id: "heading", label: "Heading", hint: "Turn with the body's yaw" },
+  { id: "position", label: "Position", hint: "x, y", title: "Track x and y" },
+  { id: "pose", label: "Pose", hint: "x, y, z", title: "Track x, y and z" },
+  { id: "heading", label: "Heading", hint: "yaw", title: "Turn with the body's yaw" },
 ];
 
 /** Camera presets, framing and follow in one menu, built like the speed menu (TL3). */
@@ -44,10 +43,9 @@ export function CameraMenu() {
       <Hint label="Camera">
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="sm" className="gap-1.5 px-2" disabled={!hasRun} aria-label="Camera">
-            <Video />
+            <Video className="fill-current" />
             <span className="@max-[34rem]:hidden">{VIEWS.find((v) => v.id === view)?.label ?? "Free"}</span>
-            {follow !== "off" ? <Crosshair className="size-3.5" aria-label="Following" /> : null}
-            <ChevronDown className="size-3.5 text-muted-foreground" />
+            <ChevronDown className="text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
       </Hint>
@@ -75,11 +73,9 @@ export function CameraMenu() {
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup value={follow} onValueChange={(v) => setFollowMode(v as FollowMode)}>
           {FOLLOW.map((f) => (
-            <DropdownMenuRadioItem key={f.id} value={f.id} className="items-start">
-              <span>
-                {f.label}
-                {f.hint ? <MenuHint>{f.hint}</MenuHint> : null}
-              </span>
+            <DropdownMenuRadioItem key={f.id} value={f.id} title={f.title}>
+              {f.label}
+              {f.hint ? <DropdownMenuShortcut>{f.hint}</DropdownMenuShortcut> : null}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

@@ -177,7 +177,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
       ) : null}
 
       {compare ? (
-        <div className="absolute left-3 top-3 z-20 flex h-8 max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-md border bg-background/90 pl-2.5 pr-0.5 text-sm">
+        <div className="absolute left-3 top-3 z-20 flex h-8 max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg bg-popover pl-2.5 pr-0.5 text-sm shadow-md ring-1 ring-foreground/10">
           <span className="size-2 shrink-0 rounded-full" style={{ background: seriesVar(slot) }} />
           <span className="shrink-0 text-xs text-muted-foreground">{SLOT_LETTERS[slot]}</span>
           <span className="truncate" title={run}>
@@ -213,7 +213,7 @@ function EnvStepper({ index, env, envs }: { index: number; env: number; envs: nu
   };
   return (
     <div
-      className="absolute bottom-3 left-3 z-20 flex h-8 items-center gap-1 rounded-md border bg-background/90 pl-2.5 pr-0.5 text-sm"
+      className="absolute bottom-3 left-3 z-20 flex h-8 items-center gap-1 rounded-lg bg-popover pl-2.5 pr-0.5 text-sm shadow-md ring-1 ring-foreground/10"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <span className="num">

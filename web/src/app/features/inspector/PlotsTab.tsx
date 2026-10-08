@@ -98,14 +98,14 @@ export function PlotsTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="@container flex h-10 shrink-0 items-center gap-1 overflow-hidden px-2">
+      <div className="@container flex h-10 shrink-0 items-center justify-between gap-1 overflow-hidden px-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-1.5 px-2" aria-label="Channels">
               <ListChecks />
               <span className="@max-[20rem]:hidden">Channels</span>
               <span className="num text-muted-foreground">{selected.length}</span>
-              <ChevronDown className="size-3.5 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="max-h-80 w-64 overflow-y-auto">
@@ -130,7 +130,7 @@ export function PlotsTab() {
             <Button variant="ghost" size="sm" className="gap-1.5 px-2">
               <Timer />
               {win === "all" ? "Whole run" : `Last ${win} s`}
-              <ChevronDown className="size-3.5 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
@@ -317,8 +317,8 @@ function ChannelPlot(props: {
             values: (_u, v) => v.map((t) => (Number.isInteger(t) ? String(t) : t.toFixed(1))),
           },
           {
-            size: 40,
-            gap: 4,
+            size: 44,
+            gap: 8,
             space: 36,
             stroke: muted,
             font: `11px ${cssVar("--font-sans")}`,

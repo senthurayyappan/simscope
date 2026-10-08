@@ -14,7 +14,7 @@ import { Hint } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { baseName, streamSummary } from "@/lib/metadata";
-import { Textarea } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { noteDraft, setNoteDraft } from "@/lib/sync";
 import { formatCount, formatDuration, formatRate, formatRecorded, formatValue, lastFrameTime } from "@/lib/format";
 import { meanRating } from "@/lib/rows";
@@ -55,8 +55,8 @@ const Row = ({ k, children, full }: { k: string; children: React.ReactNode; full
   </TableRow>
 );
 const Sub = ({ children }: { children: React.ReactNode }) => (
-  <TableRow className="hover:bg-transparent">
-    <TableCell colSpan={2} className="px-4 pb-1 pt-4 text-xs font-medium text-muted-foreground">
+  <TableRow className="border-b-0 hover:bg-transparent">
+    <TableCell colSpan={2} className="px-4 pb-2 pt-6 text-sm font-medium">
       {children}
     </TableCell>
   </TableRow>
@@ -120,7 +120,7 @@ export function MetadataTab() {
           </Badge>
         ) : null}
         {writable ? (
-          <Hint label={pinned ? "Unpin" : "Pin"}>
+          <Hint label={pinned ? "Unpin" : "Pin"} keys="V">
             <Button variant="ghost" size="icon-sm" aria-pressed={pinned} onClick={() => void annotate({ op: "favorite", value: !pinned })} aria-label={pinned ? "Unpin" : "Pin"}>
               {pinned ? <PinOff /> : <Pin />}
             </Button>
@@ -159,7 +159,7 @@ export function MetadataTab() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="-mr-2 ml-auto flex max-w-full gap-1 px-2">
                       <span className="truncate">{group ?? "Ungrouped"}</span>
-                      <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                      <ChevronDown className="shrink-0 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -218,7 +218,7 @@ export function MetadataTab() {
                     aria-expanded={configOpen}
                     className="flex w-full items-center gap-1 px-4 pb-1 pt-4 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >
-                    {configOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                    {configOpen ? <ChevronDown /> : <ChevronRight />}
                     Config
                   </button>
                 </TableCell>
@@ -264,7 +264,7 @@ function Notes({ writable }: { writable: boolean }) {
   if (!writable && notes.length === 0) return null;
   return (
     <div className="space-y-3 px-4 pt-4">
-      <div className="text-xs font-medium text-muted-foreground">Notes</div>
+      <div className="text-sm font-medium">Notes</div>
       {[...notes].reverse().map((n) => (
         <article key={n.id}>
           <p className="whitespace-pre-wrap break-words text-sm">{n.text}</p>
