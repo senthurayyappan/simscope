@@ -496,7 +496,7 @@
   <div class="typography w-full flex-1 *:data-[slot=alert]:first:mt-0">
     <h1 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h1>
 <p>Look up every option of the <code>simscope</code> command.</p>
-<p>Run <code>simscope --help</code> for the command list, or <code>simscope COMMAND --help</code> for one command. Every command takes the library folder as its first argument. <code>serve</code> needs the <code>viewer</code> extra. The other commands do not.</p>
+<p>Run <code>simscope --help</code> for the command list, or <code>simscope COMMAND --help</code> for one command. Every command takes a folder as its first argument. <code>ls</code>, <code>serve</code>, and <code>export</code> treat that folder as a library, and they also find libraries nested under it. A library is a directory whose <code>runs/</code> folder holds rollouts. A folder that is itself one library keeps the same behavior. <code>serve</code> needs the <code>viewer</code> extra. The other commands do not.</p>
 <h2 id="exit-status">Exit status<a class="headerlink" href="#exit-status" title="Permanent link">&para;</a></h2>
 <div class="table-wrapper"><table>
 <thead>
