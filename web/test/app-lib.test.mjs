@@ -400,13 +400,12 @@ test("capture: the GIF stretch is the loop region or the whole run, and at most 
   assert.equal(fileName("", "", "png"), "simscope.png");
 });
 
-test("capture: shapes have fixed sizes", async () => {
-  const { aspectOf, sizeOf, SHAPES } = await import("../src/app/lib/capture.ts");
+test("capture: the shapes are 16:9, 4:3 and 1:1", async () => {
+  const { aspectOf, SHAPES } = await import("../src/app/lib/capture.ts");
   assert.deepEqual(SHAPES.map((s) => s.id), ["16:9", "4:3", "1:1"]);
-  assert.deepEqual(sizeOf(1920, "16:9"), { width: 1920, height: 1080 });
-  assert.deepEqual(sizeOf(1920, "4:3"), { width: 1920, height: 1440 });
-  assert.deepEqual(sizeOf(1920, "1:1"), { width: 1920, height: 1920 });
+  assert.equal(aspectOf("16:9"), 16 / 9);
   assert.equal(aspectOf("4:3"), 4 / 3);
+  assert.equal(aspectOf("1:1"), 1);
 });
 
 test("capture: encodeGif writes one looping GIF frame per captured frame, with one palette", async () => {

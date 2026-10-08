@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Hint } from "@/components/ui/tooltip";
-import { aspectOf, GIF_FPS, GIF_MAX_SECONDS, GIF_WIDTHS, gifFrames, gifWindow, saveGif, saveScreenshot, SHAPES, SHOT_WIDTHS, sizeOf, type ShapeId } from "@/lib/capture";
+import { aspectOf, GIF_FPS, GIF_MAX_SECONDS, GIF_WIDTHS, gifFrames, gifWindow, saveGif, saveScreenshot, SHAPES, SHOT_WIDTHS, type ShapeId } from "@/lib/capture";
 import { activePlayer, getClock, onFrame } from "@/lib/runtime";
 import { useApp } from "@/lib/store";
 import { readStore, writeStore } from "@/lib/utils";
@@ -134,8 +134,7 @@ export function CaptureMenu() {
   }, [open, prefs.shape]);
 
   const win = gifWindow(stretch.duration, stretch.a >= 0 ? [stretch.a, stretch.b] : null, stretch.speed);
-  const frames = win.problem ? 0 : gifFrames(win.seconds, prefs.fps);
-  const shot = sizeOf(prefs.shotWidth, prefs.shape);
+  const frames = stretch.duration > 0 ? gifFrames(win.seconds, prefs.fps) : 0;
   const busy = progress !== null;
 
   const shoot = async () => {
@@ -211,9 +210,6 @@ export function CaptureMenu() {
             <Field label="Width">
               <Choice label="Width in pixels" value={prefs.shotWidth} options={SHOT_WIDTHS} onChange={(shotWidth) => set({ shotWidth })} />
             </Field>
-            <p className="text-xs text-muted-foreground tabular-nums">
-              {shot.width} × {shot.height} pixels
-            </p>
             <Button size="sm" onClick={shoot}>
               <Download />
               Save PNG
@@ -230,48 +226,36 @@ export function CaptureMenu() {
             <Field label="FPS">
               <Choice label="Frames per second" value={prefs.fps} options={GIF_FPS} onChange={(fps) => set({ fps })} disabled={busy} />
             </Field>
-            <Field label="Range">
-              <span className="text-sm text-muted-foreground">{stretch.a >= 0 ? "Selected stretch" : "Whole run"}</span>
-            </Field>
-            {win.problem ? (
-              <>
-                <p className="text-xs text-muted-foreground">{win.problem}.</p>
-                {stretch.duration > GIF_MAX_SECONDS * stretch.speed ? (
-                  <Button variant="outline" size="sm" onClick={pickStretch}>
-                    Select {GIF_MAX_SECONDS} s from the playhead
-                  </Button>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground tabular-nums">
-                  <span>{frames} frames</span>
-                  <span>
-                    {secs(win.t0)} to {secs(win.t1)}
+            <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground tabular-nums">
+              <span>{frames} frames</span>
+              <span className={win.problem ? "text-destructive" : undefined} title={win.problem ? `${win.problem}.` : undefined}>
+                {win.seconds.toFixed(2)} s
+              </span>
+            </div>
+            {busy ? (
+              <div className="flex items-center gap-3">
+                <div className="flex flex-1 flex-col gap-1.5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
+                    <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${share * 100}%` }} />
+                  </div>
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                    <Loader2 className="size-3 animate-spin" />
+                    {progress.phase === "colours" ? "Choosing colours" : `Frame ${progress.done} of ${progress.total}`}
                   </span>
                 </div>
-                {busy ? (
-                  <div className="flex items-center gap-3">
-                    <div className="flex flex-1 flex-col gap-1.5">
-                      <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
-                        <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${share * 100}%` }} />
-                      </div>
-                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-                        <Loader2 className="size-3 animate-spin" />
-                        {progress.phase === "colours" ? "Choosing colours" : `Frame ${progress.done} of ${progress.total}`}
-                      </span>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button size="sm" onClick={record}>
-                    <Download />
-                    Save GIF
-                  </Button>
-                )}
-              </>
+                <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>
+                  Cancel
+                </Button>
+              </div>
+            ) : win.problem ? (
+              <Button variant="outline" size="sm" onClick={pickStretch} disabled={!(stretch.duration > GIF_MAX_SECONDS * stretch.speed)} title={`${win.problem}.`}>
+                Select {GIF_MAX_SECONDS} s from the playhead
+              </Button>
+            ) : (
+              <Button size="sm" onClick={record}>
+                <Download />
+                Save GIF
+              </Button>
             )}
           </TabsContent>
 

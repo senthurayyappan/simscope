@@ -24,11 +24,6 @@ export type ShapeId = (typeof SHAPES)[number]["id"];
 
 export const aspectOf = (id: ShapeId): number => SHAPES.find((s) => s.id === id)?.aspect ?? 16 / 9;
 
-/** Pixels of a capture `width` wide in shape `id`. */
-export function sizeOf(width: number, id: ShapeId): { width: number; height: number } {
-  return { width, height: Math.round(width / aspectOf(id)) };
-}
-
 const MIN_SECONDS = 0.1;
 const EPS = 1e-6;
 
