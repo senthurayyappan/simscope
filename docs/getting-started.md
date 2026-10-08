@@ -136,7 +136,7 @@ Use a detector for something the data can find in every rollout. Use an event fo
 
 The viewport has two groups of controls. View options sit at the top left: the theme, the ground, geometry, contacts, and for a comparison the arrangement. Capture and Export sit at the top right.
 
-The arrow beside the ground button opens its menu. Choose a checkerboard or a grid, and a colour: Automatic, Light, Dark, or MuJoCo blue. Automatic follows the theme. The other colours stay the same in light and dark mode, so you can have a dark ground under a light interface. The choice is remembered.
+The arrow beside the ground button opens its menu. Choose a checkerboard or a grid, and a colour: Automatic, Light, Dark, or Classic, the blue checkerboard of MuJoCo. Automatic follows the theme. The other colours stay the same in light and dark mode, so you can have a dark ground under a light interface. The choice is remembered.
 
 The camera button opens the capture menu. It works in the served app and in a full export. It captures the active pane. The menu stays open while you pan, zoom, hide a sidebar, or move the stretch on the timeline. Close it with the camera button or Escape.
 

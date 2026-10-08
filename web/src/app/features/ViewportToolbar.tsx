@@ -137,7 +137,7 @@ const GROUND_COLORS: { id: GroundColor; label: string; cells: [string, string] }
   { id: "auto", label: "Automatic", cells: ["oklch(0.955 0 0)", "oklch(0.2 0 0)"] },
   { id: "light", label: "Light", cells: ["oklch(0.955 0 0)", "oklch(0.93 0 0)"] },
   { id: "dark", label: "Dark", cells: ["oklch(0.2 0 0)", "oklch(0.175 0 0)"] },
-  { id: "mujoco", label: "MuJoCo blue", cells: ["oklch(0.314 0.056 250)", "oklch(0.409 0.053 249.2)"] },
+  { id: "mujoco", label: "Classic", cells: ["oklch(0.314 0.056 250)", "oklch(0.409 0.053 249.2)"] },
 ];
 
 const GROUND_KINDS: { id: GroundKind; label: string }[] = [
