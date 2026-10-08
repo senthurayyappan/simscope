@@ -49,6 +49,7 @@ const WHOLE_RUN_BYTES = 64 * 1024 * 1024;
 export { FOLLOW_ALIASES };
 
 const _v = new Vector3();
+const _dir = new Vector3();
 const _span = { f0: 0, f1: 0, t: 0 };
 const _pan = [0, 0];
 
@@ -769,7 +770,7 @@ export class Player extends EventTarget {
     this.camMoving = moved;
     if (moved) changed = true;
     const tgt = this.rig.getTarget(_v);
-    this.ground.update(tgt.x, tgt.y, this.rig.height, this.rig.aspect);
+    this.ground.update(tgt.x, tgt.y, this.rig.height, this.rig.aspect, Math.abs(this.rig.camera.getWorldDirection(_dir).z), this.rig.height / this.cssHeight);
     if (this.rig.userChanged) {
       this.rig.userChanged = false;
       this.emit("camera", this.cameraState());

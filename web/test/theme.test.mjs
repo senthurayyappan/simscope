@@ -33,7 +33,7 @@ test("a three.js colour is the linear value of the sRGB one (colour management)"
 test("the viewport and ground are neutral in both themes, the checker is a step off the viewport", () => {
   for (const theme of ["light", "dark"]) {
     const pal = paletteOf(theme);
-    for (const lch of [pal.viewport, ...pal.checker, pal.grid.base, pal.grid.line, pal.arrow, pal.fg]) assert.equal(lch[1], 0, `${theme} chroma`);
+    for (const lch of [pal.viewport, ...pal.checker, pal.grid.base, pal.grid.line, pal.horizon, pal.arrow, pal.fg]) assert.equal(lch[1], 0, `${theme} chroma`);
     assert.ok(pal.checker[0][0] !== pal.checker[1][0]);
   }
   assert.deepEqual(PALETTE.light.checker, [[0.955, 0, 0], [0.93, 0, 0]]);
