@@ -132,6 +132,20 @@ with lib.open("drop") as rollout:
 
 Use a detector for something the data can find in every rollout. Use an event for something you noticed.
 
+## Screenshots and GIFs
+
+The camera button on the viewport toolbar opens the capture menu. It works in the served app and in a full export. It captures the active pane.
+
+A screenshot is a PNG. Pick 1×, 2×, or 4× the pixels on screen. The framing, theme, and overlays match what you see. The longest side is capped at 8192 pixels.
+
+A GIF is at most 5 seconds long, so it stays small enough to share. It shows the loop region when there is one, and the whole run when the run is 5 seconds or shorter. For a longer run:
+
+1. Drag on the timeline ruler to select a stretch. Or press **Select 5 s from the playhead** in the capture menu.
+2. Drag inside the selection to slide it along the timeline. Drag an edge to resize it.
+3. Pick a frame rate (10, 20, or 25) and a width, then save.
+
+The GIF plays at real time and loops, and its last frame leads into its first. The camera follows as in playback. The clock pauses while the GIF renders and returns to where it was. You can cancel at any time.
+
 ## Exports
 
 `simscope export` writes one HTML file that works offline. A lean export, the default, fills the window with the player and puts one control bar under it. A full export (`--ui full`) is the whole app, with the same rollouts loaded, and it includes highlights.

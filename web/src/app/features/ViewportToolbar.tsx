@@ -12,6 +12,7 @@ import {
   MenuHint,
 } from "@/components/ui/dropdown-menu";
 import { ArrangeToggle } from "./ArrangeToggle";
+import { CaptureMenu } from "./CaptureMenu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Toggle } from "@/components/ui/toggle";
 import { Hint } from "@/components/ui/tooltip";
@@ -105,12 +106,9 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
             </Hint>
           </>
         ) : null}
-        {hasExport ? (
-          <>
-            <Divider />
-            <ExportMenu />
-          </>
-        ) : null}
+        <Divider />
+        <CaptureMenu />
+        {hasExport ? <ExportMenu /> : null}
         <Divider />
         <ThemeMenu />
       </div>

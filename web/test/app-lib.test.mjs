@@ -377,3 +377,56 @@ test("a full export of exactly one run drops the library; a served app or a mult
   assert.equal(isSoloExport({ mode: "pack" }), false);
   assert.equal(isSoloExport({ mode: "http", runs: ["a"] }), false, "a served library is always browsable");
 });
+
+test("capture: the GIF stretch is the loop region or the whole run, and at most five seconds", async () => {
+  const { gifFrames, gifWindow, GIF_MAX_SECONDS, fileName } = await import("../src/app/lib/capture.ts");
+  assert.equal(GIF_MAX_SECONDS, 5);
+  assert.deepEqual(gifWindow(3, null), { t0: 0, t1: 3, problem: null });
+  assert.deepEqual(gifWindow(8, [1.65, 6.65]), { t0: 1.65, t1: 6.65, problem: null });
+  assert.equal(gifWindow(5, null).problem, null, "exactly five seconds is allowed");
+  assert.match(gifWindow(8, null).problem, /run is 8\.0 s.*up to 5 s/);
+  assert.match(gifWindow(8, [0, 6]).problem, /selected stretch is 6\.0 s/);
+  assert.equal(gifWindow(0, null).problem, "Open a run first");
+  assert.match(gifWindow(8, [1, 1.01]).problem, /longer stretch/);
+  assert.equal(gifFrames(5, 20), 100);
+  assert.equal(gifFrames(2.98, 20), 60);
+  assert.equal(gifFrames(0.01, 10), 1);
+  assert.equal(fileName("20260911 run/1", "2s", "gif"), "20260911_run_1-2s.gif");
+  assert.equal(fileName("", "", "png"), "simscope.png");
+});
+
+test("capture: encodeGif writes one looping GIF frame per captured frame", async () => {
+  const { encodeGif } = await import("../src/app/lib/capture.ts");
+  const w = 4, h = 4;
+  const frame = (i, rgb) => {
+    const data = new Uint8ClampedArray(w * h * 4);
+    for (let p = 0; p < w * h; p++) data.set([...rgb, 255], p * 4);
+    return { index: i, count: 3, t: i / 10, width: w, height: h, data };
+  };
+  let asked = null;
+  const player = {
+    async *captureFrames(opts) {
+      asked = opts;
+      yield frame(0, [255, 0, 0]);
+      yield frame(1, [0, 255, 0]);
+      yield frame(2, [0, 0, 255]);
+    },
+  };
+  const done = [];
+  const blob = await encodeGif(player, { t0: 1, t1: 1.3, fps: 10, width: 4, onProgress: (d, n) => done.push([d, n]) });
+  assert.equal(asked.t0, 1);
+  assert.equal(asked.fps, 10);
+  assert.deepEqual(done, [[1, 3], [2, 3], [3, 3]]);
+  assert.equal(blob.type, "image/gif");
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  assert.equal(String.fromCharCode(...bytes.slice(0, 6)), "GIF89a");
+  assert.equal(bytes.at(-1), 0x3b, "the trailer");
+  assert.equal(bytes[6] | (bytes[7] << 8), w);
+  assert.equal(bytes[8] | (bytes[9] << 8), h);
+  // Graphic control extension: 0x21 0xF9 0x04 flags delay(2) ...; a delay of 10 fps is 10 centiseconds.
+  const delays = [];
+  for (let i = 0; i < bytes.length - 6; i++) if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9 && bytes[i + 2] === 4) delays.push(bytes[i + 4] | (bytes[i + 5] << 8));
+  assert.deepEqual(delays, [10, 10, 10]);
+  // NETSCAPE2.0 application extension: loop forever.
+  assert.ok(new TextDecoder("latin1").decode(bytes).includes("NETSCAPE2.0"));
+});

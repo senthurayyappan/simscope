@@ -325,7 +325,12 @@ export class Player extends EventTarget {
   summaries(): Promise<SummariesDoc | null>;
   envelope(stream: string, component?: number): Promise<EnvelopeDoc | null>;
 
-  snapshot(type?: string): Promise<Blob>;
+  /** An image of the viewport. With `scale` or `width` it is drawn again at that size, with the same framing. */
+  snapshot(type?: string, opts?: CaptureSize): Promise<Blob>;
+  /** The pixel size of a capture of `opts` (the longest side is capped). */
+  captureSize(opts?: CaptureSize): { width: number; height: number };
+  /** Draw `t0..t1` frame by frame at `fps` and `width` pixels, for a GIF. The clock is paused meanwhile and put back after. */
+  captureFrames(opts: CaptureOptions): AsyncGenerator<CaptureFrame, void, void>;
 
   addEventListener<K extends keyof PlayerEventMap>(
     type: K,
@@ -333,6 +338,30 @@ export class Player extends EventTarget {
     options?: boolean | AddEventListenerOptions,
   ): void;
   addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+}
+
+/** A capture is `scale` times the viewport's device pixels, or `width` pixels wide at its shape. */
+export interface CaptureSize {
+  scale?: number;
+  width?: number;
+}
+
+export interface CaptureOptions {
+  t0: number;
+  t1: number;
+  fps?: number;
+  width?: number;
+  signal?: AbortSignal;
+}
+
+/** One frame of a capture: RGBA bytes, `width` x `height`, the run at time `t`. */
+export interface CaptureFrame {
+  index: number;
+  count: number;
+  t: number;
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
 }
 
 /** One shared rAF loop ticks every clock once, then draws every visible player. */

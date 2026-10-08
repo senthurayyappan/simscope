@@ -34,7 +34,7 @@ import { frameSpan, lerpPoses, yawOf } from "./interp.js";
 import { addPlayer, removePlayer, wake } from "./loop.js";
 import { createArrowLayer, createPolylineLayer } from "./overlays.js";
 import { pickNearest } from "./picking.js";
-import { createDirectRenderer, getSharedRenderer } from "./renderer.js";
+import { createDirectRenderer, createOffscreenRenderer, getSharedRenderer } from "./renderer.js";
 import { chooseFocus, DEFAULT_TRIANGLE_BUDGET, focusCapacity, isTiered, MAX_FOCUS } from "./tiers.js";
 import * as plots from "./plots.js";
 import * as runs from "./run.js";
@@ -45,6 +45,9 @@ import { buildScene } from "./scene.js";
 const FOLLOW_MODES = ["off", "position", "pose", "heading"];
 const ROOT_STREAM_ID = 4000;
 const WHOLE_RUN_BYTES = 64 * 1024 * 1024;
+/** The longest side of a captured image or frame, in pixels (GPUs allow 8192 at least on a desktop). */
+const MAX_CAPTURE_SIDE = 8192;
+const SETTLE_MS = 15000;
 
 export { FOLLOW_ALIASES };
 
@@ -66,6 +69,7 @@ export class Player extends EventTarget {
   constructor(canvas, opts = {}) {
     super();
     this.canvas = canvas;
+    this._capturing = false;
     this.clock = opts.clock || new Clock();
     this.theme = opts.theme === "dark" ? "dark" : "light";
     this.bgExplicit = opts.background !== undefined && opts.background !== null;
@@ -132,6 +136,8 @@ export class Player extends EventTarget {
     this.followPt = { valid: false, x: 0, y: 0, z: 0, yaw: 0 };
 
     // `opts.renderer` replaces the WebGL renderer (tests and benchmarks run players headless).
+    // `opts.offscreen` likewise replaces the factory of the captures' renderer.
+    this._offscreen = opts.offscreen || createOffscreenRenderer;
     this.renderer = opts.renderer || (opts.direct ? createDirectRenderer(canvas) : getSharedRenderer());
     this.renderer.attach(this);
 
@@ -739,6 +745,7 @@ export class Player extends EventTarget {
   // ---- per-frame work ----
 
   needsFrame() {
+    if (this._capturing) return false;
     if (this.dirty || this.camMoving || !this.fstate.settled) return true;
     const r = this.r;
     if (!r) return false;
@@ -756,6 +763,11 @@ export class Player extends EventTarget {
    * changed.
    */
   update(dt) {
+    // A capture steps the player itself, on its own frame grid.
+    return this._capturing ? false : this._update(dt);
+  }
+
+  _update(dt) {
     const r = this.r;
     if (this._frozen && !r) {
       this.dirty = false;
@@ -1560,13 +1572,108 @@ export class Player extends EventTarget {
 
   // ---- misc ----
 
-  /** Draw now and resolve with an image of the canvas. */
-  async snapshot(type = "image/png") {
+  /**
+   * An image of the viewport. With no options it is the canvas as drawn; with
+   * `scale` (times the on-screen pixels) or `width` (pixels) it is drawn again
+   * at that size, with the same framing, and no larger than the GPU allows.
+   *
+   * @param {string} [type]  image type; "image/png" by default.
+   * @param {{scale?: number, width?: number}} [opts]
+   * @returns {Promise<Blob>}
+   */
+  async snapshot(type = "image/png", opts) {
+    if (opts && (opts.scale || opts.width)) {
+      const { width, height } = this.captureSize(opts);
+      this._update(0);
+      const off = this._offscreen();
+      try {
+        const size = this._fit(width, height, off.maxSize);
+        return await off.blob(this, size.width, size.height, type);
+      } finally {
+        off.dispose();
+      }
+    }
     this.update(0);
     this.renderer.draw(this);
     return new Promise((resolve, reject) =>
       this.canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("simscope: snapshot failed"))), type),
     );
+  }
+
+  /**
+   * The pixel size of a capture: `scale` times the viewport's device pixels,
+   * or `width` pixels wide at the viewport's shape. The longest side is capped.
+   *
+   * @param {{scale?: number, width?: number}} [opts]
+   * @returns {{width: number, height: number}}
+   */
+  captureSize({ scale = 1, width } = {}) {
+    const w = width ? width : this.cssWidth * this.dpr * scale;
+    return this._fit(w, (w * this.cssHeight) / this.cssWidth, MAX_CAPTURE_SIDE);
+  }
+
+  _fit(w, h, max) {
+    const k = Math.min(1, max / Math.max(w, h));
+    return { width: Math.max(1, Math.round(w * k)), height: Math.max(1, Math.round(h * k)) };
+  }
+
+  /**
+   * Draw a stretch of the run frame by frame, at `fps` and `width` pixels, for
+   * a GIF or a video. Yields `{index, count, t, width, height, data}` per
+   * frame, `data` being RGBA bytes. Frame `i` is the run at `t0 + i / fps`, so
+   * a stretch that loops joins up. The clock is paused for the capture and
+   * put back after; the cameras follow as in playback. Abort `signal` to stop.
+   *
+   * @param {{t0: number, t1: number, fps?: number, width?: number, signal?: AbortSignal}} opts
+   */
+  async *captureFrames({ t0, t1, fps = 20, width = 720, signal } = {}) {
+    this._need("captureFrames");
+    if (this._capturing) fail("a capture is already running");
+    if (!(t1 > t0) || !(fps > 0)) fail("captureFrames(): need t1 > t0 and fps > 0");
+    const clock = this.clock;
+    const count = Math.max(1, Math.round((t1 - t0) * fps));
+    const off = this._offscreen();
+    const wanted = this.captureSize({ width });
+    const size = this._fit(wanted.width, wanted.height, off.maxSize);
+    const saved = { time: clock.time, playing: clock.playing };
+    this._capturing = true;
+    clock.pause();
+    try {
+      for (let i = 0; i < count; i++) {
+        if (signal && signal.aborted) throw signal.reason || new DOMException("Capture cancelled", "AbortError");
+        const t = t0 + i / fps;
+        clock.seek(t);
+        await this._settle();
+        if (i === 0) {
+          // Let a following camera arrive at the first frame before the capture starts.
+          for (let k = 0; k < 60; k++) {
+            this._update(0.05);
+            if (!this.camMoving && this.fstate.settled) break;
+          }
+        } else this._update(1 / fps);
+        const data = off.pixels(this, size.width, size.height);
+        yield { index: i, count, t, width: size.width, height: size.height, data };
+      }
+    } finally {
+      this._capturing = false;
+      off.dispose();
+      clock.seek(saved.time);
+      if (saved.playing) clock.play();
+      this.invalidate();
+    }
+  }
+
+  /** Pose the run at the clock's time, waiting until every window it needs has been decoded. */
+  async _settle() {
+    const r = this.r;
+    const until = Date.now() + SETTLE_MS;
+    for (;;) {
+      const changed = this._syncPose();
+      const ready = !!r.views.a.arrs[r.selected] && r.store.pending === 0 && decoder.pending === 0;
+      if (ready && !changed) return;
+      if (Date.now() > until) return;
+      await new Promise((done) => setTimeout(done, 4));
+    }
   }
 
   emit(type, detail) {

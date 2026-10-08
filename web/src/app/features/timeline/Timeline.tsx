@@ -46,6 +46,7 @@ type Drag =
   | { kind: "scrub" }
   | { kind: "ruler"; x0: number; t0: number; moved: boolean }
   | { kind: "edge"; edge: 0 | 1 }
+  | { kind: "slide"; t0: number; region: [number, number]; moved: boolean }
   | { kind: "glyph"; hit: Hit; x: number; y: number };
 
 const NO_LABELS: MarkEvent[] = [];
@@ -284,6 +285,11 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
     return GUTTER + ((t - v.t0) / (v.t1 - v.t0)) * laneWidth(size.current.w);
   };
 
+  const pxPerSecond = () => {
+    const v = getTimelineView();
+    return laneWidth(size.current.w) / (v.t1 - v.t0);
+  };
+
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0 || !model.current.info) return;
     const { x, y } = local(e);
@@ -295,6 +301,7 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
       if (region && Math.abs(x - xOfT(region[0])) <= 6) drag.current = { kind: "edge", edge: 0 };
       else if (region && Math.abs(x - xOfT(region[1])) <= 6) drag.current = { kind: "edge", edge: 1 };
       else if (Math.abs(x - xOfT(clock.time)) <= 8) drag.current = { kind: "scrub" };
+      else if (region && x > xOfT(region[0]) && x < xOfT(region[1])) drag.current = { kind: "slide", t0: tAt(x, false), region: [region[0], region[1]], moved: false };
       else drag.current = { kind: "ruler", x0: x, t0: tAt(x, e.shiftKey), moved: false };
       return;
     }
@@ -320,6 +327,15 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
           clock.loopRegion = [Math.min(d.t0, b), Math.max(d.t0, b)];
           clock.loop = true;
         }
+      } else if (d.kind === "slide") {
+        // The whole stretch moves and keeps its length; a click without a drag still seeks.
+        const [a, b] = d.region;
+        const shift = tAt(x, false) - d.t0;
+        if (!d.moved && Math.abs(shift) * pxPerSecond() < 3) return;
+        d.moved = true;
+        const start = clamp(a + shift, 0, Math.max(clock.duration - (b - a), 0));
+        clock.loopRegion = [start, start + (b - a)];
+        if (canvas.current) canvas.current.style.cursor = "grabbing";
       } else if (d.kind === "edge" && clock.loopRegion) {
         const t = tAt(x, e.shiftKey);
         const [a, b] = clock.loopRegion;
@@ -337,7 +353,8 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
     if (canvas.current) {
       const region = clock.loopRegion;
       const onEdge = y < RULER_H && region && (Math.abs(x - xOfT(region[0])) <= 6 || Math.abs(x - xOfT(region[1])) <= 6);
-      canvas.current.style.cursor = onEdge ? "ew-resize" : hit ? "pointer" : inside ? "col-resize" : "default";
+      const inRegion = y < RULER_H && region && x > xOfT(region[0]) && x < xOfT(region[1]) && Math.abs(x - xOfT(clock.time)) > 8;
+      canvas.current.style.cursor = onEdge ? "ew-resize" : inRegion ? "grab" : hit ? "pointer" : inside ? "col-resize" : "default";
     }
     if (hit) {
       if (prev.hit?.cluster?.best !== hit.cluster?.best || prev.hit?.label !== hit.label || !card) {
@@ -350,7 +367,7 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
-    if (d.kind === "ruler" && !d.moved) seekTo(d.t0);
+    if ((d.kind === "ruler" || d.kind === "slide") && !d.moved) seekTo(d.t0);
     if (d.kind === "glyph") activate(d.hit, local(e).x);
   };
 
