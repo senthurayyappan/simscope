@@ -1653,18 +1653,19 @@ export class Player extends EventTarget {
    * Draw a stretch of the run frame by frame, at `fps`, `width` pixels wide
    * and in shape `aspect`, for a GIF or a video. Yields
    * `{index, count, t, width, height, data}` per frame, `data` being RGBA
-   * bytes. Frame `i` is the run at `t0 + i / fps`, so a stretch that loops
+   * bytes. Frame `i` is the run at `t0 + i * speed / fps`, so it plays at
+   * `speed` times real time, as the clock would, and a stretch that loops
    * joins up. The clock is paused for the capture and put back after; the
    * cameras follow as in playback. Abort `signal` to stop.
    *
-   * @param {{t0: number, t1: number, fps?: number, width?: number, aspect?: number, signal?: AbortSignal}} opts
+   * @param {{t0: number, t1: number, fps?: number, width?: number, aspect?: number, speed?: number, signal?: AbortSignal}} opts
    */
-  async *captureFrames({ t0, t1, fps = 20, width = 720, aspect, signal } = {}) {
+  async *captureFrames({ t0, t1, fps = 20, width = 720, aspect, speed = 1, signal } = {}) {
     this._need("captureFrames");
     if (this._capturing) fail("a capture is already running");
-    if (!(t1 > t0) || !(fps > 0)) fail("captureFrames(): need t1 > t0 and fps > 0");
+    if (!(t1 > t0) || !(fps > 0) || !(speed > 0)) fail("captureFrames(): need t1 > t0, fps > 0 and speed > 0");
     const clock = this.clock;
-    const count = Math.max(1, Math.round((t1 - t0) * fps));
+    const count = Math.max(1, Math.round(((t1 - t0) / speed) * fps));
     const off = this._offscreen();
     const wanted = this.captureSize({ width, aspect });
     const size = this._fit(wanted.width, wanted.height, off.maxSize);
@@ -1674,7 +1675,7 @@ export class Player extends EventTarget {
     try {
       for (let i = 0; i < count; i++) {
         if (signal && signal.aborted) throw signal.reason || new DOMException("Capture cancelled", "AbortError");
-        const t = t0 + i / fps;
+        const t = t0 + (i * speed) / fps;
         clock.seek(t);
         await this._settle();
         if (i === 0) {

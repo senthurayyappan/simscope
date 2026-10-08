@@ -108,6 +108,21 @@ test("captureFrames draws the run at t0 + i / fps, then puts the clock back", as
   assert.equal(p._capturing, false);
 });
 
+test("captureFrames plays the stretch at the given speed", async () => {
+  const { p, log } = await loaded();
+  const times = [];
+  // 1 s of run at double speed is half a second of GIF: 5 frames at 10 per second, 0.2 s of run apart.
+  for await (const f of p.captureFrames({ t0: 0.4, t1: 1.4, fps: 10, width: 100, speed: 2 })) times.push(f.t);
+  assert.equal(times.length, 5);
+  times.forEach((t, i) => assert.ok(Math.abs(t - (0.4 + i * 0.2)) < 1e-9));
+  assert.equal(log.frames.length, 5);
+  // And at half speed it is twice as many frames, 0.05 s apart.
+  const slow = [];
+  for await (const f of p.captureFrames({ t0: 0.4, t1: 0.9, fps: 10, width: 100, speed: 0.5 })) slow.push(f.t);
+  assert.equal(slow.length, 10);
+  assert.ok(Math.abs(slow[1] - slow[0] - 0.05) < 1e-9);
+});
+
 test("captureFrames pauses a playing clock and starts it again after", async () => {
   const { p, clock, log } = await loaded();
   clock.play();

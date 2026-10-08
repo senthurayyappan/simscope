@@ -140,13 +140,13 @@ A capture has a fixed size, so it does not depend on your window or your screen.
 
 A screenshot is a PNG, 1280, 1920, or 3840 pixels wide. The longest side is capped at 8192 pixels, or at what your GPU allows.
 
-A GIF is at most 5 seconds long, so it stays small enough to share. It shows the loop region when there is one, and the whole run when the run is 5 seconds or shorter. For a longer run:
+A GIF plays for at most 5 seconds, so it stays small enough to share. It shows the loop region when there is one, and the whole run otherwise. It plays at the speed set on the timeline, so at 2× a 10-second stretch makes a 5-second GIF, and at 0.5× a 2.5-second stretch does. For a stretch that plays for longer than 5 seconds:
 
 1. Drag on the timeline ruler to select a stretch. Or press **Select 5 s from the playhead** in the capture menu.
 2. Drag inside the selection to slide it along the timeline. Drag an edge to resize it.
-3. Pick a width (480, 720, or 960 pixels) and a frame rate (10, 20, or 25 per second), then save.
+3. Pick a width (480, 720, or 960 pixels) and FPS (10, 20, or 25), then save.
 
-The GIF plays at real time and loops, and its last frame leads into its first. The camera follows as in playback. The clock pauses while the GIF renders and returns to where it was. You can cancel at any time.
+The GIF loops, and its last frame leads into its first. The camera follows as in playback. The clock pauses while the GIF renders and returns to where it was. You can cancel at any time.
 
 A GIF has 256 colours, shared by every frame. The viewer draws the run twice to choose them, so a dark ground does not flicker or fade into the background.
 

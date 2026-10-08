@@ -33,28 +33,33 @@ const MIN_SECONDS = 0.1;
 const EPS = 1e-6;
 
 export interface GifWindow {
+  /** The stretch of the run, in seconds of run time. */
   t0: number;
   t1: number;
+  /** How long the GIF plays: the stretch divided by the playback speed. */
+  seconds: number;
   /** Why this stretch cannot be a GIF, or null when it can. */
   problem: string | null;
 }
 
 /**
  * The stretch a GIF would show: the loop region when there is one, else the
- * whole run. It must be at most `GIF_MAX_SECONDS` long.
+ * whole run. The GIF plays it at the clock's `speed`, and must play for at most
+ * `GIF_MAX_SECONDS`.
  */
-export function gifWindow(duration: number, region: readonly [number, number] | null): GifWindow {
+export function gifWindow(duration: number, region: readonly [number, number] | null, speed = 1): GifWindow {
   const [t0, t1] = region ?? [0, duration];
-  const length = t1 - t0;
+  const seconds = (t1 - t0) / speed;
+  const at = speed === 1 ? "" : ` at ${+speed.toFixed(2)}× speed`;
   let problem: string | null = null;
   if (!(duration > 0)) problem = "Open a run first";
-  else if (length < MIN_SECONDS - EPS) problem = "Select a longer stretch on the timeline";
-  else if (length > GIF_MAX_SECONDS + EPS) {
+  else if (seconds < MIN_SECONDS - EPS) problem = "Select a longer stretch on the timeline";
+  else if (seconds > GIF_MAX_SECONDS + EPS) {
     problem = region
-      ? `The selected stretch is ${length.toFixed(1)} s. Shorten it to ${GIF_MAX_SECONDS} s or less`
-      : `The run is ${length.toFixed(1)} s. Drag on the timeline ruler to select up to ${GIF_MAX_SECONDS} s`;
+      ? `The selected stretch plays for ${seconds.toFixed(1)} s${at}. Shorten it to ${GIF_MAX_SECONDS} s or less`
+      : `The run plays for ${seconds.toFixed(1)} s${at}. Drag on the timeline ruler to select ${GIF_MAX_SECONDS} s or less`;
   }
-  return { t0, t1, problem };
+  return { t0, t1, seconds, problem };
 }
 
 /** Frames in a GIF of `seconds` at `fps`; the same count the player draws. */
@@ -94,6 +99,8 @@ export interface GifOptions {
   fps: number;
   width: number;
   shape: ShapeId;
+  /** Times real time; the clock's speed. Default 1. */
+  speed?: number;
   signal?: AbortSignal;
   onProgress?(p: { phase: "colours" | "frames"; done: number; total: number }): void;
 }
@@ -104,10 +111,10 @@ export interface GifOptions {
  * One palette serves every frame (see quantize.ts), so the run is drawn twice:
  * first a few small frames to choose the colours, then every frame to encode.
  */
-export async function encodeGif(player: PlayerLike, { t0, t1, fps, width, shape, signal, onProgress }: GifOptions): Promise<Blob> {
+export async function encodeGif(player: PlayerLike, { t0, t1, fps, width, shape, speed = 1, signal, onProgress }: GifOptions): Promise<Blob> {
   const aspect = aspectOf(shape);
   const hist = new Map<number, number>();
-  for await (const f of player.captureFrames({ t0, t1, fps: Math.max(2, Math.round(fps / 4)), width: Math.round(width / 2), aspect, signal })) {
+  for await (const f of player.captureFrames({ t0, t1, fps: Math.max(2, Math.round(fps / 4)), width: Math.round(width / 2), aspect, speed, signal })) {
     sampleColors(f.data, hist);
     onProgress?.({ phase: "colours", done: f.index + 1, total: f.count });
     await new Promise((done) => setTimeout(done, 0));
@@ -116,7 +123,7 @@ export async function encodeGif(player: PlayerLike, { t0, t1, fps, width, shape,
   const cache = new Map<number, number>();
   const gif = GIFEncoder();
   const delay = Math.round(1000 / fps);
-  for await (const f of player.captureFrames({ t0, t1, fps, width, aspect, signal })) {
+  for await (const f of player.captureFrames({ t0, t1, fps, width, aspect, speed, signal })) {
     // The first frame's palette is the file's; the others use it.
     gif.writeFrame(indexFrame(f.data, palette, cache), f.width, f.height, f.index === 0 ? { palette, delay } : { delay });
     onProgress?.({ phase: "frames", done: f.index + 1, total: f.count });

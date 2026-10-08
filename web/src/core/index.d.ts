@@ -352,6 +352,8 @@ export interface CaptureOptions {
   fps?: number;
   width?: number;
   aspect?: number;
+  /** Times real time; the stretch `t0..t1` then takes `(t1 - t0) / speed` seconds to play. Default 1. */
+  speed?: number;
   signal?: AbortSignal;
 }
 

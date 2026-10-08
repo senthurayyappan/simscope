@@ -381,13 +381,18 @@ test("a full export of exactly one run drops the library; a served app or a mult
 test("capture: the GIF stretch is the loop region or the whole run, and at most five seconds", async () => {
   const { gifFrames, gifWindow, GIF_MAX_SECONDS, fileName } = await import("../src/app/lib/capture.ts");
   assert.equal(GIF_MAX_SECONDS, 5);
-  assert.deepEqual(gifWindow(3, null), { t0: 0, t1: 3, problem: null });
-  assert.deepEqual(gifWindow(8, [1.65, 6.65]), { t0: 1.65, t1: 6.65, problem: null });
+  assert.deepEqual(gifWindow(3, null), { t0: 0, t1: 3, seconds: 3, problem: null });
+  assert.deepEqual(gifWindow(8, [1.65, 6.65]), { t0: 1.65, t1: 6.65, seconds: 5, problem: null });
   assert.equal(gifWindow(5, null).problem, null, "exactly five seconds is allowed");
-  assert.match(gifWindow(8, null).problem, /run is 8\.0 s.*up to 5 s/);
-  assert.match(gifWindow(8, [0, 6]).problem, /selected stretch is 6\.0 s/);
+  assert.match(gifWindow(8, null).problem, /run plays for 8\.0 s.*5 s or less/);
+  assert.match(gifWindow(8, [0, 6]).problem, /selected stretch plays for 6\.0 s/);
   assert.equal(gifWindow(0, null).problem, "Open a run first");
   assert.match(gifWindow(8, [1, 1.01]).problem, /longer stretch/);
+  // The GIF plays at the timeline's speed, so a stretch is limited by how long it plays, not how long it is.
+  assert.equal(gifWindow(8, null, 2).seconds, 4);
+  assert.equal(gifWindow(8, null, 2).problem, null, "8 s at double speed is a 4 s GIF");
+  assert.match(gifWindow(8, [0, 3], 0.5).problem, /plays for 6\.0 s at 0\.5× speed/);
+  assert.equal(gifWindow(8, [0, 2.5], 0.5).problem, null, "2.5 s at half speed is a 5 s GIF");
   assert.equal(gifFrames(5, 20), 100);
   assert.equal(gifFrames(2.98, 20), 60);
   assert.equal(gifFrames(0.01, 10), 1);
@@ -414,7 +419,7 @@ test("capture: encodeGif writes one looping GIF frame per captured frame, with o
   };
   const asked = [];
   const player = {
-    async *captureFrames(opts) {
+    async *captureFrames(opts) { // the speed is passed on to both passes
       asked.push(opts);
       const colours = [[255, 0, 0], [0, 255, 0], [0, 0, 255]];
       const n = asked.length === 1 ? 1 : 3;
@@ -422,12 +427,13 @@ test("capture: encodeGif writes one looping GIF frame per captured frame, with o
     },
   };
   const done = [];
-  const blob = await encodeGif(player, { t0: 1, t1: 1.3, fps: 10, width: 8, shape: "4:3", onProgress: (p) => done.push([p.phase, p.done, p.total]) });
+  const blob = await encodeGif(player, { t0: 1, t1: 1.3, fps: 10, width: 8, shape: "4:3", speed: 0.5, onProgress: (p) => done.push([p.phase, p.done, p.total]) });
   assert.equal(asked.length, 2, "a pass for the colours, a pass for the frames");
   assert.equal(asked[1].t0, 1);
   assert.equal(asked[1].fps, 10);
   assert.equal(asked[1].width, 8);
   assert.equal(asked[1].aspect, 4 / 3);
+  assert.deepEqual(asked.map((a) => a.speed), [0.5, 0.5]);
   assert.ok(asked[0].width <= asked[1].width && asked[0].fps <= asked[1].fps, "the first pass is the smaller one");
   assert.deepEqual(done, [["colours", 1, 1], ["frames", 1, 3], ["frames", 2, 3], ["frames", 3, 3]]);
   assert.equal(blob.type, "image/gif");

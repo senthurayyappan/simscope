@@ -46,14 +46,14 @@ function useStretch(open: boolean) {
   const read = () => {
     const c = getClock();
     const r = c.loopRegion;
-    return { duration: c.duration, a: r ? r[0] : -1, b: r ? r[1] : -1 };
+    return { duration: c.duration, speed: c.speed, a: r ? r[0] : -1, b: r ? r[1] : -1 };
   };
   const [v, setV] = useState(read);
   useEffect(() => {
     if (!open) return;
     return onFrame(() => {
       const next = read();
-      setV((p) => (p.duration === next.duration && p.a === next.a && p.b === next.b ? p : next));
+      setV((p) => (p.duration === next.duration && p.speed === next.speed && p.a === next.a && p.b === next.b ? p : next));
     });
   }, [open]);
   return v;
@@ -133,10 +133,9 @@ export function CaptureMenu() {
     return () => useApp.setState({ captureGuide: null });
   }, [open, prefs.shape]);
 
-  const win = gifWindow(stretch.duration, stretch.a >= 0 ? [stretch.a, stretch.b] : null);
-  const frames = win.problem ? 0 : gifFrames(win.t1 - win.t0, prefs.fps);
+  const win = gifWindow(stretch.duration, stretch.a >= 0 ? [stretch.a, stretch.b] : null, stretch.speed);
+  const frames = win.problem ? 0 : gifFrames(win.seconds, prefs.fps);
   const shot = sizeOf(prefs.shotWidth, prefs.shape);
-  const gif = sizeOf(prefs.gifWidth, prefs.shape);
   const busy = progress !== null;
 
   const shoot = async () => {
@@ -152,8 +151,10 @@ export function CaptureMenu() {
 
   const pickStretch = () => {
     const c = getClock();
-    const t = Math.min(c.time, Math.max(c.duration - GIF_MAX_SECONDS, 0));
-    c.loopRegion = [t, Math.min(t + GIF_MAX_SECONDS, c.duration)];
+    // The longest stretch that plays for five seconds at the current speed.
+    const span = GIF_MAX_SECONDS * c.speed;
+    const t = Math.min(c.time, Math.max(c.duration - span, 0));
+    c.loopRegion = [t, Math.min(t + span, c.duration)];
     c.loop = true;
   };
 
@@ -165,7 +166,7 @@ export function CaptureMenu() {
     abort.current = ctl;
     setProgress({ phase: "colours", done: 0, total: 1 });
     try {
-      await saveGif(p, run, { t0: win.t0, t1: win.t1, fps: prefs.fps, width: prefs.gifWidth, shape: prefs.shape, signal: ctl.signal, onProgress: setProgress });
+      await saveGif(p, run, { t0: win.t0, t1: win.t1, fps: prefs.fps, width: prefs.gifWidth, shape: prefs.shape, speed: stretch.speed, signal: ctl.signal, onProgress: setProgress });
     } catch (e) {
       if (!(e instanceof DOMException && e.name === "AbortError")) setError(e instanceof Error ? e.message : "The GIF failed");
     } finally {
@@ -192,8 +193,8 @@ export function CaptureMenu() {
       </Hint>
       <PopoverContent align="end" className="w-80 gap-0 p-0">
         <Tabs value={prefs.tab} onValueChange={(v) => set({ tab: v as Tab })} className="gap-0">
-          <div className="flex h-10 items-center border-b px-2">
-            <TabsList variant="line" className="h-full gap-0">
+          <div className="h-10 border-b">
+            <TabsList variant="line" className="h-full w-full gap-0">
               <TabsTrigger value="image" disabled={busy}>
                 Screenshot
               </TabsTrigger>
@@ -220,55 +221,57 @@ export function CaptureMenu() {
           </TabsContent>
 
           <TabsContent value="gif" className="flex flex-col gap-3 p-4">
-            <div className="flex flex-col gap-1 rounded-lg bg-muted/50 px-3 py-2">
-              <div className="flex items-baseline justify-between gap-2 text-xs">
-                <span className="text-muted-foreground">{stretch.a >= 0 ? "Selected stretch" : "Whole run"}</span>
-                <span className="tabular-nums">{stretch.duration > 0 ? `${secs(win.t0)} to ${secs(win.t1)}` : ""}</span>
-              </div>
-              {win.problem ? <p className="text-xs text-muted-foreground">{win.problem}.</p> : null}
-            </div>
+            <Field label="Shape">
+              <Choice label="Shape" value={prefs.shape} options={SHAPES.map((s) => s.id)} onChange={(shape) => set({ shape })} disabled={busy} />
+            </Field>
+            <Field label="Width">
+              <Choice label="Width in pixels" value={prefs.gifWidth} options={GIF_WIDTHS} onChange={(gifWidth) => set({ gifWidth })} disabled={busy} />
+            </Field>
+            <Field label="FPS">
+              <Choice label="Frames per second" value={prefs.fps} options={GIF_FPS} onChange={(fps) => set({ fps })} disabled={busy} />
+            </Field>
+            <Field label="Range">
+              <span className="text-sm text-muted-foreground">{stretch.a >= 0 ? "Selected stretch" : "Whole run"}</span>
+            </Field>
             {win.problem ? (
-              stretch.duration > GIF_MAX_SECONDS ? (
-                <Button variant="outline" size="sm" onClick={pickStretch}>
-                  Select {GIF_MAX_SECONDS} s from the playhead
-                </Button>
-              ) : null
+              <>
+                <p className="text-xs text-muted-foreground">{win.problem}.</p>
+                {stretch.duration > GIF_MAX_SECONDS * stretch.speed ? (
+                  <Button variant="outline" size="sm" onClick={pickStretch}>
+                    Select {GIF_MAX_SECONDS} s from the playhead
+                  </Button>
+                ) : null}
+              </>
             ) : (
               <>
-                <Field label="Shape">
-                  <Choice label="Shape" value={prefs.shape} options={SHAPES.map((s) => s.id)} onChange={(shape) => set({ shape })} disabled={busy} />
-                </Field>
-                <Field label="Width">
-                  <Choice label="Width in pixels" value={prefs.gifWidth} options={GIF_WIDTHS} onChange={(gifWidth) => set({ gifWidth })} disabled={busy} />
-                </Field>
-                <Field label="Frame rate">
-                  <Choice label="Frames per second" value={prefs.fps} options={GIF_FPS} onChange={(fps) => set({ fps })} disabled={busy} show={(f) => `${f}/s`} />
-                </Field>
-                <p className="text-xs text-muted-foreground tabular-nums">
-                  {frames} frames of {gif.width} × {gif.height}
-                </p>
-              </>
-            )}
-            {busy ? (
-              <div className="flex items-center gap-3">
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
-                    <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${share * 100}%` }} />
-                  </div>
-                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-                    <Loader2 className="size-3 animate-spin" />
-                    {progress.phase === "colours" ? "Choosing colours" : `Frame ${progress.done} of ${progress.total}`}
+                <div className="flex items-baseline justify-between gap-2 text-xs text-muted-foreground tabular-nums">
+                  <span>{frames} frames</span>
+                  <span>
+                    {secs(win.t0)} to {secs(win.t1)}
                   </span>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>
-                  Cancel
-                </Button>
-              </div>
-            ) : win.problem ? null : (
-              <Button size="sm" onClick={record}>
-                <Download />
-                Save GIF
-              </Button>
+                {busy ? (
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-1 flex-col gap-1.5">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(share * 100)}>
+                        <div className="h-full rounded-full bg-foreground transition-[width]" style={{ width: `${share * 100}%` }} />
+                      </div>
+                      <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
+                        <Loader2 className="size-3 animate-spin" />
+                        {progress.phase === "colours" ? "Choosing colours" : `Frame ${progress.done} of ${progress.total}`}
+                      </span>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => abort.current?.abort()}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={record}>
+                    <Download />
+                    Save GIF
+                  </Button>
+                )}
+              </>
             )}
           </TabsContent>
 
