@@ -28,6 +28,7 @@ export interface Prefs {
   contacts: boolean;
   groundOn: boolean;
   groundKind: "checker" | "grid";
+  groundColor: "auto" | "light" | "dark" | "mujoco";
   cameraSync: boolean;
   speed: number;
   loop: boolean;
@@ -68,6 +69,7 @@ export function sanitizePrefs(raw: unknown): Partial<Prefs> {
   set("contacts", bool(raw.contacts));
   set("groundOn", bool(raw.groundOn));
   set("groundKind", oneOf(raw.groundKind, ["checker", "grid"]));
+  set("groundColor", oneOf(raw.groundColor, ["auto", "light", "dark", "mujoco"]));
   set("cameraSync", bool(raw.cameraSync));
   set("speed", num(raw.speed, 0.01, 64));
   set("loop", bool(raw.loop));

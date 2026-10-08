@@ -12,13 +12,15 @@ import {
   MenuHint,
 } from "@/components/ui/dropdown-menu";
 import { ArrangeToggle } from "./ArrangeToggle";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CaptureMenu } from "./CaptureMenu";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Separator } from "@/components/ui/separator";
 import { Toggle } from "@/components/ui/toggle";
 import { Hint } from "@/components/ui/tooltip";
 import { setDisplay } from "@/lib/commands";
 import { effectiveArrangement } from "@/lib/panes";
 
-import { useApp, type GroundKind, type ThemePref } from "@/lib/store";
+import { useApp, type GroundColor, type GroundKind, type ThemePref } from "@/lib/store";
 
 const Divider = () => <div className="mx-0.5 h-4 w-px bg-border" />;
 
@@ -49,13 +51,18 @@ function OverlayToggle({
   );
 }
 
-/** Blender-style overlay buttons, then Export and Theme (V1). Camera controls live in the timeline bar. */
+const PILL = "pointer-events-auto flex items-center gap-0.5 rounded-lg bg-popover p-0.5 shadow-md ring-1 ring-foreground/10";
+
+/**
+ * Two groups of controls (V1). View options sit at the top left of the viewport: Blender-style overlay buttons, how
+ * compared runs are laid out, and the theme. Capture and Export sit at the top right. Camera controls live in the
+ * timeline bar. A comparison has one bar above its panes, with the groups at its two ends.
+ */
 export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   const info = useApp((s) => s.infos[s.active]);
   const panes = useApp((s) => s.panes.length);
   const compare = panes > 1;
   const hasRun = useApp((s) => s.panes.length > 0);
-  const groundOn = useApp((s) => s.groundOn);
   const visual = useApp((s) => s.visual);
   const collision = useApp((s) => s.collision);
   const contacts = useApp((s) => s.contacts);
@@ -63,78 +70,126 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
   const hasExport = useApp((s) => s.api?.mode === "http");
   const none = hasRun ? undefined : "Open a run first";
 
+  const view = (
+    <div className={PILL}>
+      <ThemeMenu />
+      <Divider />
+      <GroundControl />
+      <OverlayToggle label="Show visual geometry" disabledReason={none} pressed={visual} onPressedChange={(v) => setDisplay({ visual: v })}>
+        <ScanEye />
+      </OverlayToggle>
+      <OverlayToggle
+        label="Show collision geometry"
+        disabledReason={none ?? (info && !info.hasCollision ? "No collision geometry in this run" : undefined)}
+        pressed={collision}
+        onPressedChange={(v) => setDisplay({ collision: v })}
+      >
+        <Box />
+      </OverlayToggle>
+      <OverlayToggle
+        label="Show contact forces"
+        keys="C"
+        disabledReason={none ?? (info && !info.hasContacts ? "No contact data in this run" : undefined)}
+        pressed={contacts}
+        onPressedChange={(v) => setDisplay({ contacts: v })}
+      >
+        <Footprints />
+      </OverlayToggle>
+      {compare ? (
+        <>
+          <Divider />
+          <ArrangeToggle count={panes} />
+          <Hint label="Sync cameras">
+            <Toggle size="icon-sm" pressed={cameraSync} onPressedChange={(v) => useApp.setState({ cameraSync: v })} aria-label="Sync cameras">
+              <Link2 />
+            </Toggle>
+          </Hint>
+        </>
+      ) : null}
+    </div>
+  );
+
+  const out = (
+    <div className={PILL}>
+      <CaptureMenu />
+      {hasExport ? <ExportMenu compare={compare} /> : null}
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="flex w-full items-center justify-between gap-2">
+        {view}
+        {out}
+      </div>
+    );
+  }
   return (
-    <div className={inline ? "" : "pointer-events-none absolute right-3 top-3 z-20"}>
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg bg-popover p-0.5 shadow-md ring-1 ring-foreground/10">
+    <>
+      <div className="pointer-events-none absolute left-3 top-3 z-20">{view}</div>
+      <div className="pointer-events-none absolute right-3 top-3 z-20">{out}</div>
+    </>
+  );
+}
+
+/** What each ground colour looks like: two checker cells, for the swatch in the menu. */
+const GROUND_COLORS: { id: GroundColor; label: string; cells: [string, string] }[] = [
+  { id: "auto", label: "Automatic", cells: ["oklch(0.955 0 0)", "oklch(0.2 0 0)"] },
+  { id: "light", label: "Light", cells: ["oklch(0.955 0 0)", "oklch(0.93 0 0)"] },
+  { id: "dark", label: "Dark", cells: ["oklch(0.2 0 0)", "oklch(0.175 0 0)"] },
+  { id: "mujoco", label: "Classic", cells: ["oklch(0.314 0.056 250)", "oklch(0.409 0.053 249.2)"] },
+];
+
+const GROUND_KINDS: { id: GroundKind; label: string }[] = [
+  { id: "checker", label: "Checkerboard" },
+  { id: "grid", label: "Grid" },
+];
+
+/**
+ * The ground toggle, with a menu for its style and its colours. The menu opens below the toggle, its left edge under
+ * the toggle's, so that it stays over the viewport. "Automatic" colours follow the theme; the others do not.
+ */
+function GroundControl() {
+  const groundOn = useApp((s) => s.groundOn);
+  const kind = useApp((s) => s.groundKind);
+  const color = useApp((s) => s.groundColor);
+  const setGroundKind = useApp((s) => s.setGroundKind);
+  const setGroundColor = useApp((s) => s.setGroundColor);
+  return (
+    <Popover>
+      <PopoverAnchor asChild>
         <div className="flex items-center">
           <Hint label="Show ground">
             <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
               <Grid3x3 />
             </Toggle>
           </Hint>
-          <GroundPopover />
+          <Hint label="Ground style and color">
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style and color">
+                <ChevronDown />
+              </Button>
+            </PopoverTrigger>
+          </Hint>
         </div>
-        <OverlayToggle label="Show visual geometry" disabledReason={none} pressed={visual} onPressedChange={(v) => setDisplay({ visual: v })}>
-          <ScanEye />
-        </OverlayToggle>
-        <OverlayToggle
-          label="Show collision geometry"
-          disabledReason={none ?? (info && !info.hasCollision ? "No collision geometry in this run" : undefined)}
-          pressed={collision}
-          onPressedChange={(v) => setDisplay({ collision: v })}
-        >
-          <Box />
-        </OverlayToggle>
-        <OverlayToggle
-          label="Show contact forces"
-          keys="C"
-          disabledReason={none ?? (info && !info.hasContacts ? "No contact data in this run" : undefined)}
-          pressed={contacts}
-          onPressedChange={(v) => setDisplay({ contacts: v })}
-        >
-          <Footprints />
-        </OverlayToggle>
-        {compare ? (
-          <>
-            <Divider />
-            <ArrangeToggle count={panes} />
-            <Hint label="Sync cameras">
-              <Toggle size="icon-sm" pressed={cameraSync} onPressedChange={(v) => useApp.setState({ cameraSync: v })} aria-label="Sync cameras">
-                <Link2 />
-              </Toggle>
-            </Hint>
-          </>
-        ) : null}
-        {hasExport ? (
-          <>
-            <Divider />
-            <ExportMenu />
-          </>
-        ) : null}
-        <Divider />
-        <ThemeMenu />
-      </div>
-    </div>
-  );
-}
-
-function GroundPopover() {
-  const kind = useApp((s) => s.groundKind);
-  const setGroundKind = useApp((s) => s.setGroundKind);
-  return (
-    <Popover>
-      <Hint label="Ground style">
-        <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style">
-            <ChevronDown />
-          </Button>
-        </PopoverTrigger>
-      </Hint>
-      <PopoverContent align="end" className="w-44 p-1">
-        <DropdownMenuRadioGroupShim
+      </PopoverAnchor>
+      <PopoverContent align="start" className="w-56 gap-0 p-1">
+        <Choices
+          label="Ground"
           value={kind}
+          options={GROUND_KINDS}
           onChange={(v) => {
             setGroundKind(v);
+            setDisplay({ groundOn: true });
+          }}
+        />
+        <Separator className="my-1" />
+        <Choices
+          label="Color"
+          value={color}
+          options={GROUND_COLORS}
+          onChange={(v) => {
+            setGroundColor(v);
             setDisplay({ groundOn: true });
           }}
         />
@@ -144,15 +199,21 @@ function GroundPopover() {
 }
 
 // A radio list inside a popover (Blender: the chevron opens the details).
-function DropdownMenuRadioGroupShim({ value, onChange }: { value: GroundKind; onChange(v: GroundKind): void }) {
-  const items: { id: GroundKind; label: string }[] = [
-    { id: "checker", label: "Checkerboard" },
-    { id: "grid", label: "Grid" },
-  ];
+function Choices<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { id: T; label: string; cells?: [string, string] }[];
+  onChange(v: T): void;
+}) {
   return (
-    <div role="radiogroup" aria-label="Ground" className="flex flex-col">
-      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">Ground</div>
-      {items.map((it) => (
+    <div role="radiogroup" aria-label={label} className="flex flex-col">
+      <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+      {options.map((it) => (
         <button
           key={it.id}
           type="button"
@@ -163,13 +224,20 @@ function DropdownMenuRadioGroupShim({ value, onChange }: { value: GroundKind; on
         >
           {value === it.id ? <span className="absolute left-2.5 size-1.5 rounded-full bg-foreground" /> : null}
           {it.label}
+          {it.cells ? (
+            <span
+              aria-hidden
+              className="ml-auto size-4 rounded-sm ring-1 ring-foreground/20"
+              style={{ background: `linear-gradient(135deg, ${it.cells[0]} 50%, ${it.cells[1]} 50%)` }}
+            />
+          ) : null}
         </button>
       ))}
     </div>
   );
 }
 
-function ExportMenu() {
+function ExportMenu({ compare }: { compare: boolean }) {
   const api = useApp((s) => s.api);
   const panes = useApp((s) => s.panes);
   const arrange = useApp((s) => s.arrange);
@@ -194,7 +262,8 @@ function ExportMenu() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2" aria-label="Export">
               <Download />
-              <span className="@max-[29rem]/vp:hidden">Export</span>
+              {/* A comparison has more controls on its bar, so its label needs more room. */}
+              <span className={compare ? "@max-[31rem]/vp:hidden" : "@max-[29rem]/vp:hidden"}>Export</span>
               <ChevronDown />
             </Button>
           </DropdownMenuTrigger>

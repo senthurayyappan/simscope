@@ -15,7 +15,7 @@
 
 import { BufferGeometry, Color, DoubleSide, Float32BufferAttribute, Mesh, MeshBasicMaterial, PlaneGeometry, ShaderMaterial } from "three";
 
-import { colorOf, paletteOf } from "./theme.js";
+import { colorOf, groundPalette } from "./theme.js";
 
 const setLch = (color, lch) => color.copy(colorOf(lch));
 
@@ -70,7 +70,7 @@ void main() {
  * The ground object. `mesh` goes into the scene; `update()` runs every
  * frame before drawing; `setStyle()` and `setTheme()` restyle it.
  */
-export function createGround(style = "checker", theme = "light") {
+export function createGround(style = "checker", theme = "light", scheme = "auto") {
   const material = new ShaderMaterial({
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
@@ -104,11 +104,11 @@ export function createGround(style = "checker", theme = "light") {
   line.visible = false;
   mesh.add(line);
   const u = material.uniforms;
-  const state = { style, theme, z: 0 };
+  const state = { style, theme, scheme, z: 0 };
 
   function restyle() {
     mesh.visible = state.style !== "none";
-    const pal = paletteOf(state.theme);
+    const pal = groundPalette(state.scheme, state.theme);
     lineMaterial.color.copy(colorOf(pal.horizon));
     if (state.style === "grid") {
       u.uMode.value = 1;
@@ -133,6 +133,11 @@ export function createGround(style = "checker", theme = "light") {
     },
     setTheme(t) {
       state.theme = t === "dark" ? "dark" : "light";
+      restyle();
+    },
+    /** The colour scheme: "auto" (the theme's), "light", "dark" or "mujoco". */
+    setScheme(s) {
+      state.scheme = s;
       restyle();
     },
     /** Height of the plane and its tile size (from the scene's plane geom). */

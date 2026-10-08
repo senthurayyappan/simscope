@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Color, SRGBColorSpace } from "three";
 
-import { colorOf, oklch, oklchHex, oklchToSrgb, PALETTE, paletteOf } from "../src/core/theme.js";
+import { colorOf, GROUND_COLORS, groundPalette, oklch, oklchHex, oklchToSrgb, PALETTE, paletteOf } from "../src/core/theme.js";
 
 test("oklch to sRGB: the tokens of the UI guidelines come out as their hex values", () => {
   assert.equal(oklchHex(1), "#ffffff");
@@ -90,4 +90,47 @@ test("the ground and the viewport follow the theme through the Player, with the 
   assert.equal(p.scene.background, null, "an explicit background still wins");
   p.setColor("#e4572e");
   assert.equal(p.info().color, "#e4572e", "the slot colour the app uses for the pane dot");
+});
+
+test("ground colour schemes: auto follows the theme, the others do not, and MuJoCo's blue is its checker texture", () => {
+  assert.deepEqual(GROUND_COLORS, ["auto", "light", "dark", "mujoco"]);
+  assert.equal(groundPalette("auto", "dark"), PALETTE.dark);
+  assert.equal(groundPalette("auto", "light"), PALETTE.light);
+  assert.equal(groundPalette("anything else", "dark"), PALETTE.dark, "unknown means auto");
+  for (const theme of ["light", "dark"]) {
+    assert.equal(groundPalette("light", theme), PALETTE.light);
+    assert.equal(groundPalette("dark", theme), PALETTE.dark);
+    assert.equal(groundPalette("mujoco", theme), groundPalette("mujoco", "light"));
+  }
+  // MuJoCo's groundplane: rgb1 ".1 .2 .3" and rgb2 ".2 .3 .4", as 8-bit sRGB.
+  const mj = groundPalette("mujoco", "light");
+  const bytes = (lch) => oklchToSrgb(...lch).map((v) => Math.round(v * 255));
+  const near = (got, want) => got.every((v, i) => Math.abs(v - want[i]) <= 1);
+  assert.ok(near(bytes(mj.checker[0]), [26, 51, 77]), "rgb1");
+  assert.ok(near(bytes(mj.checker[1]), [51, 77, 102]), "rgb2");
+  assert.ok(mj.grid && mj.horizon, "everything the ground asks of a palette");
+});
+
+test("the ground colour is its own setting, whatever the theme is", async () => {
+  const { Player, nullRenderer, PackSource, makeWalkerPack } = await import("./headless.mjs");
+  const p = new Player(null, { renderer: nullRenderer, theme: "light", groundColor: "mujoco" });
+  await p.load(new PackSource(makeWalkerPack()), "walker");
+  const u = p.ground.mesh.material.uniforms;
+  const mj = groundPalette("mujoco", "light");
+  assert.ok(u.uA.value.equals(colorOf(mj.checker[0])) && u.uB.value.equals(colorOf(mj.checker[1])), "asked for at creation");
+  assert.ok(p.scene.background.equals(colorOf(PALETTE.light.viewport)), "the viewport still follows the theme");
+  p.setTheme("dark");
+  assert.ok(u.uA.value.equals(colorOf(mj.checker[0])), "a new theme leaves the ground colour alone");
+  assert.ok(p.scene.background.equals(colorOf(PALETTE.dark.viewport)));
+  p.setGroundColor("dark");
+  p.setTheme("light");
+  assert.ok(u.uA.value.equals(colorOf(PALETTE.dark.checker[0])), "a black ground under the light theme");
+  p.setGround("grid");
+  assert.ok(u.uA.value.equals(colorOf(PALETTE.dark.grid.base)) && u.uLine.value.equals(colorOf(PALETTE.dark.grid.line)), "grid lines too");
+  p.setGroundColor("mujoco");
+  assert.ok(u.uLine.value.equals(colorOf(mj.grid.line)));
+  p.setGroundColor("auto");
+  assert.ok(u.uA.value.equals(colorOf(PALETTE.light.grid.base)), "automatic is the theme's again");
+  p.setGroundColor("nonsense");
+  assert.ok(u.uA.value.equals(colorOf(PALETTE.light.grid.base)), "an unknown scheme is automatic");
 });

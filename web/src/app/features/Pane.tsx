@@ -33,6 +33,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
   const info = useApp((s) => s.infos[index]);
   const env = useApp((s) => s.envs[index] ?? 0);
   const isActive = useApp((s) => s.active === index);
+  const guide = useApp((s) => s.captureGuide);
   const follow = useApp((s) => s.follow);
   const refreshTick = useApp((s) => s.refresh[run] ?? 0);
 
@@ -45,6 +46,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
       clock: getClock(),
       theme: s.resolvedTheme,
       ground: s.groundOn ? s.groundKind : "none",
+      groundColor: s.groundColor,
       view: s.camView ?? "iso",
       background: viewportColor(),
       // One big viewport draws through its own context; compare panes share one.
@@ -162,6 +164,16 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
       <canvas ref={canvas} className="absolute inset-0 block size-full touch-none outline-none" />
       {compare && isActive ? (
         <div className="pointer-events-none absolute inset-0 z-10 ring-2 ring-inset" style={{ ["--tw-ring-color" as string]: seriesVar(slot) }} />
+      ) : null}
+
+      {isActive && guide ? (
+        // The frame a capture will save: the largest one of that shape that fits in the view, about its centre.
+        <div className="pointer-events-none absolute inset-0 z-10 [container-type:size]">
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 shadow-[0_0_0_9999px_rgb(0_0_0/0.45)] ring-1 ring-white/80"
+            style={{ width: `min(100cqw, 100cqh * ${guide})`, aspectRatio: String(guide) }}
+          />
+        </div>
       ) : null}
 
       {loading ? <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-muted-foreground/40" /> : null}

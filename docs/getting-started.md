@@ -132,6 +132,28 @@ with lib.open("drop") as rollout:
 
 Use a detector for something the data can find in every rollout. Use an event for something you noticed.
 
+## Screenshots and GIFs
+
+The viewport has two groups of controls. View options sit at the top left: the theme, the ground, geometry, contacts, and for a comparison the arrangement. Capture and Export sit at the top right.
+
+The arrow beside the ground button opens its menu. Choose a checkerboard or a grid, and a color: Automatic, Light, Dark, or Classic, the blue checkerboard of MuJoCo. Automatic follows the theme. The other colors stay the same in light and dark mode, so you can have a dark ground under a light interface. The choice is remembered.
+
+The camera button opens the capture menu. It works in the served app and in a full export. It captures the active pane. The menu stays open while you pan, zoom, hide a sidebar, or move the stretch on the timeline. Close it with the camera button or Escape.
+
+A capture has a fixed size, so it does not depend on your window or your screen. Pick a shape (16:9, 4:3, or 1:1) and a width. While the menu is open, the pane outlines the frame it will save: the largest frame of that shape that fits in the view, centred on it. Pan, zoom, or orbit to change the framing.
+
+A screenshot is a PNG, 1280, 1920, or 3840 pixels wide. The longest side is capped at 8192 pixels, or at what your GPU allows.
+
+A GIF plays for at most 5 seconds, so it stays small enough to share. It shows the loop region when there is one, and the whole run otherwise. It plays at the speed set on the timeline, so at 2× a 10-second stretch makes a 5-second GIF, and at 0.5× a 2.5-second stretch does. For a stretch that plays for longer than 5 seconds:
+
+1. Drag on the timeline ruler to select a stretch. Or press **Select 5 s from the playhead** in the capture menu.
+2. Drag inside the selection to slide it along the timeline. Drag an edge to resize it.
+3. Pick a width (480, 720, or 960 pixels) and FPS (10, 20, or 25), then save.
+
+The GIF loops, and its last frame leads into its first. The camera follows as in playback. The clock pauses while the GIF renders and returns to where it was. You can cancel at any time.
+
+A GIF has 256 colors, shared by every frame. The viewer draws the run twice to choose them, so a dark ground does not flicker or fade into the background.
+
 ## Exports
 
 `simscope export` writes one HTML file that works offline. A lean export, the default, fills the window with the player and puts one control bar under it. A full export (`--ui full`) is the whole app, with the same rollouts loaded, and it includes highlights.

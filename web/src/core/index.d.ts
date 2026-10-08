@@ -113,6 +113,8 @@ export class Clock extends EventTarget {
 
 export type View = "iso" | "front" | "side" | "top";
 export type FollowMode = "off" | "position" | "pose" | "heading";
+/** "auto" follows the theme; the others are the same in both themes. */
+export type GroundColor = "auto" | "light" | "dark" | "mujoco";
 export type GroundStyle = "checker" | "grid" | "none";
 export type Theme = "light" | "dark";
 
@@ -149,6 +151,8 @@ export interface PlayerOptions {
   clock?: Clock;
   theme?: Theme;
   ground?: GroundStyle;
+  /** The ground's colours, apart from the theme. Default "auto": the theme's. */
+  groundColor?: GroundColor;
   view?: View;
   /** CSS colour, or "transparent"; default from the theme. */
   background?: string;
@@ -300,6 +304,8 @@ export class Player extends EventTarget {
   // Display.
   setTheme(theme: Theme, background?: string): void;
   setGround(style: GroundStyle): void;
+  /** The ground's colours, whatever the theme is; "auto" follows the theme. */
+  setGroundColor(scheme: GroundColor): void;
   setContacts(on: boolean): void;
   setCollision(on: boolean): void;
   /** Show or hide visual geoms; independent of `setCollision` and `setContacts`. */
@@ -325,7 +331,12 @@ export class Player extends EventTarget {
   summaries(): Promise<SummariesDoc | null>;
   envelope(stream: string, component?: number): Promise<EnvelopeDoc | null>;
 
-  snapshot(type?: string): Promise<Blob>;
+  /** An image of the viewport. With `width` or `aspect` it is drawn again at that size and shape, whatever the pane is, about the centre of the view. */
+  snapshot(type?: string, opts?: CaptureSize): Promise<Blob>;
+  /** The pixel size of a capture of `opts` (the longest side is capped). */
+  captureSize(opts?: CaptureSize): { width: number; height: number };
+  /** Draw `t0..t1` frame by frame at `fps` and `width` pixels, for a GIF. The clock is paused meanwhile and put back after. */
+  captureFrames(opts: CaptureOptions): AsyncGenerator<CaptureFrame, void, void>;
 
   addEventListener<K extends keyof PlayerEventMap>(
     type: K,
@@ -333,6 +344,33 @@ export class Player extends EventTarget {
     options?: boolean | AddEventListenerOptions,
   ): void;
   addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
+}
+
+/** A capture is `width` pixels wide in shape `aspect` (width / height); each defaults to the viewport's. */
+export interface CaptureSize {
+  width?: number;
+  aspect?: number;
+}
+
+export interface CaptureOptions {
+  t0: number;
+  t1: number;
+  fps?: number;
+  width?: number;
+  aspect?: number;
+  /** Times real time; the stretch `t0..t1` then takes `(t1 - t0) / speed` seconds to play. Default 1. */
+  speed?: number;
+  signal?: AbortSignal;
+}
+
+/** One frame of a capture: RGBA bytes, `width` x `height`, the run at time `t`. */
+export interface CaptureFrame {
+  index: number;
+  count: number;
+  t: number;
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
 }
 
 /** One shared rAF loop ticks every clock once, then draws every visible player. */

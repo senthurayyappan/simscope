@@ -143,6 +143,62 @@ class DirectRenderer {
 
 const _size = new Vector2();
 
+/**
+ * A throwaway renderer for captures: its own canvas and context, at any size,
+ * so a screenshot or a GIF frame does not depend on the pane's size or touch
+ * what is on screen. `dispose()` gives the context back at once.
+ */
+class OffscreenRenderer {
+  constructor() {
+    this.canvas = document.createElement("canvas");
+    // The 2D copy of a frame is read right after the draw, but a kept buffer makes that safe in every browser.
+    this.renderer = new WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+    this.renderer.setPixelRatio(1);
+    const gl = this.renderer.getContext();
+    /** The largest width or height a frame can have. */
+    this.maxSize = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0]);
+    this.copy = null;
+  }
+
+  /** Draw `player`'s scene, through `camera`, at `w` x `h` pixels; returns the canvas. */
+  draw(player, w, h, camera) {
+    this.renderer.setSize(w, h, false);
+    this.renderer.setClearColor(0x000000, player.transparent ? 0 : 1);
+    this.renderer.render(player.scene, camera);
+    return this.canvas;
+  }
+
+  /** The drawn frame as RGBA bytes, top row first. */
+  pixels(player, w, h, camera) {
+    const gl = this.draw(player, w, h, camera);
+    if (!this.copy) this.copy = this.canvas.ownerDocument.createElement("canvas").getContext("2d", { willReadFrequently: true });
+    const ctx = this.copy;
+    if (ctx.canvas.width !== w || ctx.canvas.height !== h) {
+      ctx.canvas.width = w;
+      ctx.canvas.height = h;
+    }
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(gl, 0, 0);
+    return ctx.getImageData(0, 0, w, h).data;
+  }
+
+  /** The drawn frame as an image file. */
+  blob(player, w, h, type, camera) {
+    const gl = this.draw(player, w, h, camera);
+    return new Promise((resolve, reject) => gl.toBlob((b) => (b ? resolve(b) : reject(new Error("simscope: snapshot failed"))), type));
+  }
+
+  dispose() {
+    this.renderer.dispose();
+    this.renderer.forceContextLoss();
+  }
+}
+
+/** A renderer for one capture; throws if WebGL is unavailable. Call `dispose()` when done. */
+export function createOffscreenRenderer() {
+  return new OffscreenRenderer();
+}
+
 /** The page's shared renderer; throws if WebGL is unavailable. */
 export function getSharedRenderer() {
   if (!shared) shared = new SharedRenderer();
