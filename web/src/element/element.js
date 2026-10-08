@@ -6,7 +6,8 @@
 // Attributes: src (URL of a .simscope pack, or "#id" of an inline
 // <script type="text/plain" id="..."> holding base64 pack bytes), run,
 // autoplay, loop, speed, view (iso|front|side|top), background (CSS colour or
-// "transparent"), collision, nocontrols (or controls="none": no bar), env
+// "transparent"), collision, contacts (draw contact forces), nocontrols (or
+// controls="none": no bar), env
 // (which env to show and follow), follow (off|position|pose|heading), ground
 // (checker|grid|none), theme (light|dark; absent: follow the system), sync
 // (elements with the same name share one clock, for compare). Events: ready,
@@ -74,7 +75,7 @@ const LIVE = [];
 
 export class SimscopePlayerElement extends HTMLElement {
   static get observedAttributes() {
-    return ["src", "run", "loop", "speed", "view", "background", "collision", "env", "follow", "ground", "theme", "sync"];
+    return ["src", "run", "loop", "speed", "view", "background", "collision", "contacts", "env", "follow", "ground", "theme", "sync"];
   }
 
   constructor() {
@@ -84,11 +85,25 @@ export class SimscopePlayerElement extends HTMLElement {
       <div class="stage"><canvas part="canvas"></canvas><div class="msg" hidden></div></div>
       <div class="ss-bar" part="controls">${barHTML(`<button type="button" class="ss-btn ss-col" aria-label="Collision geometry" title="Collision geometry" aria-pressed="false" hidden>${icon("box")}</button>`)}</div>`;
     const $ = (sel) => root.querySelector(sel);
-    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: $(".ss-col") };
-    this._bar = bindBar(barParts($(".ss-bar")), {
+    const parts = barParts($(".ss-bar"));
+    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: $(".ss-col"), contacts: parts.contacts };
+    this._view = null; // the camera preset in use; null once the user orbits
+    this._bar = bindBar(parts, {
       stepDt: () => (this._info ? this._info.dt : 0.02),
       onLoop: (on) => this.toggleAttribute("loop", on),
       outside: document,
+      camera: {
+        view: () => this._view,
+        setView: (name) => this.setView(name),
+        frame: () => this._player && this._player.frame("focus"),
+        follow: () => (this._player ? this._player.follow().mode : "off"),
+        setFollow: (mode) => {
+          // The player first: the attribute alone does nothing when it already holds this mode.
+          if (this._player) this._player.setFollow({ mode });
+          this.setAttribute("follow", mode);
+        },
+      },
+      contacts: { on: () => this.hasAttribute("contacts"), set: (on) => this.toggleAttribute("contacts", on) },
     });
     this._player = null;
     this._clock = null;
@@ -163,10 +178,14 @@ export class SimscopePlayerElement extends HTMLElement {
     } else if (name === "loop") this._clock.loop = this.hasAttribute("loop");
     else if (name === "speed") this.setSpeed(Number(value));
     else if (name === "view") this.setView(value);
+    else if (name === "contacts") this._applyRoles();
     else if (name === "background") p.setBackground(this._background());
     else if (name === "collision") this._applyRoles();
     else if (name === "env") this._applyEnv();
-    else if (name === "follow") this._applyFollow();
+    else if (name === "follow") {
+      this._applyFollow();
+      this._bar.paint();
+    }
     else if (name === "ground") p.setGround(this._ground());
     else if (name === "theme") p.setTheme(this._theme(), this._background());
     else if (name === "sync") this._rebindClock();
@@ -219,6 +238,7 @@ export class SimscopePlayerElement extends HTMLElement {
       return;
     }
     this._player = p;
+    this._view = VIEWS.includes(view) ? view : "iso";
     this._clock = p.clock;
     this._clock.loop = this.hasAttribute("loop") || this._clock.loop;
     const speed = Number(this.getAttribute("speed"));
@@ -226,6 +246,14 @@ export class SimscopePlayerElement extends HTMLElement {
     this._bindClock();
     p.addEventListener("error", (e) => this._fail(new Error(e.detail.message)));
     p.addEventListener("live", () => this._buildUi(this._info));
+    // An orbit leaves the preset behind (the menu then shows none); a follow can change by itself.
+    p.addEventListener("camera", () => {
+      if (this._view !== null) {
+        this._view = null;
+        this._bar.paint();
+      }
+    });
+    p.addEventListener("follow", () => this._bar.paint());
     this._bar.setClock(this._clock);
     this._measure();
   }
@@ -410,6 +438,7 @@ export class SimscopePlayerElement extends HTMLElement {
       this._poster = null;
     }
     this._ui.col.hidden = true;
+    this._ui.contacts.hidden = true;
     this._bar.paint();
   }
 
@@ -428,6 +457,7 @@ export class SimscopePlayerElement extends HTMLElement {
   _buildUi(info) {
     if (!info) return;
     this._ui.col.hidden = !info.hasCollision;
+    this._ui.contacts.hidden = !info.hasContacts;
     this._time();
     this._bar.paint();
   }
@@ -443,6 +473,8 @@ export class SimscopePlayerElement extends HTMLElement {
     const on = this.hasAttribute("collision");
     this._player.setCollision(on);
     this._ui.col.setAttribute("aria-pressed", String(on));
+    this._player.setContacts(this.hasAttribute("contacts"));
+    this._bar.paint();
   }
 
   _applyEnv() {
@@ -496,7 +528,10 @@ export class SimscopePlayerElement extends HTMLElement {
 
   /** Switch camera view: iso, front, side or top. */
   setView(name) {
-    if (this._player && VIEWS.includes(name)) this._player.setView(name);
+    if (!this._player || !VIEWS.includes(name)) return;
+    this._player.setView(name);
+    this._view = name;
+    this._bar.paint();
   }
 
   /** The core player, for callers that need more than the element API (camera state, series). */

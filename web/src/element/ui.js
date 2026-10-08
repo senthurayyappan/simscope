@@ -20,6 +20,8 @@ const ICONS = {
   repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  video: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
+  contact: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/>',
 };
 
 /** Markup of a 16 px lucide icon (stroke follows the text colour). */
@@ -72,11 +74,19 @@ export const BAR_CSS = `
 .ss-item:hover { background: var(--ss-muted); }
 .ss-item svg { visibility: hidden; }
 .ss-item[aria-checked="true"] svg { visibility: visible; }
+.ss-group { padding: 4px 8px 2px; color: var(--ss-muted-fg); }
+.ss-row { display: flex; gap: 2px; }
+.ss-item.ss-opt { flex: none; width: auto; justify-content: center; padding: 0 8px; }
+.ss-opt[aria-checked="true"] { background: var(--ss-muted); font-weight: 500; }
+.ss-sep { height: 1px; margin: 4px -4px; background: var(--ss-border); }
 @container (max-width: 440px) { .ss-step { display: none; } }
 @container (max-width: 320px) { .ss-time { min-width: 0; } .ss-loop { display: none; } }
 `;
 
 export const SPEEDS = [0.25, 0.5, 1, 2, 4];
+
+const VIEW_LABELS = [["iso", "Iso"], ["front", "Front"], ["side", "Side"], ["top", "Top"]];
+const FOLLOW_LABELS = [["off", "Off"], ["position", "Position"], ["pose", "Pose"], ["heading", "Heading"]];
 
 /** `3.25 / 7.98 s` */
 export function readout(t, total) {
@@ -85,10 +95,22 @@ export function readout(t, total) {
 
 export const speedLabel = (x) => `${x}×`;
 
+/** The camera menu: the view presets, a frame action and the follow modes, in two rows of options. */
+function cameraHTML() {
+  const opts = (attr, list) =>
+    `<div class="ss-row">${list.map(([id, text]) => `<button type="button" class="ss-item ss-opt ss-cam-item" role="menuitemradio" aria-checked="false" data-${attr}="${id}">${text}</button>`).join("")}</div>`;
+  return `<div class="ss-wrap ss-camwrap"><button type="button" class="ss-btn ss-cam" aria-label="Camera" title="Camera" aria-haspopup="menu" aria-expanded="false">${icon("video")}</button>`
+    + `<div class="ss-menu ss-cam-menu" role="menu" hidden><div class="ss-group">View</div>${opts("view", VIEW_LABELS)}`
+    + '<button type="button" class="ss-item ss-cam-item" role="menuitem" data-frame="1">Frame</button><div class="ss-sep" role="separator"></div>'
+    + `<div class="ss-group">Follow</div>${opts("follow", FOLLOW_LABELS)}</div></div>`;
+}
+
 /**
  * The bar's markup. `extra` adds buttons to the right (the element's
  * collision toggle). Every control is an icon button with an `aria-label`
- * and a tooltip; the only text is the readout and the speed.
+ * and a tooltip; the only text is the readout, the speed and the camera menu.
+ * The camera menu and the contacts toggle come last: they are about the
+ * view, not the clock.
  */
 export function barHTML(extra = "") {
   const btn = (cls, label, inner, attrs = "") => `<button type="button" class="ss-btn ${cls}" aria-label="${label}" title="${label}"${attrs}>${inner}</button>`;
@@ -99,7 +121,9 @@ export function barHTML(extra = "") {
     '<input class="ss-scrub" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek" disabled>',
     '<span class="ss-time">0.00 / 0.00 s</span>',
     btn("ss-loop", "Loop", icon("repeat"), ' aria-pressed="false"'),
-    `<div class="ss-wrap">${btn("ss-text ss-speed", "Speed", speedLabel(1), ' aria-haspopup="menu" aria-expanded="false"')}<div class="ss-menu" role="menu" hidden>${SPEEDS.map((s) => `<button type="button" class="ss-item" role="menuitemradio" aria-checked="false" data-speed="${s}">${speedLabel(s)}${icon("check")}</button>`).join("")}</div></div>`,
+    `<div class="ss-wrap">${btn("ss-text ss-speed", "Speed", speedLabel(1), ' aria-haspopup="menu" aria-expanded="false"')}<div class="ss-menu" role="menu" hidden>${SPEEDS.map((s) => `<button type="button" class="ss-item ss-speed-item" role="menuitemradio" aria-checked="false" data-speed="${s}">${speedLabel(s)}${icon("check")}</button>`).join("")}</div></div>`,
+    cameraHTML(),
+    btn("ss-contacts", "Contact forces", icon("contact"), ' aria-pressed="false" hidden'),
     extra,
   ].join("");
 }
@@ -107,7 +131,8 @@ export function barHTML(extra = "") {
 /**
  * Find the bar's parts under `root` (a node with `querySelector`).
  *
- * @returns {object} play, back, fwd, scrub, time, loop, speed, menu, items.
+ * @returns {object} play, back, fwd, scrub, time, loop, speed, menu, items,
+ *   and the camera's wrap, button, menu and options (cam*), and contacts.
  */
 export function barParts(root) {
   const q = (s) => root.querySelector(s);
@@ -121,7 +146,12 @@ export function barParts(root) {
     loop: q(".ss-loop"),
     speed: q(".ss-speed"),
     menu: q(".ss-menu"),
-    items: [...root.querySelectorAll(".ss-item")],
+    items: [...root.querySelectorAll(".ss-speed-item")],
+    camWrap: q(".ss-camwrap"),
+    cam: q(".ss-cam"),
+    camMenu: q(".ss-cam-menu"),
+    camItems: [...root.querySelectorAll(".ss-cam-item")],
+    contacts: q(".ss-contacts"),
   };
 }
 
@@ -129,14 +159,20 @@ export function barParts(root) {
  * Wire a bar to a clock.
  *
  * @param {object} parts  from `barParts`.
- * @param {{stepDt?: () => number, onLoop?: (on: boolean) => void, outside?: EventTarget}} [opts]
+ * @param {object} [opts]
  *   `stepDt`: seconds per frame for the step buttons (default 0.02). `onLoop`:
  *   called instead of setting `clock.loop` (the element reflects its `loop`
- *   attribute). `outside`: where to listen for a click away from the speed menu.
+ *   attribute). `outside`: where to listen for a click away from a menu.
+ *   `camera`: `{view(): string|null, setView(name), frame(), follow(): string,
+ *   setFollow(mode)}`; without it the camera menu is hidden (`view()` is null
+ *   after the user orbits: no preset is current). `contacts`: `{on(): boolean,
+ *   set(on)}` for the contacts toggle, which the caller shows once the run has
+ *   contact data (`parts.contacts.hidden`).
  * @returns {{setClock(clock): void, paint(): void, dispose(): void}}
  */
 export function bindBar(parts, opts = {}) {
-  const { play, back, fwd, scrub, time, loop, speed, menu, items } = parts;
+  const { play, back, fwd, scrub, time, loop, speed, menu, items, cam, camMenu, camItems, contacts } = parts;
+  const { camera, contacts: contactsOpt } = opts;
   const stepDt = opts.stepDt || (() => 0.02);
   let clock = null;
   let dragging = false;
@@ -160,12 +196,35 @@ export function bindBar(parts, opts = {}) {
     const x = clock ? clock.speed : 1;
     speed.textContent = speedLabel(x);
     for (const it of items) it.setAttribute("aria-checked", String(Number(it.getAttribute("data-speed")) === x));
+    if (camera) {
+      const view = camera.view();
+      const follow = camera.follow();
+      for (const it of camItems) {
+        const v = it.getAttribute("data-view");
+        const f = it.getAttribute("data-follow");
+        if (v !== null) it.setAttribute("aria-checked", String(v === view));
+        else if (f !== null) it.setAttribute("aria-checked", String(f === follow));
+      }
+    }
+    if (contactsOpt) contacts.setAttribute("aria-pressed", String(contactsOpt.on()));
     paint();
   };
-  const closeMenu = () => {
-    menu.hidden = true;
-    speed.setAttribute("aria-expanded", "false");
+  // The speed and camera menus: opening one closes the other.
+  const menus = [{ button: speed, panel: menu }, { button: cam, panel: camMenu }];
+  const closeMenus = (except) => {
+    for (const m of menus) {
+      if (m === except) continue;
+      m.panel.hidden = true;
+      m.button.setAttribute("aria-expanded", "false");
+    }
   };
+  const toggleMenu = (m) => {
+    const open = m.panel.hidden;
+    closeMenus(m);
+    m.panel.hidden = !open;
+    m.button.setAttribute("aria-expanded", String(open));
+  };
+  if (!camera) parts.camWrap.hidden = true;
 
   const on = (node, type, fn) => {
     node.addEventListener(type, fn);
@@ -193,15 +252,32 @@ export function bindBar(parts, opts = {}) {
       else clock.loop = !clock.loop;
       paintState();
     }),
-    on(speed, "click", () => {
-      const open = menu.hidden;
-      menu.hidden = !open;
-      speed.setAttribute("aria-expanded", String(open));
+    on(speed, "click", () => toggleMenu(menus[0])),
+    on(cam, "click", () => toggleMenu(menus[1])),
+    on(contacts, "click", () => {
+      if (!contactsOpt) return;
+      contactsOpt.set(!contactsOpt.on());
+      paintState();
     }),
     ...items.map((it) =>
       on(it, "click", () => {
         if (clock) clock.speed = Number(it.getAttribute("data-speed"));
-        closeMenu();
+        closeMenus();
+        paintState();
+      }),
+    ),
+    // A view or a follow mode keeps the menu open, so both can be set in one visit; Frame closes it.
+    ...camItems.map((it) =>
+      on(it, "click", () => {
+        if (!camera) return;
+        const v = it.getAttribute("data-view");
+        const f = it.getAttribute("data-follow");
+        if (v !== null) camera.setView(v);
+        else if (f !== null) camera.setFollow(f);
+        else {
+          camera.frame();
+          closeMenus();
+        }
         paintState();
       }),
     ),
@@ -211,9 +287,11 @@ export function bindBar(parts, opts = {}) {
     offs.push(
       on(outside, "pointerdown", (e) => {
         const path = e.composedPath ? e.composedPath() : [];
-        if (!menu.hidden && !path.includes(menu) && !path.includes(speed)) closeMenu();
+        for (const m of menus) {
+          if (!m.panel.hidden && !path.includes(m.panel) && !path.includes(m.button)) closeMenus();
+        }
       }),
-      on(outside, "keydown", (e) => e.key === "Escape" && closeMenu()),
+      on(outside, "keydown", (e) => e.key === "Escape" && closeMenus()),
     );
   }
 

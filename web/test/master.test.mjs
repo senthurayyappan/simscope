@@ -176,6 +176,83 @@ test("loop and speed: the loop button toggles the clock, the speed menu sets it"
   assert.equal(two.getAttribute("aria-checked"), "true");
 });
 
+/** A bar on a stand-in DOM with a recording camera and contacts adapter. */
+function cameraBar(withAdapters = true) {
+  const doc = makeDocument();
+  const root = doc.createElement("div");
+  root.innerHTML = barHTML();
+  const parts = barParts(root);
+  const log = [];
+  const state = { view: "iso", follow: "off", contacts: false };
+  const opts = withAdapters
+    ? {
+        camera: {
+          view: () => state.view,
+          setView: (v) => (log.push(`view ${v}`), (state.view = v)),
+          frame: () => log.push("frame"),
+          follow: () => state.follow,
+          setFollow: (m) => (log.push(`follow ${m}`), (state.follow = m)),
+        },
+        contacts: { on: () => state.contacts, set: (on) => (log.push(`contacts ${on}`), (state.contacts = on)) },
+      }
+    : {};
+  const ctl = bindBar(parts, opts);
+  ctl.setClock(new Clock());
+  const item = (attr, value) => parts.camItems.find((i) => i.getAttribute(`data-${attr}`) === value);
+  return { parts, log, state, ctl, item };
+}
+
+test("camera menu: views and follow modes stay open for more, Frame closes it, one menu open at a time", () => {
+  const { parts, log, state, ctl, item } = cameraBar();
+  assert.equal(parts.camWrap.hidden, false);
+  assert.equal(parts.camMenu.hidden, true);
+  assert.equal(item("view", "iso").getAttribute("aria-checked"), "true", "the current preset is checked");
+  click(parts.cam);
+  assert.equal(parts.camMenu.hidden, false);
+  assert.equal(parts.cam.getAttribute("aria-expanded"), "true");
+  click(item("view", "top"));
+  click(item("follow", "pose"));
+  assert.deepEqual(log, ["view top", "follow pose"]);
+  assert.equal(parts.camMenu.hidden, false, "still open");
+  assert.equal(item("view", "top").getAttribute("aria-checked"), "true");
+  assert.equal(item("view", "iso").getAttribute("aria-checked"), "false");
+  assert.equal(item("follow", "pose").getAttribute("aria-checked"), "true");
+  // An orbit leaves no preset checked.
+  state.view = null;
+  ctl.paint();
+  assert.ok(parts.camItems.filter((i) => i.getAttribute("data-view") !== null).every((i) => i.getAttribute("aria-checked") === "false"));
+  click(parts.speed);
+  assert.equal(parts.menu.hidden, false);
+  assert.equal(parts.camMenu.hidden, true, "opening the speed menu closes the camera menu");
+  click(parts.cam);
+  assert.equal(parts.menu.hidden, true);
+  click(parts.camItems.find((i) => i.getAttribute("data-frame") !== null));
+  assert.equal(log.at(-1), "frame");
+  assert.equal(parts.camMenu.hidden, true);
+  ctl.dispose();
+});
+
+test("camera menu: without an adapter it is hidden, and no option changes the speed", () => {
+  const { parts, ctl } = cameraBar(false);
+  assert.equal(parts.camWrap.hidden, true);
+  for (const it of parts.camItems) click(it);
+  assert.equal(parts.items.length, 5, "the speed menu keeps its own five options");
+  ctl.dispose();
+});
+
+test("contacts toggle: starts hidden for the caller to show, and toggles through its adapter", () => {
+  const { parts, log, state, ctl } = cameraBar();
+  assert.equal(parts.contacts.hidden, true, "shown only once a run has contact data");
+  assert.equal(parts.contacts.getAttribute("aria-pressed"), "false");
+  click(parts.contacts);
+  assert.equal(state.contacts, true);
+  assert.equal(parts.contacts.getAttribute("aria-pressed"), "true");
+  click(parts.contacts);
+  assert.deepEqual(log, ["contacts true", "contacts false"]);
+  assert.equal(parts.contacts.getAttribute("aria-pressed"), "false");
+  ctl.dispose();
+});
+
 test("keyboard: space plays and pauses, the arrows step", () => {
   const { doc, sync } = page(["a", "b"], "side");
   const clock = clockFor(sync);

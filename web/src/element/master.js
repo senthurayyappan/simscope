@@ -92,8 +92,54 @@ export function attachMaster(box, sync = "compare") {
     const dts = els.map((el) => el.player && el.player.info() && el.player.info().dt).filter((d) => d > 0);
     return dts.length ? Math.min(...dts) : 0.02;
   };
-  const ctl = bindBar(barParts(bar), { stepDt, outside: doc });
+  // The camera and contacts controls act on every pane. The cameras are linked, so a view or a frame goes to one pane and reaches the rest.
+  const live = () => els.map((el) => el.player).filter(Boolean);
+  const first = els[0] && els[0].getAttribute("view");
+  let view = ["iso", "front", "side", "top"].includes(first) ? first : "iso";
+  let contactsOn = false;
+  const parts = barParts(bar);
+  const ctl = bindBar(parts, {
+    stepDt,
+    outside: doc,
+    camera: {
+      view: () => view,
+      setView: (name) => {
+        const ps = live();
+        for (const pl of ps.length > 1 ? ps.slice(0, 1) : ps) pl.setView(name);
+        view = name;
+      },
+      frame: () => {
+        const ps = live();
+        for (const pl of ps.length > 1 ? ps.slice(0, 1) : ps) pl.frame("focus");
+      },
+      follow: () => {
+        const pl = live()[0];
+        return pl && pl.follow ? pl.follow().mode : "off";
+      },
+      setFollow: (mode) => {
+        for (const el of els) {
+          if (el.player && el.player.setFollow) el.player.setFollow({ mode });
+          el.setAttribute("follow", mode);
+        }
+      },
+    },
+    contacts: {
+      on: () => contactsOn,
+      set: (on) => {
+        contactsOn = on;
+        for (const el of els) {
+          if (on) el.setAttribute("contacts", "");
+          else el.removeAttribute("contacts");
+        }
+      },
+    },
+  });
   ctl.setClock(clock);
+  // An orbit in any pane leaves the preset behind; the toggle appears once a run has contact data.
+  for (const pl of live()) pl.addEventListener("camera", () => view !== null && ((view = null), ctl.paint()));
+  const showContacts = () => {
+    parts.contacts.hidden = !live().some((pl) => pl.info() && pl.info().hasContacts);
+  };
 
   const onKey = (e) => {
     if (e.target && /^(input|button|select)$/i.test(e.target.tagName || "")) return;
@@ -119,7 +165,10 @@ export function attachMaster(box, sync = "compare") {
     Promise.all(players.map((p) => p._extentJob)).then(() => clock.duration > 0 && clock.play(), () => clock.play());
   };
   for (const el of els) {
-    el.addEventListener("ready", () => settle(el));
+    el.addEventListener("ready", () => {
+      showContacts();
+      settle(el);
+    });
     el.addEventListener("error", () => settle(el));
   }
 
