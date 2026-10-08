@@ -466,10 +466,11 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
   const section = "px-3 py-2.5";
   let body: React.ReactNode;
   if (hit.label) {
+    // A label is its text and its time; a developer marker's type stands in when it has no text.
     body = (
-      <div className={section}>
-        <CardHead left={hit.label.type || "Label"} time={hit.label.t0} />
-        <div className="mt-1.5 break-words text-sm text-muted-foreground">{hit.label.label || hit.label.type || "Label"}</div>
+      <div className={cn(section, "flex items-baseline justify-between gap-4")}>
+        <span className="min-w-0 break-words font-medium">{hit.label.label || hit.label.type || "Label"}</span>
+        <Time t={hit.label.t0} />
       </div>
     );
   } else {
@@ -484,8 +485,11 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
           const r = readout(h);
           return (
             <div key={i} className={section}>
-              <CardHead left={multiEnv ? `${r.title}, env ${h.env}` : r.title} time={h.t} />
-              <div className="num mt-1.5 flex items-baseline gap-2">
+              <div className="flex items-baseline justify-between gap-4 text-xs text-muted-foreground">
+                <span className="truncate">{multiEnv ? `${r.title}, env ${h.env}` : r.title}</span>
+                <Time t={h.t} />
+              </div>
+              <div className="num mt-1.5 flex items-center justify-between gap-4">
                 <span className="break-words text-lg font-medium leading-tight">{r.main}</span>
                 {r.sub ? <span className="shrink-0 text-sm text-muted-foreground">{r.sub}</span> : null}
               </div>
@@ -507,11 +511,6 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
   );
 }
 
-function CardHead({ left, time }: { left: string; time: number }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4">
-      <span className="truncate font-medium">{left}</span>
-      <span className="num shrink-0 text-xs text-muted-foreground">{formatTimecode(time)} s</span>
-    </div>
-  );
+function Time({ t }: { t: number }) {
+  return <span className="num shrink-0 text-xs text-muted-foreground">{formatTimecode(t)} s</span>;
 }

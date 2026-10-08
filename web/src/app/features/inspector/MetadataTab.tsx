@@ -55,8 +55,8 @@ const Row = ({ k, children, full }: { k: string; children: React.ReactNode; full
   </TableRow>
 );
 const Sub = ({ children }: { children: React.ReactNode }) => (
-  <TableRow className="hover:bg-transparent">
-    <TableCell colSpan={2} className="px-4 pb-1 pt-4 text-xs font-medium text-muted-foreground">
+  <TableRow className="border-b-0 hover:bg-transparent">
+    <TableCell colSpan={2} className="px-4 pb-2 pt-6 text-sm font-medium">
       {children}
     </TableCell>
   </TableRow>
@@ -264,7 +264,7 @@ function Notes({ writable }: { writable: boolean }) {
   if (!writable && notes.length === 0) return null;
   return (
     <div className="space-y-3 px-4 pt-4">
-      <div className="text-xs font-medium text-muted-foreground">Notes</div>
+      <div className="text-sm font-medium">Notes</div>
       {[...notes].reverse().map((n) => (
         <article key={n.id}>
           <p className="whitespace-pre-wrap break-words text-sm">{n.text}</p>

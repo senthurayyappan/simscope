@@ -320,7 +320,7 @@ function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: numb
   ctx.lineJoin = "round";
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
-  ctx.lineWidth = 2.1;
+  ctx.lineWidth = 1.6;
   const icon = kindIcon(kind);
   ctx.fill(icon);
   ctx.stroke(icon);
