@@ -1,6 +1,6 @@
 [project]
 name = "simscope"
-version = "0.1.1"
+version = "0.1.2"
 description = "Record and replay robot simulation rollouts."
 readme = "README.md"
 authors = [{ name = "Senthur Ayyappan" }]
