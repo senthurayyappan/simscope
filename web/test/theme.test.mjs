@@ -10,8 +10,8 @@ test("oklch to sRGB: the tokens of the UI guidelines come out as their hex value
   assert.equal(oklchHex(0.145), "#0a0a0a", "shadcn foreground");
   assert.equal(oklchHex(0.97), "#f5f5f5", "light viewport");
   assert.equal(oklchHex(0.985), "#fafafa");
-  assert.equal(oklchHex(0.54, 0.2, 295), "#7b4bd4", "contact kind, light");
-  assert.equal(oklchHex(0.56, 0.2, 295), "#8151db", "contact kind, dark");
+  assert.equal(oklchHex(0.578, 0.206, 29), "#d93025", "contact kind, light");
+  assert.equal(oklchHex(0.626, 0.206, 29), "#ea4335", "contact kind, dark");
   assert.equal(oklchHex(0.62, 0.2, 257), "#2282fb", "run A");
 });
 
@@ -42,7 +42,7 @@ test("the viewport and ground are neutral in both themes, the checker is a step 
   assert.equal(paletteOf("anything"), PALETTE.light);
 });
 
-test("contacts are the contact kind's violet in both themes; other overlays are grey and flip with the theme", async () => {
+test("contacts are the contact kind's red in both themes; other overlays are grey and flip with the theme", async () => {
   const { createArrowLayer, createPolylineLayer } = await import("../src/core/overlays.js");
   const contacts = createArrowLayer(1, 1, 1, 1, { points: true });
   const arrows = createArrowLayer(1, 1, 1, 1);

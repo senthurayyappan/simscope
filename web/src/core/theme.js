@@ -1,5 +1,5 @@
 // The viewport's colours: a neutral grey ground and background, the contact kind's
-// violet for contact points and arrows, neutral greys for every other
+// red (Google red) for contact points and arrows, neutral greys for every other
 // overlay and for collision geoms. They are written in oklch, as the app's
 // tokens are, and converted to sRGB here; three.js takes sRGB and converts to
 // its linear working space itself (`Color.setRGB(r, g, b, SRGBColorSpace)`,
@@ -38,7 +38,7 @@ export const PALETTE = {
     viewport: [0.97, 0, 0],
     checker: [[0.955, 0, 0], [0.93, 0, 0]],
     grid: { base: [0.955, 0, 0], line: [0.86, 0, 0] },
-    contact: [0.54, 0.2, 295],
+    contact: [0.578, 0.206, 29],
     arrow: [0.35, 0, 0],
     fg: [0.145, 0, 0],
   },
@@ -46,7 +46,7 @@ export const PALETTE = {
     viewport: [0.15, 0, 0],
     checker: [[0.2, 0, 0], [0.175, 0, 0]],
     grid: { base: [0.2, 0, 0], line: [0.29, 0, 0] },
-    contact: [0.56, 0.2, 295],
+    contact: [0.626, 0.206, 29],
     arrow: [0.8, 0, 0],
     fg: [0.985, 0, 0],
   },

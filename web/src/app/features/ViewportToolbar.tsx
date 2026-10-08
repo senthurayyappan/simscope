@@ -7,6 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   MenuHint,
 } from "@/components/ui/dropdown-menu";
@@ -177,12 +178,10 @@ function ExportMenu() {
   const layout = runs.length > 1 ? "compare" : "single";
   const item = (ui: "lean" | "full", title: string, hint: string, Icon: typeof Download) => (
     <DropdownMenuItem asChild>
-      <a href={api?.exportUrl({ runs, layout, ui, arrange: effectiveArrangement(runs.length, arrange) }) ?? "#"} download className="flex-col items-start gap-0">
-        <span className="flex items-center gap-2">
-          <Icon />
+      <a href={api?.exportUrl({ runs, layout, ui, arrange: effectiveArrangement(runs.length, arrange) }) ?? "#"} download className="items-start gap-3 py-2">
+        <Icon className="mt-0.5" />
+        <span>
           {title}
-        </span>
-        <span className="pl-6">
           <MenuHint>{hint}</MenuHint>
         </span>
       </a>
@@ -203,6 +202,7 @@ function ExportMenu() {
       </Hint>
       <DropdownMenuContent align="end" className="w-72">
         {item("lean", "Player page", runs.length > 1 ? `A small HTML file that plays these ${runs.length} runs side by side. Works offline.` : "A small HTML file that plays this run. Works offline.", FileCode2)}
+        <DropdownMenuSeparator />
         {item("full", "Full viewer", runs.length > 1 ? `The complete viewer in one HTML file, with these ${runs.length} runs. Works offline.` : "The complete viewer in one HTML file. Works offline.", Download)}
       </DropdownMenuContent>
     </DropdownMenu>

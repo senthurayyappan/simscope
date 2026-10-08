@@ -98,7 +98,7 @@ export function PlotsTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="@container flex h-10 shrink-0 items-center gap-1 overflow-hidden px-2">
+      <div className="@container flex h-10 shrink-0 items-center justify-between gap-1 overflow-hidden px-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-1.5 px-2" aria-label="Channels">

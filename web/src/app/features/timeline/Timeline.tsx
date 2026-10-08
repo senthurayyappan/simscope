@@ -456,48 +456,52 @@ function Strip({ lanes, playing }: { lanes: LaneSpec[]; playing: boolean }) {
 }
 
 /**
- * Hover card (contracts §11.2): the kind's name left and the time right in
- * muted small text, then the reading large on the left with its second value
- * muted on the right. In compare the run title is a first muted row.
+ * Hover card, on shadcn's hover-card surface: sections divided by hairlines,
+ * each with the same padding. A section is the kind's name and its time, then
+ * the reading with its second value muted beside it. In compare the run title
+ * is the first section; a cluster adds a line saying how many it holds.
  */
 function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec | undefined; left: number; top: number; multiEnv: boolean }) {
   const run = lane?.slot !== null && lane?.slot !== undefined ? lane.label : null;
+  const section = "px-3 py-2.5";
   let body: React.ReactNode;
   if (hit.label) {
     body = (
-      <>
+      <div className={section}>
         <CardHead left={hit.label.type || "Label"} time={hit.label.t0} />
-        <div className="mt-1 break-words text-base font-medium">{hit.label.label || hit.label.type || "Label"}</div>
-      </>
+        <div className="mt-1.5 break-words text-sm text-muted-foreground">{hit.label.label || hit.label.type || "Label"}</div>
+      </div>
     );
   } else {
     const c = hit.cluster!;
     const list = [...c.items].sort((a, b) => a.t - b.t).slice(0, 3);
     body = (
-      <div className="space-y-2.5">
-        {c.items.length > 1 ? <div className="text-xs text-muted-foreground">{c.items.length} highlights, click to zoom in</div> : null}
+      <>
+        {c.items.length > 1 ? (
+          <div className={cn(section, "text-xs text-muted-foreground")}>{c.items.length} highlights, click to zoom in</div>
+        ) : null}
         {list.map((h, i) => {
           const r = readout(h);
           return (
-            <div key={i} className={i > 0 || c.items.length > 1 ? "border-t pt-2.5 first:border-0 first:pt-0" : ""}>
+            <div key={i} className={section}>
               <CardHead left={multiEnv ? `${r.title}, env ${h.env}` : r.title} time={h.t} />
-              <div className="num mt-1 flex items-baseline justify-between gap-4">
-                <span className={cn("break-words font-medium leading-tight", r.sub ? "text-lg" : "text-base")}>{r.main}</span>
+              <div className="num mt-1.5 flex items-baseline gap-2">
+                <span className="break-words text-lg font-medium leading-tight">{r.main}</span>
                 {r.sub ? <span className="shrink-0 text-sm text-muted-foreground">{r.sub}</span> : null}
               </div>
             </div>
           );
         })}
-        {c.items.length > list.length ? <div className="text-xs text-muted-foreground">and {c.items.length - list.length} more</div> : null}
-      </div>
+        {c.items.length > list.length ? <div className={cn(section, "text-xs text-muted-foreground")}>and {c.items.length - list.length} more</div> : null}
+      </>
     );
   }
   return (
     <div
-      className="pointer-events-none fixed z-50 w-max min-w-[168px] max-w-64 -translate-x-1/2 -translate-y-full rounded-lg bg-popover px-3 py-2.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+      className="pointer-events-none fixed z-50 w-max min-w-48 max-w-64 -translate-x-1/2 -translate-y-full divide-y overflow-hidden rounded-lg bg-popover text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10"
       style={{ left: clamp(left, 140, window.innerWidth - 140), top }}
     >
-      {run ? <div className="mb-1.5 truncate text-xs text-muted-foreground">{run}</div> : null}
+      {run ? <div className={cn(section, "truncate text-xs text-muted-foreground")}>{run}</div> : null}
       {body}
     </div>
   );
@@ -505,9 +509,9 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
 
 function CardHead({ left, time }: { left: string; time: number }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 text-xs text-muted-foreground">
-      <span className="truncate">{left}</span>
-      <span className="num shrink-0">{formatTimecode(time)} s</span>
+    <div className="flex items-baseline justify-between gap-4">
+      <span className="truncate font-medium">{left}</span>
+      <span className="num shrink-0 text-xs text-muted-foreground">{formatTimecode(time)} s</span>
     </div>
   );
 }
