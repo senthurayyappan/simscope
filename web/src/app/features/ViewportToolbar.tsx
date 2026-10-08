@@ -192,9 +192,9 @@ function ExportMenu() {
       <Hint label={disabled ? "Open a run first" : runs.length > 1 ? "Export the compared runs" : "Export this run"}>
         <span>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2">
+            <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2" aria-label="Export">
               <Download />
-              Export
+              <span className="@max-[29rem]/vp:hidden">Export</span>
               <ChevronDown />
             </Button>
           </DropdownMenuTrigger>

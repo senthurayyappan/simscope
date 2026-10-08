@@ -120,7 +120,7 @@ export function MetadataTab() {
           </Badge>
         ) : null}
         {writable ? (
-          <Hint label={pinned ? "Unpin" : "Pin"}>
+          <Hint label={pinned ? "Unpin" : "Pin"} keys="V">
             <Button variant="ghost" size="icon-sm" aria-pressed={pinned} onClick={() => void annotate({ op: "favorite", value: !pinned })} aria-label={pinned ? "Unpin" : "Pin"}>
               {pinned ? <PinOff /> : <Pin />}
             </Button>

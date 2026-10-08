@@ -10,7 +10,7 @@
 
 import { oklchHex } from "../core/theme.js";
 
-// ---- icons: lucide (ISC), 24 x 24, stroke 2 ----
+// ---- icons: lucide (ISC), 24 x 24, stroke 2 (`contact` is lucide's footprints, as the app's contacts toggle) ----
 
 const ICONS = {
   play: '<polygon points="6 3 20 12 6 21 6 3"/>',
@@ -21,7 +21,7 @@ const ICONS = {
   box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
   video: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
-  contact: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/>',
+  contact: '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
 };
 
 /** Markup of a 16 px lucide icon (stroke follows the text colour). */
@@ -47,7 +47,9 @@ export const BAR_CSS = `
   background: var(--ss-bg); color: var(--ss-fg); border-top: 1px solid var(--ss-border); font: 12px/16px ${FONT}; user-select: none; }
 .ss-bar[hidden], .ss-bar [hidden] { display: none; }
 .ss-btn { display: inline-flex; align-items: center; justify-content: center; flex: none; box-sizing: border-box; height: 28px; min-width: 28px; padding: 0 6px;
-  margin: 0; border: 0; border-radius: 6px; background: transparent; color: var(--ss-fg); font: inherit; cursor: pointer; }
+  margin: 0; border: 0; border-radius: 8px; background: transparent; color: var(--ss-fg); font: inherit; cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s; }
+.ss-btn:active:not([aria-haspopup]) { transform: translateY(1px); }
 .ss-btn:hover { background: var(--ss-muted); }
 .ss-btn[aria-pressed="true"], .ss-btn[aria-expanded="true"] { background: var(--ss-muted); }
 .ss-btn:disabled { opacity: 0.4; cursor: default; background: transparent; }
@@ -68,15 +70,16 @@ export const BAR_CSS = `
 .ss-time { flex: none; min-width: 7.5em; text-align: right; color: var(--ss-muted-fg); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ss-wrap { position: relative; flex: none; }
 .ss-menu { position: absolute; right: 0; bottom: calc(100% + 8px); z-index: 5; box-sizing: border-box; min-width: 88px; padding: 4px;
-  background: var(--ss-bg); border: 1px solid var(--ss-border); border-radius: 8px; box-shadow: 0 4px 12px rgb(0 0 0 / 12%); }
-.ss-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; height: 28px; padding: 0 8px;
-  border: 0; border-radius: 4px; background: transparent; color: var(--ss-fg); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; text-align: left; }
+  background: var(--ss-bg); border: 0; border-radius: 10px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ss-fg) 10%, transparent), 0 4px 12px rgb(0 0 0 / 12%); }
+.ss-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; box-sizing: border-box; height: 32px; padding: 0 8px;
+  border: 0; border-radius: 6px; background: transparent; color: var(--ss-fg); font: inherit; font-variant-numeric: tabular-nums; cursor: pointer; text-align: left; }
 .ss-item:hover { background: var(--ss-muted); }
 .ss-item svg { visibility: hidden; }
 .ss-item[aria-checked="true"] svg { visibility: visible; }
-.ss-group { padding: 4px 8px 2px; color: var(--ss-muted-fg); }
+.ss-group { padding: 6px 8px; color: var(--ss-muted-fg); }
 .ss-row { display: flex; gap: 2px; }
-.ss-item.ss-opt { flex: none; width: auto; justify-content: center; padding: 0 8px; }
+.ss-item.ss-opt { flex: none; width: auto; justify-content: center; padding: 0 8px; height: 28px; }
 .ss-opt[aria-checked="true"] { background: var(--ss-muted); font-weight: 500; }
 .ss-sep { height: 1px; margin: 4px -4px; background: var(--ss-border); }
 @container (max-width: 440px) { .ss-step { display: none; } }

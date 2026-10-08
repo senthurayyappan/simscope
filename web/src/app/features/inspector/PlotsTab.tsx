@@ -317,8 +317,8 @@ function ChannelPlot(props: {
             values: (_u, v) => v.map((t) => (Number.isInteger(t) ? String(t) : t.toFixed(1))),
           },
           {
-            size: 40,
-            gap: 4,
+            size: 44,
+            gap: 8,
             space: 36,
             stroke: muted,
             font: `11px ${cssVar("--font-sans")}`,
