@@ -20,7 +20,7 @@ export function LibraryRail({ onExpand }: { onExpand(): void }) {
   );
 }
 
-export function InspectorRail({ onExpand }: { onExpand(): void }) {
+export function InspectorRail({ onExpand, brand = false }: { onExpand(): void; brand?: boolean }) {
   const hasEnvs = useApp((s) => (s.infos[s.active]?.envs ?? 1) > 1);
   const tab = useApp((s) => s.tab);
   const open = (t: InspectorTab) => {
@@ -36,6 +36,7 @@ export function InspectorRail({ onExpand }: { onExpand(): void }) {
   );
   return (
     <div className="flex h-full flex-col items-center gap-1 bg-card py-2">
+      {brand ? <Logo className="mb-1" /> : null}
       <Hint label="Show panel" side="left">
         <Button variant="ghost" size="icon-sm" onClick={onExpand} aria-label="Show panel">
           <PanelRightOpen />

@@ -4,6 +4,8 @@ import { usePanelRef } from "react-resizable-panels";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useApp } from "@/lib/store";
+import { readBoot } from "@/lib/api";
+import { isSoloExport } from "@/lib/boot";
 import { prefs } from "@/lib/persist";
 
 import { Drivers } from "./features/Drivers";
@@ -70,6 +72,8 @@ export function App() {
   const timelineCollapsed = useApp((s) => s.timelineCollapsed);
 
   const [init] = useState(initialSizes);
+  // A full export of one run has nothing to list or group: no library, and the brand moves to the inspector.
+  const [solo] = useState(() => isSoloExport(readBoot()));
 
   // Remember pixel sizes after the user drags a handle (never while collapsed).
   const saveSizes = (_: unknown, meta: { isUserInteraction: boolean }) => {
@@ -141,20 +145,24 @@ export function App() {
           onLayoutChanged={saveSizes}
           resizeTargetMinimumSize={{ coarse: 20, fine: 8 }}
         >
-          <ResizablePanel
-            id="library"
-            defaultSize={`${init.left}px`}
-            minSize={`${LIBRARY.min}px`}
-            maxSize={`${LIBRARY.max}px`}
-            groupResizeBehavior="preserve-pixel-size"
-            collapsible
-            collapsedSize={`${RAIL}px`}
-            panelRef={left}
-            onResize={(s) => useApp.setState({ leftCollapsed: s.inPixels < RAIL + 24 })}
-          >
-            {leftCollapsed ? <LibraryRail onExpand={toggle(left, "left")} /> : <Library onCollapse={toggle(left, "left")} />}
-          </ResizablePanel>
-          <ResizableHandle />
+          {solo ? null : (
+            <>
+              <ResizablePanel
+                id="library"
+                defaultSize={`${init.left}px`}
+                minSize={`${LIBRARY.min}px`}
+                maxSize={`${LIBRARY.max}px`}
+                groupResizeBehavior="preserve-pixel-size"
+                collapsible
+                collapsedSize={`${RAIL}px`}
+                panelRef={left}
+                onResize={(s) => useApp.setState({ leftCollapsed: s.inPixels < RAIL + 24 })}
+              >
+                {leftCollapsed ? <LibraryRail onExpand={toggle(left, "left")} /> : <Library onCollapse={toggle(left, "left")} />}
+              </ResizablePanel>
+              <ResizableHandle />
+            </>
+          )}
           <ResizablePanel id="centre" minSize={`${CENTRE_MIN}px`}>
             <ResizablePanelGroup
               orientation="vertical"
@@ -192,7 +200,7 @@ export function App() {
             panelRef={right}
             onResize={(s) => useApp.setState({ rightCollapsed: s.inPixels < RAIL + 24 })}
           >
-            {rightCollapsed ? <InspectorRail onExpand={toggle(right, "right")} /> : <Inspector onCollapse={toggle(right, "right")} />}
+            {rightCollapsed ? <InspectorRail brand={solo} onExpand={toggle(right, "right")} /> : <Inspector brand={solo} onCollapse={toggle(right, "right")} />}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
