@@ -293,7 +293,7 @@ test("compare page: the shared bar's theme button sets the theme on the page and
   assert.notEqual(box.getAttribute("data-theme"), first, "a second click flips it back");
 });
 
-test("the transport icons are solid and the play button is the primary one", () => {
+test("the transport icons are solid, and the outline ones stay outline", () => {
   assert.ok(icon("play").includes('fill="currentColor"') && icon("pause").includes('fill="currentColor"'));
   assert.ok(icon("repeat").includes('fill="none"'), "outline icons stay outline");
 });
