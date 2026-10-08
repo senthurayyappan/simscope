@@ -491,7 +491,7 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
               </div>
               <div className="num mt-1.5 flex items-center justify-between gap-4">
                 <span className="break-words text-lg font-medium leading-tight">{r.main}</span>
-                {r.sub ? <span className="shrink-0 text-sm text-muted-foreground">{r.sub}</span> : null}
+                {r.sub ? <span className="shrink-0 text-xs text-muted-foreground">{r.sub}</span> : null}
               </div>
             </div>
           );
