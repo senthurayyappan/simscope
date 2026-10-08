@@ -60,10 +60,10 @@ export const BAR_CSS = `
 .ss-btn:disabled, .ss-btn[aria-disabled="true"] { opacity: 0.4; cursor: default; background: transparent; }
 .ss-btn:focus-visible, .ss-scrub:focus-visible { outline: 2px solid var(--ss-ring); outline-offset: -1px; }
 .ss-btn.ss-text { font-variant-numeric: tabular-nums; font-weight: 500; }
-/* The play button is the app's primary button: 32 px, filled with the foreground colour. */
-.ss-btn.ss-play { width: 32px; height: 32px; background: var(--ss-fg); color: var(--ss-bg); }
-.ss-btn.ss-play:hover { background: color-mix(in srgb, var(--ss-fg) 80%, transparent); }
-.ss-btn.ss-play:disabled { background: var(--ss-fg); }
+/* The play button is the app's: a round 32 px button on the secondary fill, with a solid icon. */
+.ss-btn.ss-play { width: 32px; height: 32px; border-radius: 50%; background: var(--ss-muted); color: var(--ss-fg); }
+.ss-btn.ss-play:hover { background: color-mix(in srgb, var(--ss-muted), var(--ss-fg) 8%); }
+.ss-btn.ss-play:disabled, .ss-btn.ss-play[aria-disabled="true"] { background: var(--ss-muted); }
 .ss-scrub { --p: 0%; flex: 1; min-width: 40px; height: 28px; margin: 0 4px; padding: 0; background: transparent; cursor: pointer;
   -webkit-appearance: none; appearance: none; }
 .ss-scrub:disabled { cursor: default; opacity: 0.4; }

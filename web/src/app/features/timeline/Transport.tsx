@@ -57,7 +57,7 @@ export function Transport({
           </Button>
         </Hint>
         <Hint label={snap.playing ? "Pause" : "Play"} keys="K">
-          <Button size="icon" disabled={!hasRun} onClick={() => clock.toggle()} aria-label={snap.playing ? "Pause" : "Play"}>
+          <Button variant="secondary" size="icon" className="rounded-full" disabled={!hasRun} onClick={() => clock.toggle()} aria-label={snap.playing ? "Pause" : "Play"}>
             {snap.playing ? <Pause className="fill-current" /> : <Play className="fill-current" />}
           </Button>
         </Hint>
