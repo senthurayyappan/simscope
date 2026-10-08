@@ -4,7 +4,7 @@ Browser code for simscope:
 
 - `src/core/`: the framework-free player core (sources, decode worker, clock, scene, camera, tiers). The only renderer.
 - `src/element/`: the lean `<simscope-player>` custom element (decks, mkdeck, lean exports).
-- `src/app/`: the React + shadcn app shell for `simscope serve` and full exports. It imports only `src/core/index.js`, typed by `src/core/index.d.ts`.
+- `src/app/`: the React + shadcn app shell for `simscope serve` and full exports. It imports only `src/core/index.js`, typed by `src/core/index.d.ts`. Its components in `src/app/components/ui/` are shadcn's `radix-nova` style (`components.json`). Update one with `npx shadcn@latest add <name> --overwrite`, then re-apply the small local changes listed at the top of the file in question; the build bundles everything, so the app and its exports need no network.
 
 ## Build and test
 

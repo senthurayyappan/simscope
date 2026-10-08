@@ -125,7 +125,7 @@ export function EnvsTab() {
                 <span className="text-muted-foreground">Sort by </span>
                 {col?.label ?? "Env index"}
               </span>
-              <ChevronDown className="size-3 opacity-60" />
+              <ChevronDown className="opacity-60" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-52">

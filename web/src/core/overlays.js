@@ -28,7 +28,7 @@ const POINT_R = 0.022;
 const REFERENCE_HEIGHT = 1.7;
 const ARROW_MAX_HEIGHTS = 3; // clamp an arrow at this many robot heights
 
-/** Contacts are the contact kind's violet; every other stream is a neutral grey (theme.js). */
+/** Contacts are the contact kind's red; every other stream is a neutral grey (theme.js). */
 const layerColor = (theme, contacts) => colorOf(contacts ? paletteOf(theme).contact : paletteOf(theme).arrow);
 
 /**

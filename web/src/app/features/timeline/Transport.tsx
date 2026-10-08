@@ -85,7 +85,7 @@ export function Transport({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="num gap-1 px-2" disabled={!hasRun}>
                 {snap.speed}×
-                <ChevronDown className="size-3.5 text-muted-foreground" />
+                <ChevronDown className="text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
           </Hint>
@@ -145,7 +145,7 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
 
   // The button and the field share one box, so nothing moves when editing starts.
   // Narrow bars show only the current time, in a shorter box (the total is in the tooltip).
-  const box = "num mr-1 h-7 w-28 shrink-0 rounded-md px-2 text-xs @max-[36rem]:w-14";
+  const box = "num mr-1 h-7 w-32 shrink-0 rounded-md px-2 text-sm @max-[36rem]:w-14";
   if (editing) return <EditField className={box} initial={formatTimecode(getClock().time)} onCommit={commit} onCancel={() => setEditing(false)} />;
   return (
     <Tooltip onOpenChange={(o) => o && setTip(`Frame ${formatCount(Math.round(getClock().time / dt))} of ${formatCount(frames)}, ${formatTimecode(getClock().duration)} s long`)}>

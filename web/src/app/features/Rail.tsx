@@ -10,7 +10,7 @@ import { Logo } from "./Logo";
 export function LibraryRail({ onExpand }: { onExpand(): void }) {
   return (
     <div className="flex h-full flex-col items-center gap-1 bg-sidebar py-2">
-      <Logo className="mb-1 size-[18px]" />
+      <Logo className="mb-1" />
       <Hint label="Show library" side="right">
         <Button variant="ghost" size="icon-sm" onClick={onExpand} aria-label="Show library">
           <PanelLeftOpen />
@@ -35,7 +35,7 @@ export function InspectorRail({ onExpand }: { onExpand(): void }) {
     </Hint>
   );
   return (
-    <div className="flex h-full flex-col items-center gap-1 bg-background py-2">
+    <div className="flex h-full flex-col items-center gap-1 bg-card py-2">
       <Hint label="Show panel" side="left">
         <Button variant="ghost" size="icon-sm" onClick={onExpand} aria-label="Show panel">
           <PanelRightOpen />

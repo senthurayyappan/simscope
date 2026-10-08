@@ -20,7 +20,7 @@ import { Viewport } from "./features/Viewport";
 // large one. Every restored size is clamped against the current window.
 const LIBRARY = { def: 256, min: 240, max: 420 };
 const INSPECTOR = { def: 320, min: 280, max: 440 };
-const CENTRE_MIN = 360;
+const CENTRE_MIN = 384; // the compare toolbar, with Export as an icon, needs about 380 px
 
 interface Sizes {
   left?: number;

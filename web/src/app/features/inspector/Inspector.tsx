@@ -22,14 +22,14 @@ export function Inspector({ onCollapse }: { onCollapse(): void }) {
   useScrollMemory(metaScroll, "metadata", value === "metadata" && manifestReady);
 
   return (
-    <Tabs value={value} onValueChange={(v) => useApp.setState({ tab: v as InspectorTab })} className="flex h-full min-h-0 flex-col bg-background">
-      <div className="flex items-stretch border-b">
-        <TabsList className="flex-1 border-b-0">
+    <Tabs value={value} onValueChange={(v) => useApp.setState({ tab: v as InspectorTab })} className="h-full min-h-0 flex-col gap-0 bg-card">
+      <div className="flex h-10 shrink-0 items-center border-b px-2">
+        <TabsList variant="line">
           <TabsTrigger value="plots">Plots</TabsTrigger>
           <TabsTrigger value="metadata">Metadata</TabsTrigger>
           {hasEnvs ? <TabsTrigger value="envs">Envs</TabsTrigger> : null}
         </TabsList>
-        <div className="flex items-center pr-2">
+        <div className="ml-auto flex items-center">
           <Hint label="Hide panel" side="left">
             <Button variant="ghost" size="icon-sm" onClick={onCollapse} aria-label="Hide panel">
               <PanelRightClose />

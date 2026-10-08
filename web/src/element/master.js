@@ -19,13 +19,15 @@
 import { clockFor } from "../core/clock.js";
 import { linkCameras } from "../core/compare.js";
 import { arrangementOf, gridShape } from "./layout.js";
-import { BAR_CSS, barHTML, barParts, bindBar, FONT, TOKENS } from "./ui.js";
+import { BAR_CSS, barHTML, barParts, bindBar, FONT, setAvailable, TOKENS } from "./ui.js";
 
 const STYLE_ID = "ss-master-style";
 
 const CSS = `
 #ss-master { ${TOKENS.light} position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; background: var(--ss-bg); color: var(--ss-fg); font: 12px/16px ${FONT}; }
 @media (prefers-color-scheme: dark) { #ss-master { ${TOKENS.dark} } }
+#ss-master[data-theme="light"] { ${TOKENS.light} }
+#ss-master[data-theme="dark"] { ${TOKENS.dark} }
 #ss-master[hidden] { display: none; }
 #ss-master .ss-stage { flex: 1; min-height: 0; display: grid; gap: 1px; background: var(--ss-border); }
 #ss-master figure { position: relative; margin: 0; min-width: 0; min-height: 0; overflow: hidden; background: var(--ss-viewport); }
@@ -92,15 +94,27 @@ export function attachMaster(box, sync = "compare") {
     const dts = els.map((el) => el.player && el.player.info() && el.player.info().dt).filter((d) => d > 0);
     return dts.length ? Math.min(...dts) : 0.02;
   };
-  // The camera and contacts controls act on every pane. The cameras are linked, so a view or a frame goes to one pane and reaches the rest.
+  // The camera, collision and contacts controls act on every pane. The cameras are linked, so a view or a frame goes to one pane and reaches the rest.
   const live = () => els.map((el) => el.player).filter(Boolean);
   const first = els[0] && els[0].getAttribute("view");
   let view = ["iso", "front", "side", "top"].includes(first) ? first : "iso";
+  let collisionOn = false;
   let contactsOn = false;
   const parts = barParts(bar);
+  const systemDark = () => typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = () => (box.getAttribute("data-theme") || (systemDark() ? "dark" : "light")) === "dark";
+  parts.theme.hidden = false;
   const ctl = bindBar(parts, {
     stepDt,
     outside: doc,
+    theme: {
+      dark: isDark,
+      toggle: () => {
+        const next = isDark() ? "light" : "dark";
+        box.setAttribute("data-theme", next);
+        for (const el of els) el.setAttribute("theme", next);
+      },
+    },
     camera: {
       view: () => view,
       setView: (name) => {
@@ -123,6 +137,16 @@ export function attachMaster(box, sync = "compare") {
         }
       },
     },
+    collision: {
+      on: () => collisionOn,
+      set: (on) => {
+        collisionOn = on;
+        for (const el of els) {
+          if (on) el.setAttribute("collision", "");
+          else el.removeAttribute("collision");
+        }
+      },
+    },
     contacts: {
       on: () => contactsOn,
       set: (on) => {
@@ -135,11 +159,14 @@ export function attachMaster(box, sync = "compare") {
     },
   });
   ctl.setClock(clock);
-  // An orbit in any pane leaves the preset behind; the toggle appears once a run has contact data.
+  // An orbit in any pane leaves the preset behind. The collision and contacts toggles wait for a pane whose run has the data.
   for (const pl of live()) pl.addEventListener("camera", () => view !== null && ((view = null), ctl.paint()));
-  const showContacts = () => {
-    parts.contacts.hidden = !live().some((pl) => pl.info() && pl.info().hasContacts);
+  const showData = () => {
+    const has = (key) => live().some((pl) => pl.info() && pl.info()[key]);
+    setAvailable(parts.col, has("hasCollision"), "Collision geometry", "No collision geometry in these runs");
+    setAvailable(parts.contacts, has("hasContacts"), "Contact forces", "No contact data in these runs");
   };
+  showData();
 
   const onKey = (e) => {
     if (e.target && /^(input|button|select)$/i.test(e.target.tagName || "")) return;
@@ -166,7 +193,7 @@ export function attachMaster(box, sync = "compare") {
   };
   for (const el of els) {
     el.addEventListener("ready", () => {
-      showContacts();
+      showData();
       settle(el);
     });
     el.addEventListener("error", () => settle(el));

@@ -1,37 +1,11 @@
-// Small helpers shared by the components. shadcn normally pulls clsx,
-// tailwind-merge and class-variance-authority for this; none of them is a
-// pinned dependency, and the components below never pass conflicting
-// utilities, so a plain join and a tiny variant table are enough.
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-export type ClassValue = string | false | null | undefined | ClassValue[];
+export type { ClassValue };
 
-/** Joins class names, dropping falsy entries. */
+/** Joins class names and resolves conflicting Tailwind utilities, so a later class wins (shadcn's `cn`). */
 export function cn(...values: ClassValue[]): string {
-  const out: string[] = [];
-  for (const v of values) {
-    if (!v) continue;
-    out.push(Array.isArray(v) ? cn(...v) : v);
-  }
-  return out.join(" ");
-}
-
-/**
- * Builds a variant function: `variants("base", {size: {sm: "h-7"}})` returns
- * `(props) => className`. Missing props fall back to `defaults`.
- */
-export function variants<V extends Record<string, Record<string, string>>>(
-  base: string,
-  table: V,
-  defaults: { [K in keyof V]?: keyof V[K] },
-) {
-  return (props: { [K in keyof V]?: keyof V[K] | null } = {}, extra?: ClassValue): string => {
-    const parts: string[] = [base];
-    for (const key of Object.keys(table) as (keyof V)[]) {
-      const picked = (props[key] ?? defaults[key]) as string | undefined;
-      if (picked !== undefined) parts.push(table[key][picked] ?? "");
-    }
-    return cn(parts, extra);
-  };
+  return twMerge(clsx(values));
 }
 
 /** Clamps `x` to `[lo, hi]`. */
