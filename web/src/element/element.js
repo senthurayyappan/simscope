@@ -10,7 +10,8 @@
 // controls="none": no bar), env
 // (which env to show and follow), follow (off|position|pose|heading), ground
 // (checker|grid|none), theme (light|dark; absent: follow the system), sync
-// (elements with the same name share one clock, for compare). Events: ready,
+// (elements with the same name share one clock, for compare), themetoggle (a
+// light/dark button in the bar). Events: ready,
 // timeupdate ({t, duration}), ended, error. The scrub bar draws no highlight
 // marks; the highlights document stays readable through `player.highlights()`.
 //
@@ -75,7 +76,7 @@ const LIVE = [];
 
 export class SimscopePlayerElement extends HTMLElement {
   static get observedAttributes() {
-    return ["src", "run", "loop", "speed", "view", "background", "collision", "contacts", "env", "follow", "ground", "theme", "sync"];
+    return ["src", "run", "loop", "speed", "view", "background", "collision", "contacts", "env", "follow", "ground", "theme", "themetoggle", "sync"];
   }
 
   constructor() {
@@ -86,7 +87,7 @@ export class SimscopePlayerElement extends HTMLElement {
       <div class="ss-bar" part="controls">${barHTML(`<button type="button" class="ss-btn ss-col" aria-label="Collision geometry" title="Collision geometry" aria-pressed="false" hidden>${icon("box")}</button>`)}</div>`;
     const $ = (sel) => root.querySelector(sel);
     const parts = barParts($(".ss-bar"));
-    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: $(".ss-col"), contacts: parts.contacts };
+    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: $(".ss-col"), contacts: parts.contacts, theme: parts.theme };
     this._view = null; // the camera preset in use; null once the user orbits
     this._bar = bindBar(parts, {
       stepDt: () => (this._info ? this._info.dt : 0.02),
@@ -104,6 +105,7 @@ export class SimscopePlayerElement extends HTMLElement {
         },
       },
       contacts: { on: () => this.hasAttribute("contacts"), set: (on) => this.toggleAttribute("contacts", on) },
+      theme: { dark: () => this._theme() === "dark", toggle: () => this.setAttribute("theme", this._theme() === "dark" ? "light" : "dark") },
     });
     this._player = null;
     this._clock = null;
@@ -168,6 +170,10 @@ export class SimscopePlayerElement extends HTMLElement {
 
   attributeChangedCallback(name, old, value) {
     const p = this._player;
+    if (name === "themetoggle") {
+      this._ui.theme.hidden = !this.hasAttribute("themetoggle");
+      return;
+    }
     if (name === "src" || name === "run") {
       if (this.isConnected && (this._loaded || this._loading) && old !== value) {
         this.unload();
@@ -187,7 +193,10 @@ export class SimscopePlayerElement extends HTMLElement {
       this._bar.paint();
     }
     else if (name === "ground") p.setGround(this._ground());
-    else if (name === "theme") p.setTheme(this._theme(), this._background());
+    else if (name === "theme") {
+      p.setTheme(this._theme(), this._background());
+      this._bar.paint();
+    }
     else if (name === "sync") this._rebindClock();
   }
 

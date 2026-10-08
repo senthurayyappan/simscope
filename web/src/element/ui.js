@@ -20,13 +20,18 @@ const ICONS = {
   repeat: '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
   box: '<path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon: '<path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/>',
   video: '<path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/>',
   contact: '<path d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z"/><path d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z"/><path d="M16 17h4"/><path d="M4 13h4"/>',
 };
 
+// The transport and camera icons are solid, as in the app (UI guidelines: the timeline's icons are filled).
+const SOLID = new Set(["play", "pause", "back", "forward", "video"]);
+
 /** Markup of a 16 px lucide icon (stroke follows the text colour). */
 export function icon(name) {
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="${SOLID.has(name) ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name]}</svg>`;
 }
 
 // ---- tokens: shadcn neutral, as the app's (C1, C5) ----
@@ -55,6 +60,10 @@ export const BAR_CSS = `
 .ss-btn:disabled { opacity: 0.4; cursor: default; background: transparent; }
 .ss-btn:focus-visible, .ss-scrub:focus-visible { outline: 2px solid var(--ss-ring); outline-offset: -1px; }
 .ss-btn.ss-text { font-variant-numeric: tabular-nums; font-weight: 500; }
+/* The play button is the app's primary button: 32 px, filled with the foreground colour. */
+.ss-btn.ss-play { width: 32px; height: 32px; background: var(--ss-fg); color: var(--ss-bg); }
+.ss-btn.ss-play:hover { background: color-mix(in srgb, var(--ss-fg) 80%, transparent); }
+.ss-btn.ss-play:disabled { background: var(--ss-fg); }
 .ss-scrub { --p: 0%; flex: 1; min-width: 40px; height: 28px; margin: 0 4px; padding: 0; background: transparent; cursor: pointer;
   -webkit-appearance: none; appearance: none; }
 .ss-scrub:disabled { cursor: default; opacity: 0.4; }
@@ -128,6 +137,7 @@ export function barHTML(extra = "") {
     cameraHTML(),
     btn("ss-contacts", "Contact forces", icon("contact"), ' aria-pressed="false" hidden'),
     extra,
+    btn("ss-theme", "Switch theme", icon("sun"), " hidden"),
   ].join("");
 }
 
@@ -155,6 +165,7 @@ export function barParts(root) {
     camMenu: q(".ss-cam-menu"),
     camItems: [...root.querySelectorAll(".ss-cam-item")],
     contacts: q(".ss-contacts"),
+    theme: q(".ss-theme"),
   };
 }
 
@@ -170,12 +181,13 @@ export function barParts(root) {
  *   setFollow(mode)}`; without it the camera menu is hidden (`view()` is null
  *   after the user orbits: no preset is current). `contacts`: `{on(): boolean,
  *   set(on)}` for the contacts toggle, which the caller shows once the run has
- *   contact data (`parts.contacts.hidden`).
+ *   contact data (`parts.contacts.hidden`). `theme`: `{dark(): boolean, toggle()}` for
+ *   the light/dark button, which the caller shows (`parts.theme.hidden`).
  * @returns {{setClock(clock): void, paint(): void, dispose(): void}}
  */
 export function bindBar(parts, opts = {}) {
-  const { play, back, fwd, scrub, time, loop, speed, menu, items, cam, camMenu, camItems, contacts } = parts;
-  const { camera, contacts: contactsOpt } = opts;
+  const { play, back, fwd, scrub, time, loop, speed, menu, items, cam, camMenu, camItems, contacts, theme } = parts;
+  const { camera, contacts: contactsOpt, theme: themeOpt } = opts;
   const stepDt = opts.stepDt || (() => 0.02);
   let clock = null;
   let dragging = false;
@@ -210,6 +222,12 @@ export function bindBar(parts, opts = {}) {
       }
     }
     if (contactsOpt) contacts.setAttribute("aria-pressed", String(contactsOpt.on()));
+    if (themeOpt) {
+      const dark = themeOpt.dark();
+      theme.innerHTML = icon(dark ? "moon" : "sun");
+      theme.setAttribute("aria-label", dark ? "Switch to light theme" : "Switch to dark theme");
+      theme.title = dark ? "Switch to light theme" : "Switch to dark theme";
+    }
     paint();
   };
   // The speed and camera menus: opening one closes the other.
@@ -257,6 +275,11 @@ export function bindBar(parts, opts = {}) {
     }),
     on(speed, "click", () => toggleMenu(menus[0])),
     on(cam, "click", () => toggleMenu(menus[1])),
+    on(theme, "click", () => {
+      if (!themeOpt) return;
+      themeOpt.toggle();
+      paintState();
+    }),
     on(contacts, "click", () => {
       if (!contactsOpt) return;
       contactsOpt.set(!contactsOpt.on());

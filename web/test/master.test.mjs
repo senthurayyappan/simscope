@@ -253,6 +253,39 @@ test("contacts toggle: starts hidden for the caller to show, and toggles through
   ctl.dispose();
 });
 
+test("theme toggle: hidden until the caller shows it, flips through its adapter, and shows the icon of the current theme", () => {
+  const doc = makeDocument();
+  const root = doc.createElement("div");
+  root.innerHTML = barHTML();
+  const parts = barParts(root);
+  assert.equal(parts.theme.hidden, true);
+  let dark = false;
+  const ctl = bindBar(parts, { theme: { dark: () => dark, toggle: () => (dark = !dark) } });
+  ctl.setClock(new Clock());
+  assert.match(parts.theme.getAttribute("aria-label"), /dark/);
+  click(parts.theme);
+  assert.equal(dark, true);
+  assert.match(parts.theme.getAttribute("aria-label"), /light/, "now it offers the other theme");
+  ctl.dispose();
+});
+
+test("compare page: the shared bar's theme button sets the theme on the page and on every pane", () => {
+  const { box, players } = page(["a", "b"], "side");
+  const button = box.querySelector(".ss-theme");
+  assert.equal(button.hidden, false);
+  click(button);
+  const first = box.getAttribute("data-theme");
+  assert.ok(first === "dark" || first === "light");
+  for (const el of players) assert.equal(el.getAttribute("theme"), first);
+  click(button);
+  assert.notEqual(box.getAttribute("data-theme"), first, "a second click flips it back");
+});
+
+test("the transport icons are solid and the play button is the primary one", () => {
+  assert.ok(icon("play").includes('fill="currentColor"') && icon("pause").includes('fill="currentColor"'));
+  assert.ok(icon("repeat").includes('fill="none"'), "outline icons stay outline");
+});
+
 test("keyboard: space plays and pauses, the arrows step", () => {
   const { doc, sync } = page(["a", "b"], "side");
   const clock = clockFor(sync);

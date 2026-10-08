@@ -26,6 +26,8 @@ const STYLE_ID = "ss-master-style";
 const CSS = `
 #ss-master { ${TOKENS.light} position: fixed; inset: 0; z-index: 1; display: flex; flex-direction: column; background: var(--ss-bg); color: var(--ss-fg); font: 12px/16px ${FONT}; }
 @media (prefers-color-scheme: dark) { #ss-master { ${TOKENS.dark} } }
+#ss-master[data-theme="light"] { ${TOKENS.light} }
+#ss-master[data-theme="dark"] { ${TOKENS.dark} }
 #ss-master[hidden] { display: none; }
 #ss-master .ss-stage { flex: 1; min-height: 0; display: grid; gap: 1px; background: var(--ss-border); }
 #ss-master figure { position: relative; margin: 0; min-width: 0; min-height: 0; overflow: hidden; background: var(--ss-viewport); }
@@ -98,9 +100,20 @@ export function attachMaster(box, sync = "compare") {
   let view = ["iso", "front", "side", "top"].includes(first) ? first : "iso";
   let contactsOn = false;
   const parts = barParts(bar);
+  const systemDark = () => typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches;
+  const isDark = () => (box.getAttribute("data-theme") || (systemDark() ? "dark" : "light")) === "dark";
+  parts.theme.hidden = false;
   const ctl = bindBar(parts, {
     stepDt,
     outside: doc,
+    theme: {
+      dark: isDark,
+      toggle: () => {
+        const next = isDark() ? "light" : "dark";
+        box.setAttribute("data-theme", next);
+        for (const el of els) el.setAttribute("theme", next);
+      },
+    },
     camera: {
       view: () => view,
       setView: (name) => {
