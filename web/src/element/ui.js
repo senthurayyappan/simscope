@@ -33,7 +33,7 @@ export function icon(name) {
 
 const L = oklchHex;
 const light = { viewport: L(0.97), bg: L(1), fg: L(0.145), muted: L(0.97), mutedFg: L(0.556), border: L(0.922), ring: L(0.708) };
-const dark = { viewport: L(0.18), bg: L(0.205), fg: L(0.985), muted: L(0.269), mutedFg: L(0.708), border: "rgb(255 255 255 / 10%)", ring: L(0.556) };
+const dark = { viewport: L(0.15), bg: L(0.205), fg: L(0.985), muted: L(0.269), mutedFg: L(0.708), border: "rgb(255 255 255 / 10%)", ring: L(0.556) };
 const vars = (t) => `--ss-viewport:${t.viewport};--ss-bg:${t.bg};--ss-fg:${t.fg};--ss-muted:${t.muted};--ss-muted-fg:${t.mutedFg};--ss-border:${t.border};--ss-ring:${t.ring};`;
 
 /** Token declarations for a light and a dark scope; callers wrap them in their own selectors. */

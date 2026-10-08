@@ -105,7 +105,7 @@ export function PlotsTab() {
               <ListChecks />
               <span className="@max-[20rem]:hidden">Channels</span>
               <span className="num text-muted-foreground">{selected.length}</span>
-              <ChevronDown className="size-3.5 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="max-h-80 w-64 overflow-y-auto">
@@ -130,7 +130,7 @@ export function PlotsTab() {
             <Button variant="ghost" size="sm" className="gap-1.5 px-2">
               <Timer />
               {win === "all" ? "Whole run" : `Last ${win} s`}
-              <ChevronDown className="size-3.5 text-muted-foreground" />
+              <ChevronDown className="text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>

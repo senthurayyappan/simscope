@@ -13,7 +13,7 @@ export function ErrorToast() {
   }, [error]);
   if (!error) return null;
   return (
-    <div role="alert" className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-2 rounded-md border bg-popover p-3 pr-2 text-popover-foreground shadow-md">
+    <div role="alert" className="fixed bottom-4 right-4 z-50 flex max-w-sm items-start gap-2 rounded-lg bg-popover p-3 pr-2 text-popover-foreground shadow-md ring-1 ring-foreground/10">
       <TriangleAlert className="mt-0.5 size-4 shrink-0 text-destructive" />
       <p className="min-w-0 flex-1 break-words text-sm">{error}</p>
       <Button variant="ghost" size="icon-sm" className="size-6" onClick={() => useApp.setState({ error: null })} aria-label="Dismiss">

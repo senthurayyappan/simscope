@@ -46,8 +46,8 @@ export function CameraMenu() {
           <Button variant="ghost" size="sm" className="gap-1.5 px-2" disabled={!hasRun} aria-label="Camera">
             <Video className="fill-current" />
             <span className="@max-[34rem]:hidden">{VIEWS.find((v) => v.id === view)?.label ?? "Free"}</span>
-            {follow !== "off" ? <Crosshair className="size-3.5 fill-current" aria-label="Following" /> : null}
-            <ChevronDown className="size-3.5 text-muted-foreground" />
+            {follow !== "off" ? <Crosshair className="fill-current" aria-label="Following" /> : null}
+            <ChevronDown className="text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
       </Hint>

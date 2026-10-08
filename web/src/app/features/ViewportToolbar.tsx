@@ -64,7 +64,7 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
 
   return (
     <div className={inline ? "" : "pointer-events-none absolute right-3 top-3 z-20"}>
-      <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg border bg-background/90 p-0.5">
+      <div className="pointer-events-auto flex items-center gap-0.5 rounded-lg bg-popover p-0.5 shadow-md ring-1 ring-foreground/10">
         <div className="flex items-center">
           <Hint label="Show ground">
             <Toggle size="icon-sm" pressed={groundOn} onPressedChange={(v) => setDisplay({ groundOn: v })} aria-label="Show ground" className="rounded-r-none">
@@ -125,7 +125,7 @@ function GroundPopover() {
       <Hint label="Ground style">
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon-sm" className="w-5 rounded-l-none px-0" aria-label="Ground style">
-            <ChevronDown className="size-3.5" />
+            <ChevronDown />
           </Button>
         </PopoverTrigger>
       </Hint>
@@ -196,7 +196,7 @@ function ExportMenu() {
             <Button variant="ghost" size="sm" disabled={disabled} className="gap-1.5 px-2">
               <Download />
               Export
-              <ChevronDown className="size-3.5" />
+              <ChevronDown />
             </Button>
           </DropdownMenuTrigger>
         </span>

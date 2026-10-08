@@ -76,7 +76,7 @@ export function TimelinePanel({
     return subscribeTimelineView(check);
   }, []);
   return (
-    <div className="flex size-full min-h-0 flex-col bg-background">
+    <div className="flex size-full min-h-0 flex-col bg-card">
       <Transport snap={snap} zoomed={zoomed} collapsed={collapsed} onToggleCollapse={onToggleCollapse} />
       <div className="relative min-h-0 flex-1 border-t">
         <Strip lanes={lanes} playing={snap.playing} />
@@ -494,7 +494,7 @@ function HitCard({ hit, lane, left, top, multiEnv }: { hit: Hit; lane: LaneSpec 
   }
   return (
     <div
-      className="pointer-events-none fixed z-50 w-max min-w-[168px] max-w-64 -translate-x-1/2 -translate-y-full rounded-md border bg-popover px-3 py-2.5 text-popover-foreground shadow-md"
+      className="pointer-events-none fixed z-50 w-max min-w-[168px] max-w-64 -translate-x-1/2 -translate-y-full rounded-lg bg-popover px-3 py-2.5 text-popover-foreground shadow-md ring-1 ring-foreground/10"
       style={{ left: clamp(left, 140, window.innerWidth - 140), top }}
     >
       {run ? <div className="mb-1.5 truncate text-xs text-muted-foreground">{run}</div> : null}

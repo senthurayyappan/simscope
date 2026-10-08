@@ -1,66 +1,73 @@
-import * as React from "react";
-import { Tooltip as TooltipPrimitive } from "radix-ui";
+"use client"
 
-import { menuJustClosed } from "@/lib/menu-focus";
-import { cn } from "@/lib/utils";
+import * as React from "react"
+import { menuJustClosed } from "@/lib/menu-focus"
+import { cn } from "@/lib/utils"
+import { Kbd } from "@/components/ui/kbd"
+import { Tooltip as TooltipPrimitive } from "radix-ui"
 
-export const TooltipProvider = ({ children }: { children: React.ReactNode }) => (
-  <TooltipPrimitive.Provider delayDuration={400} skipDelayDuration={200}>
-    {children}
-  </TooltipPrimitive.Provider>
-);
-
-export function Tooltip(props: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return <TooltipPrimitive.Root {...props} />;
+function TooltipProvider({
+  delayDuration = 400,
+  skipDelayDuration = 200,
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
+  return (
+    <TooltipPrimitive.Provider
+      data-slot="tooltip-provider"
+      delayDuration={delayDuration}
+      skipDelayDuration={skipDelayDuration}
+      {...props}
+    />
+  )
 }
-export const TooltipTrigger = TooltipPrimitive.Trigger;
 
-export function TooltipContent({
+function Tooltip({
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Root>) {
+  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+}
+
+function TooltipTrigger({
+  ...props
+}: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+}
+
+function TooltipContent({
   className,
-  sideOffset = 6,
+  sideOffset = 0,
   children,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Content>) {
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Content
+        data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-50 flex w-fit max-w-xs items-center gap-2 rounded-md bg-foreground px-3 py-1.5 text-xs text-background data-[state=open]:animate-pop-in data-[state=closed]:animate-pop-out",
-          className,
+          "z-50 inline-flex w-fit max-w-xs origin-(--radix-tooltip-content-transform-origin) items-center gap-1.5 rounded-md bg-foreground px-3 py-1.5 text-xs text-background has-data-[slot=kbd]:pr-1.5 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-95 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          className
         )}
         {...props}
       >
         {children}
+        <TooltipPrimitive.Arrow className="z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-[2px] bg-foreground fill-foreground" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
-  );
-}
-
-/** Keyboard shortcut cap. */
-export function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
-  return (
-    <kbd
-      className={cn(
-        "pointer-events-none inline-flex h-5 min-w-5 items-center justify-center rounded-sm border border-current/30 px-1 text-xs font-medium opacity-80 select-none",
-        className,
-      )}
-      {...props}
-    />
-  );
+  )
 }
 
 /** Wraps a control with a verb-phrase tooltip and its shortcut (K6). */
-export function Hint({
+function Hint({
   label,
   keys,
   side = "top",
   children,
 }: {
-  label: React.ReactNode;
-  keys?: string;
-  side?: "top" | "bottom" | "left" | "right";
-  children: React.ReactElement;
+  label: React.ReactNode
+  keys?: string
+  side?: "top" | "bottom" | "left" | "right"
+  children: React.ReactElement
 }) {
   return (
     <Tooltip>
@@ -68,7 +75,7 @@ export function Hint({
         asChild
         // Focus coming back to the trigger after a menu closed must not open the tooltip.
         onFocus={(e) => {
-          if (menuJustClosed()) e.preventDefault();
+          if (menuJustClosed()) e.preventDefault()
         }}
       >
         {children}
@@ -78,5 +85,7 @@ export function Hint({
         {keys ? <Kbd>{keys}</Kbd> : null}
       </TooltipContent>
     </Tooltip>
-  );
+  )
 }
+
+export { Hint, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger }

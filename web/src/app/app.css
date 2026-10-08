@@ -1,7 +1,63 @@
 @import "tailwindcss" source(none);
+@import "tw-animate-css";
 @source "./";
 @import "./font.css";
 @import "uplot/dist/uPlot.min.css" layer(components);
+
+/* The data-* variants shadcn's components use (open, closed, checked, ...), from
+   shadcn/tailwind.css (MIT): they match Radix's data-state as well as a bare
+   data-open attribute. */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-unchecked {
+  &:where([data-state="unchecked"]),
+  &:where([data-unchecked]:not([data-unchecked="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-selected {
+  &:where([data-selected="true"]) {
+    @slot;
+  }
+}
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
 
 /* Tokens: shadcn `neutral` verbatim (UI guidelines C1-C5), plus the eight
    data colours of the validated palette and the viewport greys. Colour is
@@ -47,7 +103,7 @@
   --ink-future: oklch(0.65 0 0);
 
   /* Hex on purpose: handed to the player as its background. */
-  --viewport: #f4f4f4;
+  --viewport: #f5f5f5;
   color-scheme: light;
 }
 
@@ -87,7 +143,7 @@
   --kind-contact: oklch(0.56 0.2 295);
   --ink-future: oklch(0.5 0 0);
 
-  --viewport: #2e2e2e;
+  --viewport: #0b0b0b;
   color-scheme: dark;
 }
 
@@ -137,17 +193,6 @@
 @theme {
   /* Only the Recording dot loops (M3). */
   --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
-  /* shadcn's enter/exit (fade + 95% zoom, 100 ms) without tw-animate-css, which is not pinned. */
-  --animate-pop-in: pop-in 100ms ease-out;
-  --animate-pop-out: pop-out 100ms ease-in forwards;
-
-  @keyframes pop-in {
-    from { opacity: 0; transform: scale(0.95); }
-    to { opacity: 1; transform: none; }
-  }
-  @keyframes pop-out {
-    to { opacity: 0; transform: scale(0.95); }
-  }
 
   @keyframes pulse-dot {
     0%, 100% { opacity: 1; }
@@ -174,6 +219,8 @@
     font-size: 0.875rem;
     line-height: 1.25rem;
     -webkit-font-smoothing: antialiased;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
     overflow: hidden;
     overscroll-behavior: none;
   }

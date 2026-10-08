@@ -36,16 +36,16 @@ export function oklchHex(l, c = 0, h = 0) {
 export const PALETTE = {
   light: {
     viewport: [0.97, 0, 0],
-    checker: [[0.94, 0, 0], [0.9, 0, 0]],
-    grid: { base: [0.94, 0, 0], line: [0.82, 0, 0] },
+    checker: [[0.955, 0, 0], [0.93, 0, 0]],
+    grid: { base: [0.955, 0, 0], line: [0.86, 0, 0] },
     contact: [0.54, 0.2, 295],
     arrow: [0.35, 0, 0],
     fg: [0.145, 0, 0],
   },
   dark: {
-    viewport: [0.18, 0, 0],
-    checker: [[0.24, 0, 0], [0.205, 0, 0]],
-    grid: { base: [0.24, 0, 0], line: [0.34, 0, 0] },
+    viewport: [0.15, 0, 0],
+    checker: [[0.2, 0, 0], [0.175, 0, 0]],
+    grid: { base: [0.2, 0, 0], line: [0.29, 0, 0] },
     contact: [0.56, 0.2, 295],
     arrow: [0.8, 0, 0],
     fg: [0.985, 0, 0],

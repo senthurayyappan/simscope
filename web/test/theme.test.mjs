@@ -36,9 +36,9 @@ test("the viewport and ground are neutral in both themes, the checker is a step 
     for (const lch of [pal.viewport, ...pal.checker, pal.grid.base, pal.grid.line, pal.arrow, pal.fg]) assert.equal(lch[1], 0, `${theme} chroma`);
     assert.ok(pal.checker[0][0] !== pal.checker[1][0]);
   }
-  assert.deepEqual(PALETTE.light.checker, [[0.94, 0, 0], [0.9, 0, 0]]);
-  assert.deepEqual(PALETTE.dark.checker, [[0.24, 0, 0], [0.205, 0, 0]]);
-  assert.deepEqual(PALETTE.dark.viewport, [0.18, 0, 0]);
+  assert.deepEqual(PALETTE.light.checker, [[0.955, 0, 0], [0.93, 0, 0]]);
+  assert.deepEqual(PALETTE.dark.checker, [[0.2, 0, 0], [0.175, 0, 0]]);
+  assert.deepEqual(PALETTE.dark.viewport, [0.15, 0, 0]);
   assert.equal(paletteOf("anything"), PALETTE.light);
 });
 

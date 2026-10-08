@@ -14,7 +14,7 @@ import { Hint } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { baseName, streamSummary } from "@/lib/metadata";
-import { Textarea } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { noteDraft, setNoteDraft } from "@/lib/sync";
 import { formatCount, formatDuration, formatRate, formatRecorded, formatValue, lastFrameTime } from "@/lib/format";
 import { meanRating } from "@/lib/rows";
@@ -159,7 +159,7 @@ export function MetadataTab() {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="-mr-2 ml-auto flex max-w-full gap-1 px-2">
                       <span className="truncate">{group ?? "Ungrouped"}</span>
-                      <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+                      <ChevronDown className="shrink-0 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -218,7 +218,7 @@ export function MetadataTab() {
                     aria-expanded={configOpen}
                     className="flex w-full items-center gap-1 px-4 pb-1 pt-4 text-xs font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >
-                    {configOpen ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
+                    {configOpen ? <ChevronDown /> : <ChevronRight />}
                     Config
                   </button>
                 </TableCell>
