@@ -26,7 +26,7 @@ import { clockFor } from "../core/clock.js";
 import * as fmt from "../core/format.js";
 import { Player } from "../core/player.js";
 import { PackSource } from "../core/source.js";
-import { barHTML, barParts, bindBar, BAR_CSS, FONT, icon, TOKENS } from "./ui.js";
+import { barHTML, barParts, bindBar, BAR_CSS, FONT, setAvailable, TOKENS } from "./ui.js";
 
 const FOLLOWS = ["off", "position", "pose", "heading"];
 const GROUNDS = ["checker", "grid", "none"];
@@ -84,10 +84,11 @@ export class SimscopePlayerElement extends HTMLElement {
     const root = this.attachShadow({ mode: "open" });
     root.innerHTML = `<style>${STYLE}</style>
       <div class="stage"><canvas part="canvas"></canvas><div class="msg" hidden></div></div>
-      <div class="ss-bar" part="controls">${barHTML(`<button type="button" class="ss-btn ss-col" aria-label="Collision geometry" title="Collision geometry" aria-pressed="false" hidden>${icon("box")}</button>`)}</div>`;
+      <div class="ss-bar" part="controls">${barHTML()}</div>`;
     const $ = (sel) => root.querySelector(sel);
     const parts = barParts($(".ss-bar"));
-    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: $(".ss-col"), contacts: parts.contacts, theme: parts.theme };
+    this._ui = { stage: $(".stage"), canvas: $("canvas"), msg: $(".msg"), bar: $(".ss-bar"), col: parts.col, contacts: parts.contacts, theme: parts.theme };
+    this._setData(false, "Loading the run");
     this._view = null; // the camera preset in use; null once the user orbits
     this._bar = bindBar(parts, {
       stepDt: () => (this._info ? this._info.dt : 0.02),
@@ -104,6 +105,7 @@ export class SimscopePlayerElement extends HTMLElement {
           this.setAttribute("follow", mode);
         },
       },
+      collision: { on: () => this.hasAttribute("collision"), set: (on) => this.toggleAttribute("collision", on) },
       contacts: { on: () => this.hasAttribute("contacts"), set: (on) => this.toggleAttribute("contacts", on) },
       theme: { dark: () => this._theme() === "dark", toggle: () => this.setAttribute("theme", this._theme() === "dark" ? "light" : "dark") },
     });
@@ -117,7 +119,6 @@ export class SimscopePlayerElement extends HTMLElement {
     this._poster = null;
     this._info = null;
 
-    this._ui.col.addEventListener("click", () => this.toggleAttribute("collision"));
     this._onTime = () => this._time();
     this._onEnded = () => this._emit("ended");
   }
@@ -446,8 +447,7 @@ export class SimscopePlayerElement extends HTMLElement {
       this._poster.remove();
       this._poster = null;
     }
-    this._ui.col.hidden = true;
-    this._ui.contacts.hidden = true;
+    this._setData(false, "No run loaded");
     this._bar.paint();
   }
 
@@ -465,10 +465,15 @@ export class SimscopePlayerElement extends HTMLElement {
 
   _buildUi(info) {
     if (!info) return;
-    this._ui.col.hidden = !info.hasCollision;
-    this._ui.contacts.hidden = !info.hasContacts;
+    this._setData(true, "", info);
     this._time();
     this._bar.paint();
+  }
+
+  /** The collision and contacts toggles need data in the run; without it they stay, disabled, and say why. */
+  _setData(loaded, reason, info = {}) {
+    setAvailable(this._ui.col, loaded && !!info.hasCollision, "Collision geometry", loaded ? "No collision geometry in this run" : reason);
+    setAvailable(this._ui.contacts, loaded && !!info.hasContacts, "Contact forces", loaded ? "No contact data in this run" : reason);
   }
 
   _time() {
@@ -481,7 +486,6 @@ export class SimscopePlayerElement extends HTMLElement {
     if (!this._player) return;
     const on = this.hasAttribute("collision");
     this._player.setCollision(on);
-    this._ui.col.setAttribute("aria-pressed", String(on));
     this._player.setContacts(this.hasAttribute("contacts"));
     this._bar.paint();
   }

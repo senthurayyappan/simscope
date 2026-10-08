@@ -57,7 +57,7 @@ export const BAR_CSS = `
 .ss-btn:active:not([aria-haspopup]) { transform: translateY(1px); }
 .ss-btn:hover { background: var(--ss-muted); }
 .ss-btn[aria-pressed="true"], .ss-btn[aria-expanded="true"] { background: var(--ss-muted); }
-.ss-btn:disabled { opacity: 0.4; cursor: default; background: transparent; }
+.ss-btn:disabled, .ss-btn[aria-disabled="true"] { opacity: 0.4; cursor: default; background: transparent; }
 .ss-btn:focus-visible, .ss-scrub:focus-visible { outline: 2px solid var(--ss-ring); outline-offset: -1px; }
 .ss-btn.ss-text { font-variant-numeric: tabular-nums; font-weight: 500; }
 /* The play button is the app's primary button: 32 px, filled with the foreground colour. */
@@ -107,6 +107,15 @@ export function readout(t, total) {
 
 export const speedLabel = (x) => `${x}×`;
 
+/**
+ * Enable or disable a view toggle that needs data in the run. A disabled one stays in the bar
+ * and says why in its tooltip (UI guidelines I6); `aria-disabled` keeps the tooltip reachable.
+ */
+export function setAvailable(button, available, label, reason) {
+  button.setAttribute("aria-disabled", String(!available));
+  button.title = available ? label : reason;
+}
+
 /** The camera menu: the view presets, a frame action and the follow modes, in two rows of options. */
 function cameraHTML() {
   const opts = (attr, list) =>
@@ -118,13 +127,12 @@ function cameraHTML() {
 }
 
 /**
- * The bar's markup. `extra` adds buttons to the right (the element's
- * collision toggle). Every control is an icon button with an `aria-label`
+ * The bar's markup. Every control is an icon button with an `aria-label`
  * and a tooltip; the only text is the readout, the speed and the camera menu.
- * The camera menu and the contacts toggle come last: they are about the
- * view, not the clock.
+ * The camera menu, the collision and contacts toggles and the theme button
+ * come last: they are about the view, not the clock.
  */
-export function barHTML(extra = "") {
+export function barHTML() {
   const btn = (cls, label, inner, attrs = "") => `<button type="button" class="ss-btn ${cls}" aria-label="${label}" title="${label}"${attrs}>${inner}</button>`;
   return [
     btn("ss-play", "Play", icon("play"), " disabled"),
@@ -135,8 +143,8 @@ export function barHTML(extra = "") {
     btn("ss-loop", "Loop", icon("repeat"), ' aria-pressed="false"'),
     `<div class="ss-wrap">${btn("ss-text ss-speed", "Speed", speedLabel(1), ' aria-haspopup="menu" aria-expanded="false"')}<div class="ss-menu" role="menu" hidden>${SPEEDS.map((s) => `<button type="button" class="ss-item ss-speed-item" role="menuitemradio" aria-checked="false" data-speed="${s}">${speedLabel(s)}${icon("check")}</button>`).join("")}</div></div>`,
     cameraHTML(),
-    btn("ss-contacts", "Contact forces", icon("contact"), ' aria-pressed="false" hidden'),
-    extra,
+    btn("ss-col", "Collision geometry", icon("box"), ' aria-pressed="false" aria-disabled="true"'),
+    btn("ss-contacts", "Contact forces", icon("contact"), ' aria-pressed="false" aria-disabled="true"'),
     btn("ss-theme", "Switch theme", icon("sun"), " hidden"),
   ].join("");
 }
@@ -164,6 +172,7 @@ export function barParts(root) {
     cam: q(".ss-cam"),
     camMenu: q(".ss-cam-menu"),
     camItems: [...root.querySelectorAll(".ss-cam-item")],
+    col: q(".ss-col"),
     contacts: q(".ss-contacts"),
     theme: q(".ss-theme"),
   };
@@ -180,14 +189,14 @@ export function barParts(root) {
  *   `camera`: `{view(): string|null, setView(name), frame(), follow(): string,
  *   setFollow(mode)}`; without it the camera menu is hidden (`view()` is null
  *   after the user orbits: no preset is current). `contacts`: `{on(): boolean,
- *   set(on)}` for the contacts toggle, which the caller shows once the run has
- *   contact data (`parts.contacts.hidden`). `theme`: `{dark(): boolean, toggle()}` for
+ *   set(on)}` for the contacts toggle and `collision` likewise for the collision toggle;
+ *   the caller enables them once the run has the data (`setAvailable`). `theme`: `{dark(): boolean, toggle()}` for
  *   the light/dark button, which the caller shows (`parts.theme.hidden`).
  * @returns {{setClock(clock): void, paint(): void, dispose(): void}}
  */
 export function bindBar(parts, opts = {}) {
-  const { play, back, fwd, scrub, time, loop, speed, menu, items, cam, camMenu, camItems, contacts, theme } = parts;
-  const { camera, contacts: contactsOpt, theme: themeOpt } = opts;
+  const { play, back, fwd, scrub, time, loop, speed, menu, items, cam, camMenu, camItems, col, contacts, theme } = parts;
+  const { camera, collision: collisionOpt, contacts: contactsOpt, theme: themeOpt } = opts;
   const stepDt = opts.stepDt || (() => 0.02);
   let clock = null;
   let dragging = false;
@@ -222,6 +231,7 @@ export function bindBar(parts, opts = {}) {
       }
     }
     if (contactsOpt) contacts.setAttribute("aria-pressed", String(contactsOpt.on()));
+    if (collisionOpt) col.setAttribute("aria-pressed", String(collisionOpt.on()));
     if (themeOpt) {
       const dark = themeOpt.dark();
       theme.innerHTML = icon(dark ? "moon" : "sun");
@@ -280,8 +290,13 @@ export function bindBar(parts, opts = {}) {
       themeOpt.toggle();
       paintState();
     }),
+    on(col, "click", () => {
+      if (!collisionOpt || col.getAttribute("aria-disabled") === "true") return;
+      collisionOpt.set(!collisionOpt.on());
+      paintState();
+    }),
     on(contacts, "click", () => {
-      if (!contactsOpt) return;
+      if (!contactsOpt || contacts.getAttribute("aria-disabled") === "true") return;
       contactsOpt.set(!contactsOpt.on());
       paintState();
     }),

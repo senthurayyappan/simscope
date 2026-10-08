@@ -5,7 +5,7 @@ import test from "node:test";
 
 import { clockFor } from "../src/core/clock.js";
 import { attachMaster } from "../src/element/master.js";
-import { barHTML, barParts, bindBar, icon, readout } from "../src/element/ui.js";
+import { barHTML, barParts, bindBar, icon, readout, setAvailable } from "../src/element/ui.js";
 import { Clock } from "../src/core/clock.js";
 import { makeDocument } from "./fakedom.mjs";
 
@@ -183,7 +183,7 @@ function cameraBar(withAdapters = true) {
   root.innerHTML = barHTML();
   const parts = barParts(root);
   const log = [];
-  const state = { view: "iso", follow: "off", contacts: false };
+  const state = { view: "iso", follow: "off", contacts: false, collision: false };
   const opts = withAdapters
     ? {
         camera: {
@@ -194,6 +194,7 @@ function cameraBar(withAdapters = true) {
           setFollow: (m) => (log.push(`follow ${m}`), (state.follow = m)),
         },
         contacts: { on: () => state.contacts, set: (on) => (log.push(`contacts ${on}`), (state.contacts = on)) },
+        collision: { on: () => state.collision, set: (on) => (log.push(`collision ${on}`), (state.collision = on)) },
       }
     : {};
   const ctl = bindBar(parts, opts);
@@ -240,16 +241,27 @@ test("camera menu: without an adapter it is hidden, and no option changes the sp
   ctl.dispose();
 });
 
-test("contacts toggle: starts hidden for the caller to show, and toggles through its adapter", () => {
+test("contacts and collision toggles: present from the start, disabled until the caller enables them, and they toggle through their adapters", () => {
   const { parts, log, state, ctl } = cameraBar();
-  assert.equal(parts.contacts.hidden, true, "shown only once a run has contact data");
-  assert.equal(parts.contacts.getAttribute("aria-pressed"), "false");
+  for (const key of ["contacts", "col"]) {
+    assert.equal(parts[key].hidden, false, "never hidden: a disabled toggle says why");
+    assert.equal(parts[key].getAttribute("aria-disabled"), "true");
+    click(parts[key]);
+  }
+  assert.deepEqual(log, [], "a disabled toggle does nothing");
+  setAvailable(parts.contacts, true, "Contact forces", "No contact data in this run");
+  assert.equal(parts.contacts.getAttribute("aria-disabled"), "false");
+  assert.equal(parts.contacts.title, "Contact forces");
+  setAvailable(parts.col, false, "Collision geometry", "No collision geometry in this run");
+  assert.equal(parts.col.title, "No collision geometry in this run", "the tooltip gives the reason");
   click(parts.contacts);
   assert.equal(state.contacts, true);
   assert.equal(parts.contacts.getAttribute("aria-pressed"), "true");
   click(parts.contacts);
-  assert.deepEqual(log, ["contacts true", "contacts false"]);
-  assert.equal(parts.contacts.getAttribute("aria-pressed"), "false");
+  setAvailable(parts.col, true, "Collision geometry", "");
+  click(parts.col);
+  assert.deepEqual(log, ["contacts true", "contacts false", "collision true"]);
+  assert.equal(parts.col.getAttribute("aria-pressed"), "true");
   ctl.dispose();
 });
 
