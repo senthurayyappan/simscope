@@ -16,7 +16,7 @@ import sys
 import time
 from collections.abc import Callable, Sequence
 
-from simscope import export, importers, library
+from simscope import discover, export, importers, library
 from simscope.io import errors, manifest
 
 _SORTS = ("created", "name", "n_frames", "rating")
@@ -52,12 +52,14 @@ def _check_runs(root: pathlib.Path, names: Sequence[str]) -> None:
     """
     if len(set(names)) != len(names):
         raise UserError("duplicate run names")
+    found = discover.by_name(root)
     for name in names:
         try:
             manifest.validate_run_name(name)
         except ValueError as exc:
             raise UserError(str(exc)) from exc
-        run_dir = root / "runs" / name
+        hit = found.get(name)
+        run_dir = root / "runs" / name if hit is None else hit.run_dir
         if not any(
             (run_dir / f).is_file()
             for f in (manifest.MANIFEST_NAME, manifest.PARTIAL_NAME)
@@ -381,7 +383,11 @@ def _build_parser() -> argparse.ArgumentParser:
     def add(name: str, func: Callable, help_: str) -> argparse.ArgumentParser:
         p = sub.add_parser(name, help=help_, description=help_)
         p.set_defaults(func=func)
-        p.add_argument("dir", metavar="DIR", help="the library folder")
+        p.add_argument(
+            "dir",
+            metavar="DIR",
+            help="a library folder, or a folder that contains libraries",
+        )
         return p
 
     p = add("serve", _cmd_serve, "browse and replay rollouts in the browser")

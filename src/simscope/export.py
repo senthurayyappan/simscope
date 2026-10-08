@@ -46,7 +46,7 @@ import tempfile
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from simscope import _icon, highlights, library
+from simscope import _icon, discover, highlights, library
 from simscope.io import cas, manifest, pack
 
 logger = logging.getLogger(__name__)
@@ -254,7 +254,8 @@ def derived_entries(
     with a warning: derived data is optional in a pack.
 
     Args:
-        library_root: The library directory.
+        library_root: The library directory, or a folder that contains
+            libraries.
         runs: Run names (validated by the caller).
         scratch: A folder for files made on the way; it must outlive the
             pack write.
@@ -270,10 +271,13 @@ def derived_entries(
     """
     root = pathlib.Path(library_root)
     derived = _derived_module()
+    located = discover.by_name(root)
     entries: dict[str, pack.Source] = {}
     for name in runs:
+        hit = located.get(name)
+        owner = root if hit is None else hit.library
         try:
-            run = library.Rollout(root, name)
+            run = library.Rollout(owner, name)
         except FileNotFoundError:
             continue  # write_pack reports it
         with run:
@@ -289,14 +293,14 @@ def derived_entries(
             if with_highlights:
                 try:
                     entries[prefix + highlights.FILE_NAME] = _run_highlights(
-                        run, derived, root, scratch, ids
+                        run, derived, owner, scratch, ids
                     )
                 except Exception:  # isolation point: optional data
                     logger.warning("no highlights for %s", name, exc_info=True)
             if derived is None or n_out <= CROWD_ENVS:
                 continue
             try:
-                found = _crowd_entries(run, derived, root, scratch, ids)
+                found = _crowd_entries(run, derived, owner, scratch, ids)
             except Exception:  # isolation point: optional data must not fail
                 logger.warning("no crowd data for %s", name, exc_info=True)
                 continue
@@ -321,7 +325,8 @@ def build_pack(
     included when it exists.
 
     Args:
-        library_root: The library directory.
+        library_root: The library directory, or a folder that contains
+            libraries.
         runs: Names of the runs to include.
         transcode: Whether to shrink the pack (q16d poses, q16 meshes).
         annotations: Whether to keep each run's ``annotations.json``.
@@ -396,7 +401,8 @@ def export_pack(
     """Writes runs to a ``.simscope`` pack.
 
     Args:
-        library_root: The library directory.
+        library_root: The library directory, or a folder that contains
+            libraries.
         runs: Names of the runs to include.
         out_path: The pack file to write (replaced atomically).
         transcode: Whether to shrink the pack (q16d poses, q16 meshes).
@@ -738,7 +744,8 @@ def export_html(
     very large runs need ``envs`` to pick a subset.
 
     Args:
-        library_root: The library directory.
+        library_root: The library directory, or a folder that contains
+            libraries.
         runs: Names of the runs to export.
         out_path: The HTML file to write (replaced atomically).
         title: Page title; defaults to the run name for a single run and to

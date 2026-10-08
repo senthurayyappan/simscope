@@ -178,7 +178,7 @@ class LibraryState:
 
     def _load_extras(self, info: library.RunInfo) -> Extras:
         """Builds the extra row fields of one run."""
-        extras = _read_extras(self.lib.runs_dir / info.name)
+        extras = _read_extras(self.lib.run_dir(info.name))
         if info.status == "complete" and info.id:
             extras = dataclasses.replace(
                 extras, n_highlights=self._highlight_count(info)
@@ -695,14 +695,21 @@ class LibraryState:
         self.index.close()
 
     def _names_of(self, paths: Iterable[str]) -> set[str]:
-        """Maps changed absolute paths to the names of the runs they touch."""
-        prefix = os.path.join(self.root_real, "runs") + os.sep
+        """Maps changed absolute paths to the names of the runs they touch.
+
+        A path names a run when it passes through ``runs/<name>/``, including
+        a library nested under the served folder.
+        """
+        prefix = self.root_real + os.sep
         names = set()
         for path in paths:
-            if path.startswith(prefix):
-                name = path[len(prefix) :].split(os.sep, 1)[0]
-                if name:
-                    names.add(name)
+            if not path.startswith(prefix):
+                continue
+            parts = path[len(prefix) :].split(os.sep)
+            for i, part in enumerate(parts):
+                if part == "runs" and i + 1 < len(parts) and parts[i + 1]:
+                    names.add(parts[i + 1])
+                    break
         return names
 
     def _watch(self) -> None:
@@ -733,7 +740,7 @@ class LibraryState:
                         continue
                     names = None  # backstop against missed events
                 elif not names:
-                    continue  # changes outside runs/ (assets, scenes)
+                    continue  # changes outside a runs/ folder (assets, scenes)
                 try:
                     self._scan(names)
                 except Exception:

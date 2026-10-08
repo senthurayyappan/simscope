@@ -98,6 +98,36 @@ def test_ls_json_is_one_object_per_line(root, capsys):
     assert rows[2]["favorite"] is True and rows[2]["rating"] == 4
 
 
+def test_ls_and_export_find_nested_libraries(tmp_path, capsys):
+    parent = tmp_path / "outputs"
+    stamp = "20261002-131651-488607Z"
+    nested = parent / "position_vault_barkour" / "cad" / stamp
+    other = parent / "other_task" / "model" / "run_b"
+    for folder, name, n in ((nested, stamp, 150), (other, "run_b", 40)):
+        lib = library.Library(folder)
+        record(lib, name, n=n)
+        lib.close()
+    code, out, err = run(capsys, "ls", parent)
+    assert code == 0 and err == ""
+    assert stamp in out and "run_b" in out and "150" in out
+    code, out, err = run(capsys, "ls", nested)
+    assert code == 0 and err == ""
+    assert stamp in out and "run_b" not in out
+    html = tmp_path / "out.html"
+    code, stdout, err = run(capsys, "export", parent, stamp, "-o", html)
+    assert code == 0 and err == "" and stdout.startswith(f"wrote {html}")
+    assert stamp in html.read_text(encoding="utf-8")
+    packed = tmp_path / "out.simscope"
+    code, _, err = run(capsys, "pack", parent, stamp, "run_b", "-o", packed)
+    assert code == 0 and err == ""
+    with pack.PackReader(packed) as reader:
+        assert sorted(reader.runs()) == [stamp, "run_b"]
+    code, out, err = run(capsys, "info", parent, stamp)
+    assert code == 0 and err == "" and "150" in out
+    code, _, err = run(capsys, "export", parent, "ghost", "-o", html)
+    assert code == 1 and "no run 'ghost'" in err
+
+
 def test_ls_empty_library_and_missing_folder(tmp_path, capsys):
     empty = tmp_path / "empty"
     empty.mkdir()

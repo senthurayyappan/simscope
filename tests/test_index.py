@@ -280,3 +280,75 @@ def test_wal_mode_and_persistence(lib, tmp_path):
 def test_rebuild(lib):
     lib.refresh()
     assert lib.rebuild().added == 3
+
+
+def test_refresh_indexes_nested_libraries(tmp_path):
+    nested = (
+        tmp_path / "position_vault_barkour" / "cad" / "20261002-131651-488607Z"
+    )
+    write_run(nested, "20261002-131651-488607Z", n_frames=150)
+    other = tmp_path / "other_task" / "model" / "20261002-131700-000000Z"
+    write_run(other, "20261002-131700-000000Z", n_frames=40, tags=["vault"])
+    idx = index.Index(tmp_path)
+    stats = idx.refresh()
+    assert stats.added == 2
+    got = idx.get("20261002-131651-488607Z")
+    assert got is not None
+    assert (got.status, got.n_frames) == ("complete", 150)
+    assert idx.owner("20261002-131651-488607Z") == nested
+    assert idx.owner("20261002-131700-000000Z") == other
+    assert set(names(idx.query(limit=None))) == {
+        "20261002-131651-488607Z",
+        "20261002-131700-000000Z",
+    }
+    assert idx.owners() == [other, nested]
+    assert names(idx.query(tags=["vault"])) == ["20261002-131700-000000Z"]
+    assert idx.refresh() == index.RefreshStats(unchanged=2)
+
+    import shutil
+
+    shutil.rmtree(nested)
+    assert idx.refresh().removed == 1
+    assert idx.get("20261002-131651-488607Z") is None
+    idx.close()
+
+
+def test_direct_run_wins_over_a_nested_name(tmp_path):
+    nested = tmp_path / "task" / "model" / "lib"
+    write_run(tmp_path, "same", n_frames=7)
+    write_run(nested, "same", n_frames=99)
+    write_run(nested, "other", n_frames=3)
+    idx = index.Index(tmp_path)
+    idx.refresh()
+    got = idx.get("same")
+    assert got is not None and got.n_frames == 7
+    assert idx.owner("same") == tmp_path
+    assert idx.owner("other") == nested
+    assert idx.owners() == [nested]
+    idx.close()
+
+
+def test_moved_library_path_is_an_update(tmp_path):
+    nested = tmp_path / "task" / "model" / "run_a"
+    write_run(nested, "run_a", n_frames=12)
+    idx = index.Index(tmp_path)
+    idx.refresh()
+    idx.close()
+    path = tmp_path / ".simscope" / "index.sqlite"
+    conn = sqlite3.connect(path)
+    conn.execute("UPDATE runs SET lib_rel = 'nope' WHERE name = 'run_a'")
+    conn.commit()
+    conn.close()
+    fresh = index.Index(tmp_path)
+    assert fresh.refresh().updated == 1
+    assert fresh.owner("run_a") == nested
+    fresh.close()
+
+
+def test_empty_tree_creates_no_index(tmp_path):
+    root = tmp_path / "outputs"
+    (root / "task" / "model").mkdir(parents=True)
+    idx = index.Index(root)
+    assert idx.refresh() == index.RefreshStats()
+    assert not (root / ".simscope").exists()
+    idx.close()

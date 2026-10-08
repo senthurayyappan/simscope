@@ -368,10 +368,22 @@ class Library:
     def run_dir(self, name: str) -> pathlib.Path:
         """Returns a run's folder (which may not exist).
 
+        A run in ``runs/`` of this folder is that directory. Otherwise the
+        folder is the one discovered under a nested library. When nothing
+        matches, the path is ``runs/<name>`` of this folder, which is where
+        a new recording would go.
+
         Raises:
             ValueError: If the name is invalid.
         """
-        return self.runs_dir / manifest.validate_run_name(name)
+        name = manifest.validate_run_name(name)
+        direct = self.runs_dir / name
+        if _has_manifest(direct):
+            return direct
+        owner = self._index.owner(name, scan=True)
+        if owner is None:
+            return direct
+        return owner / "runs" / name
 
     def record(
         self,
@@ -448,8 +460,10 @@ class Library:
         Raises:
             FileNotFoundError: If there is no such run.
             errors.FormatError: If its manifest is invalid.
+            ValueError: If the name is invalid.
         """
-        return Rollout(self.root, name)
+        run_dir = self.run_dir(name)
+        return Rollout(run_dir.parent.parent, name)
 
     def rename(self, old: str, new: str) -> None:
         """Renames a run.
@@ -475,11 +489,14 @@ class Library:
                 Windows while a file in it is open).
             errors.FormatError: If the manifest is invalid.
         """
-        old_dir, new_dir = self.run_dir(old), self.run_dir(new)
+        old_dir = self.run_dir(old)
+        new_name = manifest.validate_run_name(new)
         if not old_dir.is_dir():
             raise FileNotFoundError(f"no run {old!r} in {self.root}")
         if not (old_dir / manifest.MANIFEST_NAME).is_file():
             raise ValueError(f"run {old!r} is still recording")
+        owner = old_dir.parent.parent
+        new_dir = owner / "runs" / new_name
         # On a case-insensitive filesystem a case-only rename names the same
         # folder; that is a rename, not a clash.
         if os.path.lexists(new_dir) and (
@@ -489,9 +506,9 @@ class Library:
         from simscope import derived  # circular at module level
 
         m = manifest.read_manifest(old_dir)
-        with Rollout(self.root, old) as run:
+        with Rollout(owner, old) as run:
             before = derived.fingerprint(run)
-        m.name = new
+        m.name = new_name
         m.validate()
         cas.atomic_write(
             old_dir / manifest.MANIFEST_NAME, manifest.manifest_bytes(m)
@@ -505,17 +522,21 @@ class Library:
             )
             raise
         try:
-            with Rollout(self.root, new) as run:
-                derived.carry_over(self.root, run, before)
+            with Rollout(owner, new_name) as run:
+                derived.carry_over(owner, run, before)
         except Exception:  # isolation point: a cold cache is only slower
-            logger.warning("derived cache of %r not carried over", new)
+            logger.warning("derived cache of %r not carried over", new_name)
         self._index.refresh()
-        logger.info("renamed run %r to %r", old, new)
+        logger.info("renamed run %r to %r", old, new_name)
 
     # -- browsing --
 
     def refresh(self) -> index.RefreshStats:
-        """Rescans ``runs/`` and updates the index (incrementally)."""
+        """Rescans rollout libraries under this folder and updates the index.
+
+        A refresh is incremental: runs whose files are unchanged are not
+        re-read. Libraries nested under this folder are included.
+        """
         return self._index.refresh()
 
     def runs(self, refresh: bool = True) -> list[RunInfo]:
@@ -655,6 +676,13 @@ class Library:
         manifest.write_manifest(run_dir, m, partial=False)
         logger.info("recovered run %r: %d frames", name, common)
         return RecoverReport(name, common, False, frames, dropped)
+
+
+def _has_manifest(run_dir: pathlib.Path) -> bool:
+    """Tells whether ``run_dir`` holds a rollout manifest."""
+    return (run_dir / manifest.MANIFEST_NAME).is_file() or (
+        run_dir / manifest.PARTIAL_NAME
+    ).is_file()
 
 
 def _recover_stream(path: pathlib.Path) -> int:
