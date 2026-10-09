@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.3](https://github.com/senthurayyappan/simscope/compare/v0.1.2...v0.1.3) (2026-10-08)
+
+
+### Features
+
+* choose the ground's colour apart from the theme ([7f125ce](https://github.com/senthurayyappan/simscope/commit/7f125ce67b60c19af1e3c798a41871c0750f4574)), closes [#11](https://github.com/senthurayyappan/simscope/issues/11)
+* keep the capture menu open, and split the viewport controls in two ([64f76eb](https://github.com/senthurayyappan/simscope/commit/64f76eb02674f6def21b8ffe45b152194044fec5)), closes [#11](https://github.com/senthurayyappan/simscope/issues/11)
+* screenshots and GIFs of the viewport ([e133bdb](https://github.com/senthurayyappan/simscope/commit/e133bdb868dc70b76e3550728d8dffdb23842c8d))
+* screenshots and GIFs of the viewport ([46fd690](https://github.com/senthurayyappan/simscope/commit/46fd690fb2490c48237fd91a937524fcbd1cecdc)), closes [#11](https://github.com/senthurayyappan/simscope/issues/11)
+
+
+### Bug Fixes
+
+* fixed-shape captures, steady GIF colours, and a calmer capture menu ([66e969b](https://github.com/senthurayyappan/simscope/commit/66e969b4742b8b1fc01a45196db4e4634857361a)), closes [#11](https://github.com/senthurayyappan/simscope/issues/11)
+* GIFs follow the timeline speed, and tidy the capture menu ([eb8fa33](https://github.com/senthurayyappan/simscope/commit/eb8fa33aa2a86508810d597f9c392d7a41df3fd4)), closes [#11](https://github.com/senthurayyappan/simscope/issues/11)
+* simpler capture menu readouts ([36dd214](https://github.com/senthurayyappan/simscope/commit/36dd21463fca34257184e8cbca764e77fdfd48d4)), closes [#11](https://github.com/senthurayyappan/simscope/issues/11)
+
 ## [0.1.2](https://github.com/senthurayyappan/simscope/compare/v0.1.1...v0.1.2) (2026-10-08)
 
 
