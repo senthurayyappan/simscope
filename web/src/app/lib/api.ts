@@ -61,6 +61,8 @@ export interface Api {
   rename(name: string, to: string): Promise<string>;
   /** A download URL (http mode only). */
   exportUrl(opts: ExportOptions): string | null;
+  /** The download URL of a run as a USD stage, with only `envs` when given (http mode only). */
+  usdUrl(run: string, envs?: readonly number[]): string | null;
 }
 
 export class PackApi implements Api {
@@ -141,6 +143,10 @@ export class PackApi implements Api {
 
   async rename(): Promise<string> {
     throw new Error("this export is read-only");
+  }
+
+  usdUrl(): string | null {
+    return null;
   }
 
   exportUrl(): string | null {
@@ -265,6 +271,12 @@ export class HttpApi implements Api {
     const q = new URLSearchParams({ runs: runs.join(","), layout, ui });
     if (arrange && runs.length > 1) q.set("arrange", arrange);
     return `${this.base}/api/export?${q}`;
+  }
+
+  usdUrl(run: string, envs?: readonly number[]): string {
+    const q = new URLSearchParams({ run });
+    if (envs?.length) q.set("envs", envs.join(","));
+    return `${this.base}/api/export/usd?${q}`;
   }
 }
 

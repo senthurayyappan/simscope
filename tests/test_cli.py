@@ -184,6 +184,19 @@ def test_export_writes_one_html(root, capsys, tmp_path):
     assert "<simscope-player" in page and "walk_a" in page
 
 
+def test_usd_writes_one_usdz(root, capsys, tmp_path):
+    out = tmp_path / "out" / "a.usdz"
+    code, stdout, err = run(capsys, "usd", root, "walk_a", "-o", out)
+    assert code == 0 and err == ""
+    assert stdout.startswith(f"wrote {out}")
+    assert out.read_bytes().startswith(b"PK")
+    assert run(capsys, "usd", root, "walk_a", "-o", out, "--envs", "0")[0] == 0
+    code, _, err = run(capsys, "usd", root, "walk_a", "-o", out, "--envs", "4")
+    assert code == 1 and "envs" in err
+    code, _, err = run(capsys, "usd", root, "ghost", "-o", out)
+    assert code == 1 and "ghost" in err
+
+
 def test_export_layout_title_and_flags(root, capsys, tmp_path):
     big = tmp_path / "big.html"
     small = tmp_path / "small.html"

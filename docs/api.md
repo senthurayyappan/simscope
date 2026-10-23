@@ -62,6 +62,10 @@ by two, the default for three or four). Lean files carry no highlights.
 
 ::: simscope.export
 
+`export_usd` writes one rollout as a `.usdz` stage that Blender imports.
+
+::: simscope.usd
+
 ## Data model
 
 ::: simscope.core

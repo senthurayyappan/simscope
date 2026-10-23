@@ -73,6 +73,7 @@ To replay a rollout you already have, point `simscope import` at a `.rbundle` fi
 - The timeline marks peaks in contact force and in center-of-mass acceleration. [Add your own markers](https://senthurayyappan.github.io/simscope/getting-started/#custom-markers).
 - Follow a body. Switch among iso, front, side, and top. Toggle contacts and collision shapes.
 - [Export](https://senthurayyappan.github.io/simscope/getting-started/#exports) one HTML file. `--ui lean` is the player. `--ui full` is the whole app.
+- [Open a rollout in Blender](https://senthurayyappan.github.io/simscope/getting-started/#usd-for-blender) as a `.usdz` stage.
 - Import a `.rbundle` file or a Brax HTML page.
 - Thousands of envs stay interactive. Nearby envs are drawn in full. The rest are simple shapes.
 - Put an export on an [mkdeck](https://github.com/senthurayyappan/mkdeck) slide: `![Rollout](assets/box.html)`.

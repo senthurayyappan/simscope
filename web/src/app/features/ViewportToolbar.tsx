@@ -1,4 +1,4 @@
-import { Box, ChevronDown, Download, FileCode2, Footprints, Grid3x3, Link2, Monitor, Moon, ScanEye, Sun } from "lucide-react";
+import { Box, Boxes, ChevronDown, Download, FileCode2, Footprints, Grid3x3, Link2, Monitor, Moon, ScanEye, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -273,8 +273,38 @@ function ExportMenu({ compare }: { compare: boolean }) {
         {item("lean", "Player page", runs.length > 1 ? `A small HTML file that plays these ${runs.length} runs side by side. Works offline.` : "A small HTML file that plays this run. Works offline.", FileCode2)}
         <DropdownMenuSeparator />
         {item("full", "Full viewer", runs.length > 1 ? `The complete viewer in one HTML file, with these ${runs.length} runs. Works offline.` : "The complete viewer in one HTML file. Works offline.", Download)}
+        <DropdownMenuSeparator />
+        <UsdItem compare={runs.length > 1} />
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/** The active run as a USD stage for Blender. A run with several envs exports the selected env and the pinned ones. */
+function UsdItem({ compare }: { compare: boolean }) {
+  const api = useApp((s) => s.api);
+  const run = useApp((s) => s.panes[s.active]?.name);
+  const info = useApp((s) => s.infos[s.active]);
+  const env = useApp((s) => s.envs[s.active] ?? 0);
+  const pinned = useApp((s) => s.pinned);
+  const many = !!info && info.envs > 1;
+  const envs = many ? [env, ...pinned.filter((e) => e !== env)] : undefined;
+  const url = run ? api?.usdUrl(run, envs) : null;
+  // Blender plays one recorded frame per scene frame, whatever the file says.
+  const fps = info ? +(1 / info.dt).toFixed(2) : null;
+  const what = many ? "The selected and pinned envs" : compare ? "The active run" : "This run";
+  return (
+    <DropdownMenuItem asChild disabled={!url}>
+      <a href={url ?? "#"} download className="items-start gap-3 py-2">
+        <Boxes className="mt-0.5" />
+        <span>
+          USD for Blender
+          <MenuHint>
+            {what} as a USD file.{fps ? ` Set Blender to ${fps} fps to play it in real time.` : ""}
+          </MenuHint>
+        </span>
+      </a>
+    </DropdownMenuItem>
   );
 }
 

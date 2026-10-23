@@ -23,7 +23,7 @@ from starlette.responses import (
     StreamingResponse,
 )
 
-from simscope import annotations, export
+from simscope import annotations, export, usd
 from simscope.io import blockfile, errors, manifest
 from simscope.server import blocks, jobs, security, static
 from simscope.server import state as state_mod
@@ -690,6 +690,42 @@ def export_route(request: Request) -> Response:
         media_type="text/html; charset=utf-8",
         headers={
             "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+def usd_route(request: Request) -> Response:
+    """``GET /api/export/usd?run=&envs=``: a ``.usdz`` download."""
+    st = _svc(request).state
+    q = request.query_params
+    name = q.get("run", "")
+    try:
+        manifest.validate_run_name(name)
+    except ValueError as exc:
+        return error(400, str(exc))
+    if st.info(name) is None:
+        return error(404, "no such run")
+    envs = None
+    if q.get("envs"):
+        try:
+            envs = [_int(e, "envs") for e in q["envs"].split(",") if e]
+        except ValueError as exc:
+            return error(400, str(exc))
+    with tempfile.TemporaryDirectory(prefix="simscope-usd-") as tmp:
+        out = pathlib.Path(tmp) / "export.usdz"
+        try:
+            usd.export_usd(st.root, name, out, envs=envs)
+        except ValueError as exc:  # still recording, bad envs
+            return error(400, str(exc))
+        except FileNotFoundError as exc:
+            return error(404, str(exc))
+        data = out.read_bytes()
+    return Response(
+        data,
+        media_type="model/vnd.usdz+zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{name}.usdz"',
             "Cache-Control": "no-store",
         },
     )
