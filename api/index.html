@@ -26270,7 +26270,8 @@ guard); loopback names by default.</p>
 <span class="normal">112</span>
 <span class="normal">113</span>
 <span class="normal">114</span>
-<span class="normal">115</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_app</span><span class="p">(</span>
+<span class="normal">115</span>
+<span class="normal">116</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_app</span><span class="p">(</span>
     <span class="n">root</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">author</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -26339,6 +26340,7 @@ guard); loopback names by default.</p>
             <span class="n">Route</span><span class="p">(</span><span class="s2">"/api/blk"</span><span class="p">,</span> <span class="n">routes</span><span class="o">.</span><span class="n">blk</span><span class="p">),</span>
             <span class="n">Route</span><span class="p">(</span><span class="s2">"/api/blocks"</span><span class="p">,</span> <span class="n">routes</span><span class="o">.</span><span class="n">blocks_route</span><span class="p">),</span>
             <span class="n">Route</span><span class="p">(</span><span class="s2">"/api/export"</span><span class="p">,</span> <span class="n">routes</span><span class="o">.</span><span class="n">export_route</span><span class="p">),</span>
+            <span class="n">Route</span><span class="p">(</span><span class="s2">"/api/export/usd"</span><span class="p">,</span> <span class="n">routes</span><span class="o">.</span><span class="n">usd_route</span><span class="p">),</span>
             <span class="n">Route</span><span class="p">(</span><span class="s2">"/api/groups"</span><span class="p">,</span> <span class="n">routes</span><span class="o">.</span><span class="n">groups</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">"GET"</span><span class="p">]),</span>
             <span class="n">Route</span><span class="p">(</span><span class="s2">"/api/groups"</span><span class="p">,</span> <span class="n">routes</span><span class="o">.</span><span class="n">change_groups</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">"POST"</span><span class="p">]),</span>
             <span class="n">Route</span><span class="p">(</span>
@@ -26484,8 +26486,7 @@ answers any.</p>
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/simscope/server/app.py</code></summary>
-              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">118</span>
-<span class="normal">119</span>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">119</span>
 <span class="normal">120</span>
 <span class="normal">121</span>
 <span class="normal">122</span>
@@ -26515,7 +26516,8 @@ answers any.</p>
 <span class="normal">146</span>
 <span class="normal">147</span>
 <span class="normal">148</span>
-<span class="normal">149</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">serve</span><span class="p">(</span>
+<span class="normal">149</span>
+<span class="normal">150</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">serve</span><span class="p">(</span>
     <span class="n">root</span><span class="p">:</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">"127.0.0.1"</span><span class="p">,</span>
     <span class="n">port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8080</span><span class="p">,</span>
@@ -28736,6 +28738,1451 @@ a run that is still recording, or an invalid <code>envs</code>.</p>
 <span class="sd">    """</span>
     <span class="n">resource</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">files</span><span class="p">(</span><span class="s2">"simscope"</span><span class="p">)</span> <span class="o">/</span> <span class="s2">"_assets"</span> <span class="o">/</span> <span class="n">name</span>
     <span class="k">return</span> <span class="n">resource</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><p><code>export_usd</code> writes one rollout as a <code>.usdz</code> stage that Blender imports.</p>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="simscope.usd" class="doc doc-heading">
+            <code>simscope.usd</code>
+
+
+<a href="#simscope.usd" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Exports a run as a USD stage that Blender opens.</p>
+<p><code>export_usd</code> writes one <code>.usdz</code> file: a zip, stored uncompressed, that
+holds a text stage (<code>scene.usda</code>) and the scene's textures. Blender imports
+it with File &gt; Import &gt; Universal Scene Description, and so does any other
+USD tool. Nothing beyond numpy is needed: the stage is written as text.</p>
+<p>The stage is Z-up, in metres, with one time code per recorded frame and
+<code>timeCodesPerSecond</code> set to the run's frame rate::</p>
+<div class="codehilite"><pre><span></span><code>/World                      Xform, the default prim
+  /Looks/M&lt;k&gt;               one UsdPreviewSurface material per material
+  /Prototypes               class: one mesh per shape, never drawn
+  /&lt;body&gt;                   Xform, animated world pose of the body
+    /&lt;geom&gt;                 Mesh that references its prototype
+</code></pre></div>
+
+<p>A run with several envs gets one <code>/World/env_&lt;i&gt;</code> Xform per exported env,
+each holding that env's bodies. Body poses are world poses, so bodies are
+siblings rather than nested, and an env's origin is added to its positions.</p>
+<p>Visual geoms are written as they are. Collision geoms get <code>purpose =
+"guide"</code>: Blender leaves them out unless "Guide" is ticked on import.
+Primitive shapes are tessellated the way the viewer draws them; a plane
+becomes a quad, as wide as the plane, or (for an infinite plane) wide enough
+to cover everything the run's bodies reach.</p>
+<p>Given the same inputs, the output is byte-identical.</p>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="simscope.usd.ALIGN" class="doc doc-heading">
+            <code class=" language-python"><span class="n">ALIGN</span> <span class="o">=</span> <span class="mi">64</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#simscope.usd.ALIGN" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>USDZ needs every file's data to start at a multiple of 64 bytes.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="simscope.usd.GROUND_MARGIN" class="doc doc-heading">
+            <code class=" language-python"><span class="n">GROUND_MARGIN</span> <span class="o">=</span> <span class="mf">2.0</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#simscope.usd.GROUND_MARGIN" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Metres an infinite plane reaches past the run's bodies.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="simscope.usd.MAX_ENVS" class="doc doc-heading">
+            <code class=" language-python"><span class="n">MAX_ENVS</span> <span class="o">=</span> <span class="mi">64</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#simscope.usd.MAX_ENVS" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Exporting more envs than this needs an explicit <code>envs</code> list.</p>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="simscope.usd.STAGE_NAME" class="doc doc-heading">
+            <code class=" language-python"><span class="n">STAGE_NAME</span> <span class="o">=</span> <span class="s1">'scene.usda'</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#simscope.usd.STAGE_NAME" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>The root layer inside the <code>.usdz</code>; a package's first file.</p>
+
+    </div>
+
+</div>
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.capsule" class="doc doc-heading">
+            <code class=" language-python"><span class="n">capsule</span><span class="p">(</span><span class="n">radius</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">half_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Shape</span></code>
+
+<a href="#simscope.usd.capsule" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A capsule along <code>z</code>: 16 segments around, 8 per cap.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">capsule</span><span class="p">(</span><span class="n">radius</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">half_length</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Shape</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A capsule along ``z``: 16 segments around, 8 per cap."""</span>
+    <span class="n">cap</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+    <span class="n">lats</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">)</span> <span class="o">-</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="n">half_length</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span> <span class="ow">in</span> <span class="n">cap</span><span class="p">]</span>
+    <span class="n">lats</span> <span class="o">+=</span> <span class="p">[(</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">),</span> <span class="n">half_length</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span> <span class="ow">in</span> <span class="n">cap</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">_rings</span><span class="p">(</span><span class="n">lats</span><span class="p">,</span> <span class="n">radius</span><span class="p">,</span> <span class="mi">16</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.export_usd" class="doc doc-heading">
+            <code class=" language-python"><span class="n">export_usd</span><span class="p">(</span><span class="n">library_root</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="n">run</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">out_path</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">envs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span></code>
+
+<a href="#simscope.usd.export_usd" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Writes one run as a <code>.usdz</code> stage.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>library_root</code>
+            </td>
+            <td>
+                  <code><span title="os.PathLike">PathLike</span>[<span title="str">str</span>] | <span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The library directory, or a folder that contains
+libraries.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>run</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Run name.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>out_path</code>
+            </td>
+            <td>
+                  <code><span title="os.PathLike">PathLike</span>[<span title="str">str</span>] | <span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Destination file; parent folders are created. The suffix
+should be <code>.usdz</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>envs</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="int">int</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The envs to export, in this order. <code>None</code> exports every env
+of a run that has up to 64 of them.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="pathlib.Path">Path</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The path written.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+<p><span class="doc-section-title">Raises:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="FileNotFoundError">FileNotFoundError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>If there is no such run.</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="ValueError">ValueError</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>For a run that is still recording, an invalid <code>envs</code>,
+or <code>envs=None</code> on a run with more than 64 envs.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">642</span>
+<span class="normal">643</span>
+<span class="normal">644</span>
+<span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span>
+<span class="normal">649</span>
+<span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span>
+<span class="normal">663</span>
+<span class="normal">664</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span>
+<span class="normal">669</span>
+<span class="normal">670</span>
+<span class="normal">671</span>
+<span class="normal">672</span>
+<span class="normal">673</span>
+<span class="normal">674</span>
+<span class="normal">675</span>
+<span class="normal">676</span>
+<span class="normal">677</span>
+<span class="normal">678</span>
+<span class="normal">679</span>
+<span class="normal">680</span>
+<span class="normal">681</span>
+<span class="normal">682</span>
+<span class="normal">683</span>
+<span class="normal">684</span>
+<span class="normal">685</span>
+<span class="normal">686</span>
+<span class="normal">687</span>
+<span class="normal">688</span>
+<span class="normal">689</span>
+<span class="normal">690</span>
+<span class="normal">691</span>
+<span class="normal">692</span>
+<span class="normal">693</span>
+<span class="normal">694</span>
+<span class="normal">695</span>
+<span class="normal">696</span>
+<span class="normal">697</span>
+<span class="normal">698</span>
+<span class="normal">699</span>
+<span class="normal">700</span>
+<span class="normal">701</span>
+<span class="normal">702</span>
+<span class="normal">703</span>
+<span class="normal">704</span>
+<span class="normal">705</span>
+<span class="normal">706</span>
+<span class="normal">707</span>
+<span class="normal">708</span>
+<span class="normal">709</span>
+<span class="normal">710</span>
+<span class="normal">711</span>
+<span class="normal">712</span>
+<span class="normal">713</span>
+<span class="normal">714</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">export_usd</span><span class="p">(</span>
+    <span class="n">library_root</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">run</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">out_path</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">envs</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Writes one run as a ``.usdz`` stage.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        library_root: The library directory, or a folder that contains</span>
+<span class="sd">            libraries.</span>
+<span class="sd">        run: Run name.</span>
+<span class="sd">        out_path: Destination file; parent folders are created. The suffix</span>
+<span class="sd">            should be ``.usdz``.</span>
+<span class="sd">        envs: The envs to export, in this order. ``None`` exports every env</span>
+<span class="sd">            of a run that has up to 64 of them.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The path written.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        FileNotFoundError: If there is no such run.</span>
+<span class="sd">        ValueError: For a run that is still recording, an invalid ``envs``,</span>
+<span class="sd">            or ``envs=None`` on a run with more than 64 envs.</span>
+<span class="sd">    """</span>
+    <span class="n">root</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">library_root</span><span class="p">)</span>
+    <span class="n">hit</span> <span class="o">=</span> <span class="n">discover</span><span class="o">.</span><span class="n">by_name</span><span class="p">(</span><span class="n">root</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
+    <span class="n">owner</span> <span class="o">=</span> <span class="n">root</span> <span class="k">if</span> <span class="n">hit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">hit</span><span class="o">.</span><span class="n">library</span>
+    <span class="k">with</span> <span class="n">library</span><span class="o">.</span><span class="n">Rollout</span><span class="p">(</span><span class="n">owner</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span> <span class="k">as</span> <span class="n">rollout</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">rollout</span><span class="o">.</span><span class="n">is_recording</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"run </span><span class="si">{</span><span class="n">run</span><span class="si">!r}</span><span class="s2"> is still recording"</span><span class="p">)</span>
+        <span class="n">n_envs</span> <span class="o">=</span> <span class="n">rollout</span><span class="o">.</span><span class="n">n_envs</span>
+        <span class="k">if</span> <span class="n">envs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">n_envs</span> <span class="o">&gt;</span> <span class="n">MAX_ENVS</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"run </span><span class="si">{</span><span class="n">run</span><span class="si">!r}</span><span class="s2"> has </span><span class="si">{</span><span class="n">n_envs</span><span class="si">}</span><span class="s2"> envs; pick up to </span><span class="si">{</span><span class="n">MAX_ENVS</span><span class="si">}</span><span class="s2"> "</span>
+                    <span class="s2">"with envs"</span>
+                <span class="p">)</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_envs</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ids</span> <span class="o">=</span> <span class="n">pack</span><span class="o">.</span><span class="n">check_envs</span><span class="p">(</span><span class="n">envs</span><span class="p">,</span> <span class="n">n_envs</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
+        <span class="n">scene</span> <span class="o">=</span> <span class="n">rollout</span><span class="o">.</span><span class="n">scene</span>
+        <span class="n">poses</span> <span class="o">=</span> <span class="n">_poses</span><span class="p">(</span><span class="n">rollout</span><span class="p">,</span> <span class="n">ids</span><span class="p">)</span>
+        <span class="n">fps</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="n">rollout</span><span class="o">.</span><span class="n">dt</span><span class="p">,</span> <span class="mi">3</span><span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">stage_text</span><span class="p">(</span>
+            <span class="n">scene</span><span class="p">,</span>
+            <span class="n">poses</span><span class="p">,</span>
+            <span class="n">fps</span><span class="o">=</span><span class="n">fps</span><span class="p">,</span>
+            <span class="n">env_ids</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">n_envs</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">ids</span><span class="p">,</span>
+            <span class="n">title</span><span class="o">=</span><span class="sa">f</span><span class="s2">"simscope run </span><span class="si">{</span><span class="n">run</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="n">files</span> <span class="o">=</span> <span class="p">[(</span><span class="n">STAGE_NAME</span><span class="p">,</span> <span class="n">text</span><span class="o">.</span><span class="n">encode</span><span class="p">())]</span>
+    <span class="n">used</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="n">scene</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">material</span><span class="p">]</span><span class="o">.</span><span class="n">texture</span>
+        <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">scene</span><span class="o">.</span><span class="n">geoms</span>
+        <span class="k">if</span> <span class="n">scene</span><span class="o">.</span><span class="n">materials</span><span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">material</span><span class="p">]</span><span class="o">.</span><span class="n">texture</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">}</span>
+    <span class="n">files</span> <span class="o">+=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="n">_texture_path</span><span class="p">(</span><span class="n">scene</span><span class="p">,</span> <span class="n">k</span><span class="p">),</span> <span class="n">scene</span><span class="o">.</span><span class="n">textures</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">used</span> <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">out_path</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">fd</span><span class="p">,</span> <span class="n">tmp</span> <span class="o">=</span> <span class="n">cas</span><span class="o">.</span><span class="n">create_temp</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">parent</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="n">os</span><span class="o">.</span><span class="n">fdopen</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="s2">"wb"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">usdz_bytes</span><span class="p">(</span><span class="n">files</span><span class="p">))</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">tmp</span><span class="p">,</span> <span class="n">out</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">BaseException</span><span class="p">:</span>
+        <span class="n">pathlib</span><span class="o">.</span><span class="n">Path</span><span class="p">(</span><span class="n">tmp</span><span class="p">)</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span>
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.plane" class="doc doc-heading">
+            <code class=" language-python"><span class="n">plane</span><span class="p">(</span><span class="n">half_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">half_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Shape</span></code>
+
+<a href="#simscope.usd.plane" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A quad facing <code>+z</code>; its texture coordinates are in metres.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">plane</span><span class="p">(</span><span class="n">half_x</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">half_y</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">_Shape</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A quad facing ``+z``; its texture coordinates are in metres."""</span>
+    <span class="n">corners</span> <span class="o">=</span> <span class="p">[(</span><span class="o">-</span><span class="n">half_x</span><span class="p">,</span> <span class="o">-</span><span class="n">half_y</span><span class="p">),</span> <span class="p">(</span><span class="n">half_x</span><span class="p">,</span> <span class="o">-</span><span class="n">half_y</span><span class="p">),</span> <span class="p">(</span><span class="n">half_x</span><span class="p">,</span> <span class="n">half_y</span><span class="p">)]</span>
+    <span class="n">corners</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="o">-</span><span class="n">half_x</span><span class="p">,</span> <span class="n">half_y</span><span class="p">))</span>
+    <span class="n">points</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">corners</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">_Shape</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">)],</span> <span class="p">[(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)]</span> <span class="o">*</span> <span class="mi">4</span><span class="p">,</span> <span class="n">corners</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.prim_name" class="doc doc-heading">
+            <code class=" language-python"><span class="n">prim_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">used</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">fallback</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span></code>
+
+<a href="#simscope.usd.prim_name" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A valid, unused USD prim name for <code>name</code>, and marks it used.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>name</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The wanted name. A USD path (<code>/World/robot/base</code>) keeps only
+its last element.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>used</code>
+            </td>
+            <td>
+                  <code><span title="set">set</span>[<span title="str">str</span>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Names already taken among the siblings; updated.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fallback</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The name to use when <code>name</code> has no usable characters.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>[A-Za-z_][A-Za-z0-9_]*</code>, unique within <code>used</code>.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">prim_name</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">used</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">fallback</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A valid, unused USD prim name for ``name``, and marks it used.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name: The wanted name. A USD path (``/World/robot/base``) keeps only</span>
+<span class="sd">            its last element.</span>
+<span class="sd">        used: Names already taken among the siblings; updated.</span>
+<span class="sd">        fallback: The name to use when ``name`` has no usable characters.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        ``[A-Za-z_][A-Za-z0-9_]*``, unique within ``used``.</span>
+<span class="sd">    """</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">name</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">"/"</span><span class="p">)</span><span class="o">.</span><span class="n">rsplit</span><span class="p">(</span><span class="s2">"/"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="s2">""</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">isascii</span><span class="p">()</span> <span class="ow">and</span> <span class="n">c</span><span class="o">.</span><span class="n">isalnum</span><span class="p">()</span> <span class="k">else</span> <span class="s2">"_"</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">base</span><span class="p">)</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">"_+"</span><span class="p">,</span> <span class="s2">"_"</span><span class="p">,</span> <span class="n">base</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">"_"</span><span class="p">)</span> <span class="ow">or</span> <span class="n">fallback</span>
+    <span class="k">if</span> <span class="n">base</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">isdigit</span><span class="p">():</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="s2">"_"</span> <span class="o">+</span> <span class="n">base</span>
+    <span class="n">out</span><span class="p">,</span> <span class="n">k</span> <span class="o">=</span> <span class="n">base</span><span class="p">,</span> <span class="mi">1</span>
+    <span class="k">while</span> <span class="n">out</span> <span class="ow">in</span> <span class="n">used</span><span class="p">:</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">base</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">"</span>
+        <span class="n">k</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">used</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.stage_text" class="doc doc-heading">
+            <code class=" language-python"><span class="n">stage_text</span><span class="p">(</span><span class="n">scene</span><span class="p">:</span> <span class="n">core</span><span class="o">.</span><span class="n">Scene</span><span class="p">,</span> <span class="n">poses</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">''</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span></code>
+
+<a href="#simscope.usd.stage_text" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Returns the <code>.usda</code> text of a run.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>scene</code>
+            </td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="Scene
+
+
+  
+      dataclass
+   (simscope.core.Scene)" href="#simscope.core.Scene">Scene</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The run's scene.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>poses</code>
+            </td>
+            <td>
+                  <code><span title="simscope.usd.FloatArray">FloatArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>World poses, <code>[T, E, B, 7]</code> with xyzw quaternions and the
+env origins already added.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>fps</code>
+            </td>
+            <td>
+                  <code><span title="float">float</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Frames per second; one time code per frame.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>env_ids</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="int">int</span>] | None</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The run's index of each env in <code>poses</code>, used to name the
+env prims; <code>None</code> puts the bodies straight under <code>/World</code>,
+which needs <code>E == 1</code>.</p>
+              </div>
+            </td>
+            <td>
+                  <code>None</code>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>title</code>
+            </td>
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The stage's <code>doc</code> string.</p>
+              </div>
+            </td>
+            <td>
+                  <code>&#39;&#39;</code>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="str">str</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The layer, as text.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">483</span>
+<span class="normal">484</span>
+<span class="normal">485</span>
+<span class="normal">486</span>
+<span class="normal">487</span>
+<span class="normal">488</span>
+<span class="normal">489</span>
+<span class="normal">490</span>
+<span class="normal">491</span>
+<span class="normal">492</span>
+<span class="normal">493</span>
+<span class="normal">494</span>
+<span class="normal">495</span>
+<span class="normal">496</span>
+<span class="normal">497</span>
+<span class="normal">498</span>
+<span class="normal">499</span>
+<span class="normal">500</span>
+<span class="normal">501</span>
+<span class="normal">502</span>
+<span class="normal">503</span>
+<span class="normal">504</span>
+<span class="normal">505</span>
+<span class="normal">506</span>
+<span class="normal">507</span>
+<span class="normal">508</span>
+<span class="normal">509</span>
+<span class="normal">510</span>
+<span class="normal">511</span>
+<span class="normal">512</span>
+<span class="normal">513</span>
+<span class="normal">514</span>
+<span class="normal">515</span>
+<span class="normal">516</span>
+<span class="normal">517</span>
+<span class="normal">518</span>
+<span class="normal">519</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
+<span class="normal">540</span>
+<span class="normal">541</span>
+<span class="normal">542</span>
+<span class="normal">543</span>
+<span class="normal">544</span>
+<span class="normal">545</span>
+<span class="normal">546</span>
+<span class="normal">547</span>
+<span class="normal">548</span>
+<span class="normal">549</span>
+<span class="normal">550</span>
+<span class="normal">551</span>
+<span class="normal">552</span>
+<span class="normal">553</span>
+<span class="normal">554</span>
+<span class="normal">555</span>
+<span class="normal">556</span>
+<span class="normal">557</span>
+<span class="normal">558</span>
+<span class="normal">559</span>
+<span class="normal">560</span>
+<span class="normal">561</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span>
+<span class="normal">571</span>
+<span class="normal">572</span>
+<span class="normal">573</span>
+<span class="normal">574</span>
+<span class="normal">575</span>
+<span class="normal">576</span>
+<span class="normal">577</span>
+<span class="normal">578</span>
+<span class="normal">579</span>
+<span class="normal">580</span>
+<span class="normal">581</span>
+<span class="normal">582</span>
+<span class="normal">583</span>
+<span class="normal">584</span>
+<span class="normal">585</span>
+<span class="normal">586</span>
+<span class="normal">587</span>
+<span class="normal">588</span>
+<span class="normal">589</span>
+<span class="normal">590</span>
+<span class="normal">591</span>
+<span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">stage_text</span><span class="p">(</span>
+    <span class="n">scene</span><span class="p">:</span> <span class="n">core</span><span class="o">.</span><span class="n">Scene</span><span class="p">,</span>
+    <span class="n">poses</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">fps</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">env_ids</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">""</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Returns the ``.usda`` text of a run.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        scene: The run's scene.</span>
+<span class="sd">        poses: World poses, ``[T, E, B, 7]`` with xyzw quaternions and the</span>
+<span class="sd">            env origins already added.</span>
+<span class="sd">        fps: Frames per second; one time code per frame.</span>
+<span class="sd">        env_ids: The run's index of each env in ``poses``, used to name the</span>
+<span class="sd">            env prims; ``None`` puts the bodies straight under ``/World``,</span>
+<span class="sd">            which needs ``E == 1``.</span>
+<span class="sd">        title: The stage's ``doc`` string.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The layer, as text.</span>
+<span class="sd">    """</span>
+    <span class="n">n_frames</span><span class="p">,</span> <span class="n">n_envs</span><span class="p">,</span> <span class="n">n_bodies</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">poses</span><span class="o">.</span><span class="n">shape</span>
+    <span class="k">if</span> <span class="n">n_bodies</span> <span class="o">!=</span> <span class="n">scene</span><span class="o">.</span><span class="n">n_bodies</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">"poses have </span><span class="si">{</span><span class="n">n_bodies</span><span class="si">}</span><span class="s2"> bodies, the scene has </span><span class="si">{</span><span class="n">scene</span><span class="o">.</span><span class="n">n_bodies</span><span class="si">}</span><span class="s2">"</span>
+        <span class="p">)</span>
+    <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_envs</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"env_ids is needed for more than one env"</span><span class="p">)</span>
+    <span class="n">by_body</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">g</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">scene</span><span class="o">.</span><span class="n">geoms</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="s2">"plane"</span> <span class="ow">or</span> <span class="n">_shape_key</span><span class="p">(</span><span class="n">g</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">by_body</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">body</span><span class="p">,</span> <span class="p">[])</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+    <span class="n">protos</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="o">...</span><span class="p">],</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">scene</span><span class="o">.</span><span class="n">geoms</span><span class="p">:</span>
+        <span class="n">hit</span> <span class="o">=</span> <span class="n">_shape_key</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">hit</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">hit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">protos</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">hit</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"mesh"</span><span class="p">:</span>
+            <span class="n">protos</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"mesh_</span><span class="si">{</span><span class="n">key</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">elif</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"capsule"</span><span class="p">:</span>
+            <span class="n">protos</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"capsule_</span><span class="si">{</span><span class="nb">sum</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s1">'capsule'</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">k</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">protos</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">protos</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">materials</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+        <span class="p">{</span><span class="n">scene</span><span class="o">.</span><span class="n">geoms</span><span class="p">[</span><span class="n">j</span><span class="p">]</span><span class="o">.</span><span class="n">material</span> <span class="k">for</span> <span class="n">js</span> <span class="ow">in</span> <span class="n">by_body</span><span class="o">.</span><span class="n">values</span><span class="p">()</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">js</span><span class="p">}</span>
+    <span class="p">)</span>
+
+    <span class="n">w</span> <span class="o">=</span> <span class="n">_Writer</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s2">"#usda 1.0"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s2">"("</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">depth</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s1">'defaultPrim = "World"'</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">title</span><span class="p">:</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="sa">f</span><span class="s2">"doc = </span><span class="si">{</span><span class="n">_string</span><span class="p">(</span><span class="n">title</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="sa">f</span><span class="s2">"endTimeCode = </span><span class="si">{</span><span class="nb">max</span><span class="p">(</span><span class="n">n_frames</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="sa">f</span><span class="s2">"framesPerSecond = </span><span class="si">{</span><span class="n">_f</span><span class="p">(</span><span class="n">fps</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s2">"metersPerUnit = 1"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s2">"startTimeCode = 0"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="sa">f</span><span class="s2">"timeCodesPerSecond = </span><span class="si">{</span><span class="n">_f</span><span class="p">(</span><span class="n">fps</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s1">'upAxis = "Z"'</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">depth</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s2">")"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">'def Xform "World"'</span><span class="p">,</span> <span class="s1">'kind = "assembly"'</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">'def Scope "Looks"'</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">materials</span><span class="p">:</span>
+        <span class="n">_write_material</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">scene</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"/World/Looks/M</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">'class Scope "Prototypes"'</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">protos</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">'def Mesh "</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">"'</span><span class="p">)</span>
+        <span class="n">_write_mesh_body</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">_prototype</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">scene</span><span class="p">))</span>
+        <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="n">envs</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span> <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">list</span><span class="p">(</span><span class="n">env_ids</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">e</span><span class="p">,</span> <span class="n">env</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">envs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">'def Xform "env_</span><span class="si">{</span><span class="n">env</span><span class="si">}</span><span class="s1">"'</span><span class="p">)</span>
+        <span class="n">used</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">_RESERVED</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">b</span><span class="p">,</span> <span class="n">body</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">scene</span><span class="o">.</span><span class="n">bodies</span><span class="p">):</span>
+            <span class="n">geoms</span> <span class="o">=</span> <span class="n">by_body</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">geoms</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">prim_name</span><span class="p">(</span><span class="n">body</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">used</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"body_</span><span class="si">{</span><span class="n">b</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">'def Xform "</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">"'</span><span class="p">)</span>
+            <span class="n">_write_body_pose</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">poses</span><span class="p">[:,</span> <span class="n">e</span><span class="p">,</span> <span class="n">b</span><span class="p">])</span>
+            <span class="n">geom_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">geoms</span><span class="p">:</span>
+                <span class="n">g</span> <span class="o">=</span> <span class="n">scene</span><span class="o">.</span><span class="n">geoms</span><span class="p">[</span><span class="n">j</span><span class="p">]</span>
+                <span class="n">gname</span> <span class="o">=</span> <span class="n">prim_name</span><span class="p">(</span><span class="n">g</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">geom_names</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">g</span><span class="o">.</span><span class="n">kind</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">j</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+                <span class="n">hit</span> <span class="o">=</span> <span class="n">_shape_key</span><span class="p">(</span><span class="n">g</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">hit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># a plane: its own quad</span>
+                    <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">'def Mesh "</span><span class="si">{</span><span class="n">gname</span><span class="si">}</span><span class="s1">"'</span><span class="p">,</span> <span class="n">_BINDING</span><span class="p">)</span>
+                    <span class="n">_write_mesh_body</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">plane</span><span class="p">(</span><span class="o">*</span><span class="n">_ground_half</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">poses</span><span class="p">[:,</span> <span class="n">e</span><span class="p">])))</span>
+                    <span class="n">scale</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">key</span><span class="p">,</span> <span class="n">scale</span> <span class="o">=</span> <span class="n">hit</span>
+                    <span class="n">w</span><span class="o">.</span><span class="n">open</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">'def Mesh "</span><span class="si">{</span><span class="n">gname</span><span class="si">}</span><span class="s1">"'</span><span class="p">,</span>
+                        <span class="n">_BINDING</span><span class="p">,</span>
+                        <span class="s2">"prepend references = "</span>
+                        <span class="sa">f</span><span class="s2">"&lt;/World/Prototypes/</span><span class="si">{</span><span class="n">protos</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="s2">&gt;"</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="n">_xform_ops</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">pos</span><span class="p">,</span> <span class="n">g</span><span class="o">.</span><span class="n">quat</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+                <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="sa">f</span><span class="s2">"rel material:binding = &lt;/World/Looks/M</span><span class="si">{</span><span class="n">g</span><span class="o">.</span><span class="n">material</span><span class="si">}</span><span class="s2">&gt;"</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s2">"collision"</span><span class="p">:</span>
+                    <span class="n">w</span><span class="o">.</span><span class="n">line</span><span class="p">(</span><span class="s1">'uniform token purpose = "guide"'</span><span class="p">)</span>
+                <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">w</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">w</span><span class="o">.</span><span class="n">text</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.unit_box" class="doc doc-heading">
+            <code class=" language-python"><span class="n">unit_box</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_Shape</span></code>
+
+<a href="#simscope.usd.unit_box" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A cube with edges of 1, centred on the origin.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">unit_box</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_Shape</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A cube with edges of 1, centred on the origin."""</span>
+    <span class="n">points</span><span class="p">,</span> <span class="n">normals</span><span class="p">,</span> <span class="n">faces</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">n</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">_BOX_FACES</span><span class="p">:</span>
+        <span class="n">nn</span><span class="p">,</span> <span class="n">uu</span><span class="p">,</span> <span class="n">vv</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">u</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">su</span><span class="p">,</span> <span class="n">sv</span> <span class="ow">in</span> <span class="p">((</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)):</span>
+            <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">nn</span> <span class="o">+</span> <span class="n">su</span> <span class="o">*</span> <span class="n">uu</span> <span class="o">+</span> <span class="n">sv</span> <span class="o">*</span> <span class="n">vv</span><span class="p">))</span>
+            <span class="n">normals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">nn</span><span class="p">)</span>
+        <span class="n">faces</span> <span class="o">+=</span> <span class="p">[(</span><span class="n">base</span><span class="p">,</span> <span class="n">base</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">base</span> <span class="o">+</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">base</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span> <span class="n">base</span> <span class="o">+</span> <span class="mi">3</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">_Shape</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">faces</span><span class="p">,</span> <span class="n">normals</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.unit_cylinder" class="doc doc-heading">
+            <code class=" language-python"><span class="n">unit_cylinder</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_Shape</span></code>
+
+<a href="#simscope.usd.unit_cylinder" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A cylinder of radius 1 from <code>z = -1</code> to <code>z = 1</code>, 24 segments.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">unit_cylinder</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_Shape</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A cylinder of radius 1 from ``z = -1`` to ``z = 1``, 24 segments."""</span>
+    <span class="n">seg</span> <span class="o">=</span> <span class="mi">24</span>
+    <span class="n">phi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">seg</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ring</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">phi</span><span class="p">)],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">up</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+    <span class="n">side</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">ring</span> <span class="o">-</span> <span class="n">up</span><span class="p">,</span> <span class="n">ring</span> <span class="o">+</span> <span class="n">up</span><span class="p">])</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">seg</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">faces</span> <span class="o">=</span> <span class="p">[(</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">seg</span><span class="p">)]</span>
+    <span class="n">faces</span> <span class="o">+=</span> <span class="p">[(</span><span class="n">j</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">w</span><span class="p">,</span> <span class="n">j</span> <span class="o">+</span> <span class="n">w</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">seg</span><span class="p">)]</span>
+    <span class="n">points</span><span class="p">,</span> <span class="n">normals</span> <span class="o">=</span> <span class="p">[</span><span class="n">side</span><span class="p">],</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">ring</span><span class="p">,</span> <span class="n">ring</span><span class="p">])]</span>
+    <span class="k">for</span> <span class="n">z</span> <span class="ow">in</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">):</span>
+        <span class="n">base</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">)</span>
+        <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">([</span><span class="n">up</span> <span class="o">*</span> <span class="n">z</span><span class="p">,</span> <span class="n">ring</span> <span class="o">+</span> <span class="n">up</span> <span class="o">*</span> <span class="n">z</span><span class="p">]))</span>
+        <span class="n">normals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">((</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">z</span><span class="p">),</span> <span class="p">(</span><span class="n">w</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">seg</span><span class="p">):</span>
+            <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">base</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="n">j</span><span class="p">,</span> <span class="n">base</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">j</span>
+            <span class="n">faces</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">base</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span> <span class="k">if</span> <span class="n">z</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">a</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">_Shape</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">points</span><span class="p">),</span> <span class="n">faces</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">normals</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.unit_sphere" class="doc doc-heading">
+            <code class=" language-python"><span class="n">unit_sphere</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_Shape</span></code>
+
+<a href="#simscope.usd.unit_sphere" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>A sphere of radius 1: 24 segments around, 16 from pole to pole.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">unit_sphere</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">_Shape</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A sphere of radius 1: 24 segments around, 16 from pole to pole."""</span>
+    <span class="n">lats</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">17</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_rings</span><span class="p">([(</span><span class="nb">float</span><span class="p">(</span><span class="n">lat</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span> <span class="k">for</span> <span class="n">lat</span> <span class="ow">in</span> <span class="n">lats</span><span class="p">],</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">24</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.usdz_bytes" class="doc doc-heading">
+            <code class=" language-python"><span class="n">usdz_bytes</span><span class="p">(</span><span class="n">files</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">bytes</span></code>
+
+<a href="#simscope.usd.usdz_bytes" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Packs files into a USDZ archive.</p>
+<p>A USDZ is a zip with no compression whose file data all start at a
+multiple of 64 bytes. The first file is the root layer.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>files</code>
+            </td>
+            <td>
+                  <code><span title="collections.abc.Sequence">Sequence</span>[<span title="tuple">tuple</span>[<span title="str">str</span>, <span title="bytes">bytes</span>]]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p><code>(name, data)</code> pairs, the root layer first.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="bytes">bytes</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The archive.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span>
+<span class="normal">621</span>
+<span class="normal">622</span>
+<span class="normal">623</span>
+<span class="normal">624</span>
+<span class="normal">625</span>
+<span class="normal">626</span>
+<span class="normal">627</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">usdz_bytes</span><span class="p">(</span><span class="n">files</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Packs files into a USDZ archive.</span>
+
+<span class="sd">    A USDZ is a zip with no compression whose file data all start at a</span>
+<span class="sd">    multiple of 64 bytes. The first file is the root layer.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        files: ``(name, data)`` pairs, the root layer first.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        The archive.</span>
+<span class="sd">    """</span>
+    <span class="n">buf</span> <span class="o">=</span> <span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipFile</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZIP_STORED</span><span class="p">)</span> <span class="k">as</span> <span class="n">zf</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="n">info</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZipInfo</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">date_time</span><span class="o">=</span><span class="n">_ZIP_TIME</span><span class="p">)</span>
+            <span class="n">info</span><span class="o">.</span><span class="n">compress_type</span> <span class="o">=</span> <span class="n">zipfile</span><span class="o">.</span><span class="n">ZIP_STORED</span>
+            <span class="n">info</span><span class="o">.</span><span class="n">external_attr</span> <span class="o">=</span> <span class="mo">0o644</span> <span class="o">&lt;&lt;</span> <span class="mi">16</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="mi">30</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="n">name</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span> <span class="o">+</span> <span class="mi">4</span>  <span class="c1"># with the padding's id+size</span>
+            <span class="n">pad</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">buf</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span> <span class="o">+</span> <span class="n">header</span><span class="p">)</span> <span class="o">%</span> <span class="n">ALIGN</span>
+            <span class="n">info</span><span class="o">.</span><span class="n">extra</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">"&lt;HH"</span><span class="p">,</span> <span class="n">_PAD_ID</span><span class="p">,</span> <span class="n">pad</span><span class="p">)</span> <span class="o">+</span> <span class="sa">b</span><span class="s2">"</span><span class="se">\0</span><span class="s2">"</span> <span class="o">*</span> <span class="n">pad</span>
+            <span class="n">zf</span><span class="o">.</span><span class="n">writestr</span><span class="p">(</span><span class="n">info</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">buf</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="simscope.usd.vertex_normals" class="doc doc-heading">
+            <code class=" language-python"><span class="n">vertex_normals</span><span class="p">(</span><span class="n">points</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span> <span class="n">faces</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatArray</span></code>
+
+<a href="#simscope.usd.vertex_normals" class="headerlink" title="Permanent link">&para;</a></h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Area-weighted vertex normals, as the viewer computes them.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                <code>points</code>
+            </td>
+            <td>
+                  <code><span title="simscope.usd.FloatArray">FloatArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Vertex positions, <code>[V, 3]</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                <code>faces</code>
+            </td>
+            <td>
+                  <code><span title="numpy.typing.NDArray">NDArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Triangle vertex indices, <code>[F, 3]</code>.</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <div class="table-wrapper"><table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="simscope.usd.FloatArray">FloatArray</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Unit normals, <code>[V, 3]</code>; <code>+z</code> for a vertex no face touches.</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table></div>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/simscope/usd.py</code></summary>
+              <div class="codehilite"><div class="table-wrapper"><table class="codehilitetable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">vertex_normals</span><span class="p">(</span><span class="n">points</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span> <span class="n">faces</span><span class="p">:</span> <span class="n">npt</span><span class="o">.</span><span class="n">NDArray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatArray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""Area-weighted vertex normals, as the viewer computes them.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        points: Vertex positions, ``[V, 3]``.</span>
+<span class="sd">        faces: Triangle vertex indices, ``[F, 3]``.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Unit normals, ``[V, 3]``; ``+z`` for a vertex no face touches.</span>
+<span class="sd">    """</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="n">faces</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]],</span> <span class="n">p</span><span class="p">[</span><span class="n">faces</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]],</span> <span class="n">p</span><span class="p">[</span><span class="n">faces</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]]</span>
+    <span class="n">face_n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">b</span> <span class="o">-</span> <span class="n">a</span><span class="p">,</span> <span class="n">c</span> <span class="o">-</span> <span class="n">a</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">at</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">faces</span><span class="p">[:,</span> <span class="n">k</span><span class="p">],</span> <span class="n">face_n</span><span class="p">)</span>
+    <span class="n">length</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">n</span><span class="p">[</span><span class="n">length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+    <span class="n">length</span><span class="p">[</span><span class="n">length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">n</span> <span class="o">/</span> <span class="n">length</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div></div>
             </details>
     </div>
@@ -40474,6 +41921,100 @@ an invalid <code>envs</code> for a run, or a <code>derived</code> path outside
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
             data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.export.read_asset');">
             read_asset
+        </a>
+        
+        
+
+        
+        <a href="#simscope.usd"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#simscope.usd');">
+            usd
+        </a>
+        
+        
+        <a href="#simscope.usd.ALIGN"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.ALIGN');">
+            ALIGN
+        </a>
+        
+        <a href="#simscope.usd.GROUND_MARGIN"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.GROUND_MARGIN');">
+            GROUND_MARGIN
+        </a>
+        
+        <a href="#simscope.usd.MAX_ENVS"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.MAX_ENVS');">
+            MAX_ENVS
+        </a>
+        
+        <a href="#simscope.usd.STAGE_NAME"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.STAGE_NAME');">
+            STAGE_NAME
+        </a>
+        
+        <a href="#simscope.usd.capsule"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.capsule');">
+            capsule
+        </a>
+        
+        <a href="#simscope.usd.export_usd"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.export_usd');">
+            export_usd
+        </a>
+        
+        <a href="#simscope.usd.plane"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.plane');">
+            plane
+        </a>
+        
+        <a href="#simscope.usd.prim_name"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.prim_name');">
+            prim_name
+        </a>
+        
+        <a href="#simscope.usd.stage_text"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.stage_text');">
+            stage_text
+        </a>
+        
+        <a href="#simscope.usd.unit_box"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.unit_box');">
+            unit_box
+        </a>
+        
+        <a href="#simscope.usd.unit_cylinder"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.unit_cylinder');">
+            unit_cylinder
+        </a>
+        
+        <a href="#simscope.usd.unit_sphere"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.unit_sphere');">
+            unit_sphere
+        </a>
+        
+        <a href="#simscope.usd.usdz_bytes"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.usdz_bytes');">
+            usdz_bytes
+        </a>
+        
+        <a href="#simscope.usd.vertex_normals"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#simscope.usd.vertex_normals');">
+            vertex_normals
         </a>
         
         

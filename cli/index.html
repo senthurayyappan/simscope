@@ -668,6 +668,37 @@
 </tr>
 </tbody>
 </table></div>
+<h2 id="simscope-usd">simscope usd<a class="headerlink" href="#simscope-usd" title="Permanent link">&para;</a></h2>
+<p>Writes one rollout as a USD stage for Blender. See <a href="../getting-started/#usd-for-blender">USD for Blender</a>.</p>
+<div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span>usd<span class="w"> </span>DIR<span class="w"> </span>RUN<span class="w"> </span>-o<span class="w"> </span>OUT.usdz<span class="w"> </span><span class="o">[</span>--envs<span class="w"> </span>I,J,...<span class="o">]</span>
+</code></pre></div>
+
+<div class="table-wrapper"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What it does</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>RUN</code></td>
+<td>The rollout name</td>
+<td>required</td>
+</tr>
+<tr>
+<td><code>-o</code>, <code>--output</code></td>
+<td>The <code>.usdz</code> file to write</td>
+<td>required</td>
+</tr>
+<tr>
+<td><code>--envs</code></td>
+<td>Comma-separated env indices to include. Needed above 64 envs</td>
+<td>all envs</td>
+</tr>
+</tbody>
+</table></div>
 <h2 id="simscope-rename">simscope rename<a class="headerlink" href="#simscope-rename" title="Permanent link">&para;</a></h2>
 <p>Renames a rollout. The folder name changes. The id does not, so notes, ratings, groups, and cached highlights stay with it. A rollout that is still recording cannot be renamed, and the new name must be free. Reopen any <code>Rollout</code> you opened before the rename.</p>
 <div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span>rename<span class="w"> </span>DIR<span class="w"> </span>OLD<span class="w"> </span>NEW
@@ -868,6 +899,14 @@
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
             data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#simscope-export');">
             simscope export
+        </a>
+        
+
+        
+        <a href="#simscope-usd"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#simscope-usd');">
+            simscope usd
         </a>
         
 

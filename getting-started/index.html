@@ -698,6 +698,17 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 <p>Compare takes up to four rollouts. <code>--arrange</code> applies only with <code>--layout compare</code>. In Python, pass <code>layout="compare"</code> and <code>arrange="stack"</code> to <code>simscope.export.export_html</code>. The viewer's Export button sends the arrangement you are looking at.</p>
 <p>Without <code>--layout</code>, one rollout exports as <code>single</code> and several rollouts export as <code>grid</code>.</p>
 <p>A lean file on an mkdeck slide is an image of that file. Copy it next to the deck and write <code>![Rollout](assets/box.html)</code>.</p>
+<h2 id="usd-for-blender">USD for Blender<a class="headerlink" href="#usd-for-blender" title="Permanent link">&para;</a></h2>
+<p><code>simscope usd</code> writes one rollout as a <code>.usdz</code> file: the scene and its motion as a USD stage, with the scene's textures inside. In the app, choose Export, then USD for Blender. A rollout with several envs exports the env you selected and the ones you pinned.</p>
+<div class="codehilite"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span>usd<span class="w"> </span>demo_lib<span class="w"> </span>drop_a<span class="w"> </span>-o<span class="w"> </span>drop_a.usdz
+</code></pre></div>
+
+<p>In Blender, choose File, then Import, then Universal Scene Description. Each body is an object that follows its recorded pose, one USD time code per recorded frame. Two things to know:</p>
+<ul>
+<li>Blender plays one recorded frame per scene frame and keeps its own frame rate. Set the scene's frame rate to the rollout's (the menu says which) to play it in real time.</li>
+<li>Blender reads the motion from the <code>.usdz</code> file as it plays, so keep the file where it was imported from.</li>
+</ul>
+<p>Collision geometry is marked as guide geometry. Tick Guide in the import options to bring it in. An infinite ground plane becomes a square that covers everywhere the bodies go, plus 2 m. In Python, call <code>simscope.usd.export_usd</code>.</p>
 <h2 id="rename">Rename<a class="headerlink" href="#rename" title="Permanent link">&para;</a></h2>
 <p><code>simscope rename demo_lib old_name new_name</code> renames a rollout. In Python, call <code>Library.rename(old, new)</code>. In the app, double-click the name.</p>
 <p>The name is the folder name. The id never changes, so notes, ratings, groups, cached highlights, and exports stay with the rollout. A rollout that is still recording cannot be renamed. The new name must not already exist. Reopen any <code>Rollout</code> you had open, because it still points at the old folder.</p>
@@ -857,6 +868,14 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
             data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#exports');">
             Exports
+        </a>
+        
+
+        
+        <a href="#usd-for-blender"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#usd-for-blender');">
+            USD for Blender
         </a>
         
 

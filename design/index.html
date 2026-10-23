@@ -509,6 +509,7 @@
 <li>Notes, ratings, and labels sit in a JSON file next to each rollout. The SQLite index is a cache and can be rebuilt.</li>
 <li>The simulators are MuJoCo, including MJX and MuJoCo Warp, and Isaac Lab 3.0 or newer. Python is 3.12 or newer.</li>
 <li>Import reads <code>.rbundle</code> files and self-contained Brax HTML pages. Export writes one HTML file or a <code>.simscope</code> pack.</li>
+<li>A rollout also exports as a <code>.usdz</code> stage for Blender, not as a <code>.blend</code>. Blender's own USD import reads it, and so does any USD tool. The stage is written as text, so the library needs no USD dependency.</li>
 <li>The viewer is this repository's three.js player. Python serves the folder over HTTP.</li>
 <li>Follow runs in the browser, in the same frame as the poses.</li>
 <li>A rollout with many envs draws the ones you are looking at in full and the rest as simple shapes.</li>
