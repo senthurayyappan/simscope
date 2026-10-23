@@ -67,6 +67,20 @@ simscope export DIR RUN [RUN ...] -o OUT.html [OPTIONS]
 | `--no-transcode` | Keeps the stored blocks instead of transcoding them for the pack | transcode |
 | `--no-annotations` | Leaves notes, ratings, and events out of the file | include them |
 
+## simscope usd
+
+Writes one rollout as a USD stage for Blender. See [USD for Blender](getting-started.md#usd-for-blender).
+
+```bash
+simscope usd DIR RUN -o OUT.usdz [--envs I,J,...]
+```
+
+| Option | What it does | Default |
+| --- | --- | --- |
+| `RUN` | The rollout name | required |
+| `-o`, `--output` | The `.usdz` file to write | required |
+| `--envs` | Comma-separated env indices to include. Needed above 64 envs | all envs |
+
 ## simscope rename
 
 Renames a rollout. The folder name changes. The id does not, so notes, ratings, groups, and cached highlights stay with it. A rollout that is still recording cannot be renamed, and the new name must be free. Reopen any `Rollout` you opened before the rename.

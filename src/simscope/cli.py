@@ -1,9 +1,9 @@
 """The ``simscope`` command line.
 
-Commands are ``serve``, ``ls``, ``export``, ``rename``, ``pack``, ``import``,
-``recover``, and ``info``. Everything except ``serve`` works without the
-viewer extra. ``serve`` imports the server lazily, so the other commands
-never load starlette, uvicorn, or watchfiles.
+Commands are ``serve``, ``ls``, ``export``, ``usd``, ``rename``, ``pack``,
+``import``, ``recover``, and ``info``. Everything except ``serve`` works
+without the viewer extra. ``serve`` imports the server lazily, so the other
+commands never load starlette, uvicorn, or watchfiles.
 """
 
 import argparse
@@ -16,7 +16,7 @@ import sys
 import time
 from collections.abc import Callable, Sequence
 
-from simscope import discover, export, importers, library
+from simscope import discover, export, importers, library, usd
 from simscope.io import errors, manifest
 
 _SORTS = ("created", "name", "n_frames", "rating")
@@ -182,6 +182,17 @@ def _cmd_export(args: argparse.Namespace) -> int:
             envs=args.envs,
         )
     except ValueError as exc:  # still recording, bad layout or envs
+        raise UserError(str(exc)) from exc
+    print(f"wrote {out} ({_human(out.stat().st_size)})")
+    return 0
+
+
+def _cmd_usd(args: argparse.Namespace) -> int:
+    root = _library_root(args.dir)
+    _check_runs(root, [args.run])
+    try:
+        out = usd.export_usd(root, args.run, args.output, envs=args.envs)
+    except ValueError as exc:  # still recording, bad or too many envs
         raise UserError(str(exc)) from exc
     print(f"wrote {out} ({_human(out.stat().st_size)})")
     return 0
@@ -432,6 +443,16 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--no-transcode", action="store_true")
     p.add_argument("--no-annotations", action="store_true")
+
+    p = add("usd", _cmd_usd, "export a rollout as a USD stage for Blender")
+    p.add_argument("run", metavar="RUN")
+    p.add_argument("-o", "--output", required=True, metavar="OUT.usdz")
+    p.add_argument(
+        "--envs",
+        type=_env_list,
+        metavar="I,J,...",
+        help=f"export only these envs (needed above {usd.MAX_ENVS} envs)",
+    )
 
     p = add("rename", _cmd_rename, "rename a rollout")
     p.add_argument("old", metavar="OLD", help="the rollout's current name")

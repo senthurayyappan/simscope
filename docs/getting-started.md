@@ -178,6 +178,21 @@ Without `--layout`, one rollout exports as `single` and several rollouts export 
 
 A lean file on an mkdeck slide is an image of that file. Copy it next to the deck and write `![Rollout](assets/box.html)`.
 
+## USD for Blender
+
+`simscope usd` writes one rollout as a `.usdz` file: the scene and its motion as a USD stage, with the scene's textures inside. In the app, choose Export, then USD for Blender. A rollout with several envs exports the env you selected and the ones you pinned.
+
+```bash
+uv run simscope usd demo_lib drop_a -o drop_a.usdz
+```
+
+In Blender, choose File, then Import, then Universal Scene Description. Each body is an object that follows its recorded pose, one USD time code per recorded frame. Two things to know:
+
+- Blender plays one recorded frame per scene frame and keeps its own frame rate. Set the scene's frame rate to the rollout's (the menu says which) to play it in real time.
+- Blender reads the motion from the `.usdz` file as it plays, so keep the file where it was imported from.
+
+Collision geometry is marked as guide geometry. Tick Guide in the import options to bring it in. An infinite ground plane becomes a square that covers everywhere the bodies go, plus 2 m. In Python, call `simscope.usd.export_usd`.
+
 ## Rename
 
 `simscope rename demo_lib old_name new_name` renames a rollout. In Python, call `Library.rename(old, new)`. In the app, double-click the name.

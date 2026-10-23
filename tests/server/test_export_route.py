@@ -100,3 +100,31 @@ def test_bad_arrange_is_a_400_and_other_layouts_ignore_it(client):
     # Only a compare page has an arrangement; the app may always send one.
     ok = client.get("/api/export", params={"runs": "walk", "arrange": "stack"})
     assert ok.status_code == 200 and b"data-arrange" not in ok.content
+
+
+def test_usd_download(client):
+    r = client.get("/api/export/usd", params={"run": "walk"})
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "model/vnd.usdz+zip"
+    assert (
+        r.headers["content-disposition"] == 'attachment; filename="walk.usdz"'
+    )
+    assert r.headers["cache-control"] == "no-store"
+    assert r.content.startswith(b"PK")
+    crowd = client.get(
+        "/api/export/usd", params={"run": "crowd", "envs": "3,1"}
+    )
+    assert crowd.status_code == 200
+
+
+def test_usd_bad_requests(client, live):
+    get = lambda **q: client.get("/api/export/usd", params=q)  # noqa: E731
+    assert get().status_code == 400
+    assert get(run="../x").status_code == 400
+    assert get(run="ghost").status_code == 404
+    assert get(run="walk", envs="a").status_code == 400
+    assert get(run="walk", envs="1").status_code == 400
+    assert get(run="crowd").status_code == 400  # 70 envs need a subset
+    live.grow(20)
+    client.app.state.services.state.rescan()
+    assert get(run="live").status_code == 400

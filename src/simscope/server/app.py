@@ -88,6 +88,7 @@ def create_app(
             Route("/api/blk", routes.blk),
             Route("/api/blocks", routes.blocks_route),
             Route("/api/export", routes.export_route),
+            Route("/api/export/usd", routes.usd_route),
             Route("/api/groups", routes.groups, methods=["GET"]),
             Route("/api/groups", routes.change_groups, methods=["POST"]),
             Route(
