@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.1.4](https://github.com/senthurayyappan/simscope/compare/v0.1.3...v0.1.4) (2026-10-24)
+
+
+### Features
+
+* a denser, Blender-like UI scale ([c450080](https://github.com/senthurayyappan/simscope/commit/c45008019b4928ce1138fcd01b1719e2a522a8fb))
+* a denser, Blender-like UI scale ([df96547](https://github.com/senthurayyappan/simscope/commit/df965477e8229c9798aae384e2928d49e2adbe68))
+* export a run as a USD stage for Blender ([2c2c07d](https://github.com/senthurayyappan/simscope/commit/2c2c07df1ddf9d432ef3abc3fb8297a7d7167e05))
+* export a run as a USD stage for Blender ([28c51fc](https://github.com/senthurayyappan/simscope/commit/28c51fc56f58656ebd6c00a79caa2476b173da2c)), closes [#10](https://github.com/senthurayyappan/simscope/issues/10)
+* lighter timeline markers, and [ and ] toggle the side panels ([c571e2f](https://github.com/senthurayyappan/simscope/commit/c571e2f8aea34eb0a789f97213b21511d9503fd2))
+* lighting controls for the viewport ([7b01089](https://github.com/senthurayyappan/simscope/commit/7b0108919a28cf6d1d5f199e01ed6c7878e7bd6e))
+* lighting controls for the viewport ([7726f30](https://github.com/senthurayyappan/simscope/commit/7726f30f226fcc431ceded9e677f8bf3084d2c6f)), closes [#12](https://github.com/senthurayyappan/simscope/issues/12)
+* use Inter, Blender's UI font, instead of Geist ([d4c5a57](https://github.com/senthurayyappan/simscope/commit/d4c5a57910c4271f2a6bceee13dc9ec85c579518))
+* use Inter, Blender's UI font, instead of Geist ([514a6c2](https://github.com/senthurayyappan/simscope/commit/514a6c26133243cb3268d6401d0221c96dbcece6))
+
+
+### Bug Fixes
+
+* the ground follows the lighting, and brightness goes to zero ([998ef6a](https://github.com/senthurayyappan/simscope/commit/998ef6a325be026bd797d754c929f64a20ec3a3e)), closes [#12](https://github.com/senthurayyappan/simscope/issues/12)
+
+
+### Documentation
+
+* show the m_roll_d001 run in the README banner ([9022636](https://github.com/senthurayyappan/simscope/commit/9022636654c6a82960c473974f156218e215756b))
+* use a GIF of the viewer as the README banner ([4a8f02d](https://github.com/senthurayyappan/simscope/commit/4a8f02dea062a574850e83e3b501dd5f32703159))
+* use a GIF of the viewer as the README banner ([133e3fb](https://github.com/senthurayyappan/simscope/commit/133e3fb84bcde1707e5f8aaa127cb8ade118c577))
+
 ## [0.1.3](https://github.com/senthurayyappan/simscope/compare/v0.1.2...v0.1.3) (2026-10-08)
 
 
