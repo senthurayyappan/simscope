@@ -170,7 +170,7 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, s: DrawState, pal: P
     }
   }
 
-  // Ruler: 11 px Geist ticks.
+  // Ruler: 11 px Inter ticks.
   ctx.save();
   ctx.beginPath();
   ctx.rect(GUTTER - 1, 0, lw + 2, RULER_H);

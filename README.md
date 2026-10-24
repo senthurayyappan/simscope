@@ -94,4 +94,4 @@ The [developing guide](https://senthurayyappan.github.io/simscope/developing/) c
 
 Bug reports and pull requests are welcome, so read [CONTRIBUTING.md](https://github.com/senthurayyappan/simscope/blob/main/CONTRIBUTING.md) first.
 
-simscope is [Apache 2.0](LICENSE.md) licensed. Copyright 2026 Senthur Ayyappan. The package also carries three.js, camera-controls, React, Radix, uPlot, Geist, and other libraries under their own licenses, and code adapted from mjviser. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+simscope is [Apache 2.0](LICENSE.md) licensed. Copyright 2026 Senthur Ayyappan. The package also carries three.js, camera-controls, React, Radix, uPlot, Inter, and other libraries under their own licenses, and code adapted from mjviser. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

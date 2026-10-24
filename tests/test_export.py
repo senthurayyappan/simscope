@@ -987,7 +987,8 @@ def test_runtime_size_budgets():
         return len(export.gzip_runtime(export.read_asset(name)))
 
     assert gz("simscope-player.js") <= 250 * 1024
-    assert gz("simscope-app.js") + gz("simscope-app.css") <= 450 * 1024
+    # 470 KiB: 450 plus the Inter font (48 KB, inlined in the CSS as base64).
+    assert gz("simscope-app.js") + gz("simscope-app.css") <= 470 * 1024
 
 
 # ---------------------------------------------------------------------- CLI

@@ -22,7 +22,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 # simscope's own code is Apache-2.0. The wheel also carries the browser
-# bundles: MIT, ISC, and 0BSD code, and the Geist font (OFL-1.1).
+# bundles: MIT, ISC, and 0BSD code, and the Inter font (OFL-1.1).
 # See THIRD_PARTY_NOTICES.md.
 license = "Apache-2.0 AND MIT AND ISC AND OFL-1.1 AND 0BSD"
 license-files = [
