@@ -196,7 +196,7 @@ export function CaptureMenu() {
         onEscapeKeyDown={(e) => e.stopPropagation()}
       >
         <Tabs value={prefs.tab} onValueChange={(v) => set({ tab: v as Tab })} className="gap-0">
-          <div className="h-10 border-b">
+          <div className="h-8 border-b">
             <TabsList variant="line" className="h-full w-full gap-0">
               <TabsTrigger value="image" disabled={busy}>
                 Screenshot

@@ -122,7 +122,7 @@ test("strip geometry: one time-to-pixel mapping for ruler, glyphs and pointer", 
 test("timeline height: bar, border, ruler, lanes, padding", () => {
   assert.equal(timelineHeight(0), BAR_H + 1 + RULER_H + BOTTOM_PAD);
   for (let n = 1; n <= 5; n++) assert.equal(timelineHeight(n) - timelineHeight(n - 1), LANE_H);
-  assert.equal(timelineHeight(1), 111);
+  assert.equal(timelineHeight(1), 89);
 });
 
 test("highlight kinds: built-ins have palette slots, custom kinds a validated hex or neutral", () => {

@@ -71,7 +71,7 @@ export function InlineName({ initial, label, maxLength = 64, className, error, r
         onClick={(e) => e.stopPropagation()}
         onDoubleClick={(e) => e.stopPropagation()}
         className={cn(
-          "h-7 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/30",
+          "h-6 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:focus-visible:ring-destructive/30",
           className,
         )}
       />
