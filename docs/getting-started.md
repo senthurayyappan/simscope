@@ -134,9 +134,11 @@ Use a detector for something the data can find in every rollout. Use an event fo
 
 ## Screenshots and GIFs
 
-The viewport has two groups of controls. View options sit at the top left: the theme, the ground, geometry, contacts, and for a comparison the arrangement. Capture and Export sit at the top right.
+The viewport has two groups of controls. View options sit at the top left: the theme, the ground, the lighting, geometry, contacts, and for a comparison the arrangement. Capture and Export sit at the top right.
 
 The arrow beside the ground button opens its menu. Choose a checkerboard or a grid, and a color: Automatic, Light, Dark, or Classic, the blue checkerboard of MuJoCo. Automatic follows the theme. The other colors stay the same in light and dark mode, so you can have a dark ground under a light interface. The choice is remembered.
+
+The light bulb opens the lighting menu. Studio, the default, turns the lights with the camera, so the robot stays lit from any angle. Sun fixes one light in the world; set its direction and height, and its shadows stay put while you orbit. Brightness and shadows apply to both. Shadows fall on the ground and show in screenshots and GIFs. The lighting is remembered.
 
 The camera button opens the capture menu. It works in the served app and in a full export. It captures the active pane. The menu stays open while you pan, zoom, hide a sidebar, or move the stretch on the timeline. Close it with the camera button or Escape.
 

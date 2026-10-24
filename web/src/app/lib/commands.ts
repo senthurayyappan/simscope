@@ -3,7 +3,7 @@
 
 import type { FollowMode, PlayerLike, ViewName } from "./core";
 import { activePlayer, allPlayers, getClock } from "./runtime";
-import { useApp } from "./store";
+import { useApp, type Lighting } from "./store";
 import { fitTimeline, panTimeline, zoomTimeline } from "./timeline-view";
 import { clamp } from "./utils";
 import type { Action } from "./keys";
@@ -37,9 +37,16 @@ export function applyDisplay(p: PlayerLike): void {
   const s = state();
   p.setGround?.(s.groundOn ? s.groundKind : "none");
   p.setGroundColor?.(s.groundColor);
+  p.setLighting?.(s.lighting);
   p.setVisual?.(s.visual);
   p.setContacts?.(s.contacts);
   p.setCollision?.(s.collision);
+}
+
+/** Changes some lighting settings in every pane and records them. */
+export function setLighting(patch: Partial<Lighting>): void {
+  useApp.setState((s) => ({ lighting: { ...s.lighting, ...patch } }));
+  for (const p of allPlayers()) p.setLighting?.(state().lighting);
 }
 
 /** Applies a display toggle to every pane and records it. */

@@ -29,6 +29,7 @@ export interface Prefs {
   groundOn: boolean;
   groundKind: "checker" | "grid";
   groundColor: "auto" | "light" | "dark" | "mujoco";
+  lighting: Partial<{ mode: "studio" | "sun"; brightness: number; shadows: boolean; azimuth: number; height: number }>;
   cameraSync: boolean;
   speed: number;
   loop: boolean;
@@ -70,6 +71,10 @@ export function sanitizePrefs(raw: unknown): Partial<Prefs> {
   set("groundOn", bool(raw.groundOn));
   set("groundKind", oneOf(raw.groundKind, ["checker", "grid"]));
   set("groundColor", oneOf(raw.groundColor, ["auto", "light", "dark", "mujoco"]));
+  if (isObj(raw.lighting)) {
+    const l = raw.lighting;
+    set("lighting", defined({ mode: oneOf(l.mode, ["studio", "sun"]), brightness: num(l.brightness, 0.25, 2), shadows: bool(l.shadows), azimuth: num(l.azimuth, 0, 360), height: num(l.height, 5, 90) }));
+  }
   set("cameraSync", bool(raw.cameraSync));
   set("speed", num(raw.speed, 0.01, 64));
   set("loop", bool(raw.loop));

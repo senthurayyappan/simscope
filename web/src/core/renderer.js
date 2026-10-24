@@ -12,6 +12,7 @@
 
 import { Vector2, WebGLRenderer } from "three";
 
+import { enableShadows } from "./lighting.js";
 import { wake } from "./loop.js";
 
 let shared = null;
@@ -23,6 +24,7 @@ class SharedRenderer {
     // No preserveDrawingBuffer: the blit happens in the same task as the draw.
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(1);
+    enableShadows(this.renderer);
     this.renderer.setScissorTest(true);
     this.canvas = this.renderer.domElement;
     this.width = 0;
@@ -96,6 +98,7 @@ class DirectRenderer {
   constructor(canvas) {
     this.renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true });
     this.renderer.setPixelRatio(1);
+    enableShadows(this.renderer);
     this.canvas = canvas;
     this.player = null;
     this.lost = false;
@@ -154,6 +157,7 @@ class OffscreenRenderer {
     // The 2D copy of a frame is read right after the draw, but a kept buffer makes that safe in every browser.
     this.renderer = new WebGLRenderer({ canvas: this.canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(1);
+    enableShadows(this.renderer);
     const gl = this.renderer.getContext();
     /** The largest width or height a frame can have. */
     this.maxSize = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_TEXTURE_SIZE), gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0]);

@@ -1,6 +1,7 @@
-import { Box, Boxes, ChevronDown, Download, FileCode2, Footprints, Grid3x3, Link2, Monitor, Moon, ScanEye, Sun } from "lucide-react";
+import { Box, Boxes, ChevronDown, Download, FileCode2, Footprints, Grid3x3, Lightbulb, Link2, Monitor, Moon, ScanEye, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,12 +16,13 @@ import { ArrangeToggle } from "./ArrangeToggle";
 import { CaptureMenu } from "./CaptureMenu";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
 import { Toggle } from "@/components/ui/toggle";
 import { Hint } from "@/components/ui/tooltip";
-import { setDisplay } from "@/lib/commands";
+import { setDisplay, setLighting } from "@/lib/commands";
 import { effectiveArrangement } from "@/lib/panes";
 
-import { useApp, type GroundColor, type GroundKind, type ThemePref } from "@/lib/store";
+import { DEFAULT_LIGHTING, useApp, type GroundColor, type GroundKind, type LightMode, type ThemePref } from "@/lib/store";
 
 const Divider = () => <div className="mx-0.5 h-4 w-px bg-border" />;
 
@@ -75,6 +77,7 @@ export function ViewportToolbar({ inline = false }: { inline?: boolean }) {
       <ThemeMenu />
       <Divider />
       <GroundControl />
+      <LightingMenu />
       <OverlayToggle label="Show visual geometry" disabledReason={none} pressed={visual} onPressedChange={(v) => setDisplay({ visual: v })}>
         <ScanEye />
       </OverlayToggle>
@@ -198,6 +201,97 @@ function GroundControl() {
   );
 }
 
+const LIGHT_MODES: { id: LightMode; label: string; hint: string }[] = [
+  { id: "studio", label: "Studio", hint: "Turns with the camera" },
+  { id: "sun", label: "Sun", hint: "Fixed in the world" },
+];
+
+/** One slider setting: its name, the slider, and its value. */
+function SliderRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  show,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  show(v: number): string;
+  onChange(v: number): void;
+}) {
+  return (
+    <div className="grid grid-cols-[4.5rem_1fr_2.75rem] items-center gap-2 px-2 py-1.5">
+      <span className="text-sm">{label}</span>
+      <Slider value={[value]} min={min} max={max} step={step} onValueChange={([v]) => onChange(v)} aria-label={label} />
+      <span className="text-right text-xs text-muted-foreground tabular-nums">{show(value)}</span>
+    </div>
+  );
+}
+
+/**
+ * The lights. Studio lights turn with the camera, so the robot is lit from wherever it is seen; the sun stays put
+ * and its shadows read as they would outdoors. Both cast shadows onto the ground.
+ */
+function LightingMenu() {
+  const hasRun = useApp((s) => s.panes.length > 0);
+  const l = useApp((s) => s.lighting);
+  const changed = (Object.keys(DEFAULT_LIGHTING) as (keyof typeof DEFAULT_LIGHTING)[]).some((k) => l[k] !== DEFAULT_LIGHTING[k]);
+  const deg = (v: number) => `${Math.round(v)}°`;
+  return (
+    <Popover>
+      <Hint label={hasRun ? "Lighting" : "Open a run first"}>
+        <span>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="icon-sm" disabled={!hasRun} aria-label="Lighting">
+              <Lightbulb />
+            </Button>
+          </PopoverTrigger>
+        </span>
+      </Hint>
+      <PopoverContent align="start" className="w-72 gap-0 p-1">
+        <Choices label="Light" value={l.mode} options={LIGHT_MODES} onChange={(mode) => setLighting({ mode })} />
+        {l.mode === "sun" ? (
+          <>
+            <SliderRow label="Direction" value={l.azimuth} min={0} max={360} step={5} show={deg} onChange={(azimuth) => setLighting({ azimuth })} />
+            <SliderRow label="Height" value={l.height} min={5} max={90} step={5} show={deg} onChange={(height) => setLighting({ height })} />
+          </>
+        ) : null}
+        <Separator className="my-1" />
+        <SliderRow
+          label="Brightness"
+          value={l.brightness}
+          min={0.25}
+          max={2}
+          step={0.05}
+          show={(v) => `${Math.round(v * 100)}%`}
+          onChange={(brightness) => setLighting({ brightness })}
+        />
+        <label className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent">
+          <Checkbox checked={l.shadows} onCheckedChange={(v) => setLighting({ shadows: v === true })} />
+          Shadows
+        </label>
+        {changed ? (
+          <>
+            <Separator className="my-1" />
+            <button
+              type="button"
+              onClick={() => setLighting(DEFAULT_LIGHTING)}
+              className="w-full rounded-sm px-2 py-1.5 text-left text-sm outline-hidden hover:bg-accent focus-visible:bg-accent"
+            >
+              Reset lighting
+            </button>
+          </>
+        ) : null}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // A radio list inside a popover (Blender: the chevron opens the details).
 function Choices<T extends string>({
   label,
@@ -207,7 +301,7 @@ function Choices<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { id: T; label: string; cells?: [string, string] }[];
+  options: { id: T; label: string; hint?: string; cells?: [string, string] }[];
   onChange(v: T): void;
 }) {
   return (
@@ -223,7 +317,14 @@ function Choices<T extends string>({
           className="relative flex items-center rounded-sm py-1.5 pl-8 pr-2 text-left text-sm outline-hidden hover:bg-accent focus-visible:bg-accent"
         >
           {value === it.id ? <span className="absolute left-2.5 size-1.5 rounded-full bg-foreground" /> : null}
-          {it.label}
+          {it.hint ? (
+            <span>
+              {it.label}
+              <span className="block text-xs text-muted-foreground">{it.hint}</span>
+            </span>
+          ) : (
+            it.label
+          )}
           {it.cells ? (
             <span
               aria-hidden

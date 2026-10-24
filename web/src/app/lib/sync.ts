@@ -26,6 +26,7 @@ const PREF_FIELDS = {
   groundOn: "groundOn",
   groundKind: "groundKind",
   groundColor: "groundColor",
+  lighting: "lighting",
   cameraSync: "cameraSync",
   plotWindow: "plotWindow",
   follow: "follow",
