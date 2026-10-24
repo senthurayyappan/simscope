@@ -28,6 +28,7 @@ export function createCrowd(nEnvs, size) {
   mesh.instanceMatrix.setUsage(DynamicDrawUsage);
   mesh.instanceMatrix.array.fill(0);
   mesh.frustumCulled = false;
+  mesh.castShadow = mesh.receiveShadow = true;
   const neutral = new Color().setStyle(NEUTRAL, SRGBColorSpace);
   mesh.instanceColor = new InstancedBufferAttribute(new Float32Array(nEnvs * 3), 3);
   for (let e = 0; e < nEnvs; e++) neutral.toArray(mesh.instanceColor.array, 3 * e);

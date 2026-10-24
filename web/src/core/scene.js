@@ -341,6 +341,8 @@ export async function buildScene(sceneJson, loaders, nSlots) {
     mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     mesh.frustumCulled = false; // instances move; the base geometry's sphere is meaningless
     mesh.visible = !bucket.collision;
+    // The see-through collision geoms neither cast nor take shadows.
+    mesh.castShadow = mesh.receiveShadow = !bucket.collision;
     const body = new Int32Array(n);
     const local = new Float32Array(12 * n);
     list.forEach((g, i) => {

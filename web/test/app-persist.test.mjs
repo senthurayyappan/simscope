@@ -76,6 +76,18 @@ test("hash: the time is written at most every 2 s while playing and settles quic
   assert.equal(timeWriteDelay(10_001, 10_000, false), SEEK_SETTLE_MS);
 });
 
+test("prefs: lighting keeps its valid fields and drops the rest", () => {
+  assert.deepEqual(sanitizePrefs({ lighting: { mode: "sun", brightness: 1.5, shadows: false, azimuth: 200, height: 30 } }).lighting, {
+    mode: "sun",
+    brightness: 1.5,
+    shadows: false,
+    azimuth: 200,
+    height: 30,
+  });
+  assert.deepEqual(sanitizePrefs({ lighting: { mode: "disco", brightness: 40, shadows: "no", height: 45 } }).lighting, { height: 45 });
+  assert.equal(sanitizePrefs({ lighting: "bright" }).lighting, undefined);
+});
+
 test("prefs: only valid fields survive", () => {
   const p = sanitizePrefs({
     theme: "dark",

@@ -115,6 +115,20 @@ export type View = "iso" | "front" | "side" | "top";
 export type FollowMode = "off" | "position" | "pose" | "heading";
 /** "auto" follows the theme; the others are the same in both themes. */
 export type GroundColor = "auto" | "light" | "dark" | "mujoco";
+/** "studio": lights that turn with the camera; "sun": one light fixed in the world. */
+export type LightMode = "studio" | "sun";
+export interface Lighting {
+  mode: LightMode;
+  /** Times the default intensity, 0 (dark) to 2. */
+  brightness: number;
+  shadows: boolean;
+  /** The sun's direction, degrees counterclockwise from +x (sun mode only). */
+  azimuth: number;
+  /** The sun's height above the ground, 5 to 90 degrees (sun mode only). */
+  height: number;
+}
+export const LIGHT_MODES: readonly LightMode[];
+export const DEFAULT_LIGHTING: Readonly<Lighting>;
 export type GroundStyle = "checker" | "grid" | "none";
 export type Theme = "light" | "dark";
 
@@ -153,6 +167,8 @@ export interface PlayerOptions {
   ground?: GroundStyle;
   /** The ground's colours, apart from the theme. Default "auto": the theme's. */
   groundColor?: GroundColor;
+  /** The lights; missing fields take `DEFAULT_LIGHTING`'s. */
+  lighting?: Partial<Lighting>;
   view?: View;
   /** CSS colour, or "transparent"; default from the theme. */
   background?: string;
@@ -306,6 +322,8 @@ export class Player extends EventTarget {
   setGround(style: GroundStyle): void;
   /** The ground's colours, whatever the theme is; "auto" follows the theme. */
   setGroundColor(scheme: GroundColor): void;
+  /** Change some of the lighting settings; the rest stay. */
+  setLighting(settings: Partial<Lighting>): void;
   setContacts(on: boolean): void;
   setCollision(on: boolean): void;
   /** Show or hide visual geoms; independent of `setCollision` and `setContacts`. */

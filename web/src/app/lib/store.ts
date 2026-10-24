@@ -22,6 +22,18 @@ export type GroundKind = "checker" | "grid";
 /** The ground's colours: "auto" follows the theme; the rest are the same in both themes. */
 export type GroundColor = "auto" | "light" | "dark" | "mujoco";
 export type PlotWindow = "all" | "5" | "2";
+export type LightMode = "studio" | "sun";
+/** The viewport's lights (core/lighting.js). The player clamps every field to its range. */
+export interface Lighting {
+  mode: LightMode;
+  brightness: number;
+  shadows: boolean;
+  /** The sun's direction and height, in degrees. */
+  azimuth: number;
+  height: number;
+}
+/** The same as the core's DEFAULT_LIGHTING. */
+export const DEFAULT_LIGHTING: Lighting = { mode: "studio", brightness: 1, shadows: true, azimuth: 135, height: 50 };
 export const MAX_COMPARE = MAX_SLOTS;
 /** Pinned envs of a single run: the selected env plus three = four series colours. */
 export const MAX_PINNED = 3;
@@ -79,6 +91,7 @@ export interface AppState {
   groundOn: boolean;
   groundKind: GroundKind;
   groundColor: GroundColor;
+  lighting: Lighting;
   visual: boolean;
   collision: boolean;
   contacts: boolean;
@@ -244,6 +257,7 @@ export const useApp = create<AppState & AppActions>((set, get) => {
     groundOn: pref("groundOn", true),
     groundKind: pref("groundKind", "checker") as GroundKind,
     groundColor: pref("groundColor", "auto") as GroundColor,
+    lighting: { ...DEFAULT_LIGHTING, ...saved.lighting },
     visual: pref("visual", true),
     collision: pref("collision", false),
     contacts: pref("contacts", false),

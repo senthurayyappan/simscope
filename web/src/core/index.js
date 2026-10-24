@@ -5,6 +5,7 @@ import * as format from "./format.js";
 
 export { Clock, clockFor } from "./clock.js";
 export { linkCameras } from "./compare.js";
+export { DEFAULT_LIGHTING, LIGHT_MODES } from "./lighting.js";
 export { startLoop, stepLoop } from "./loop.js";
 export { Player } from "./player.js";
 export { HttpSource, PackSource, SourceError } from "./source.js";

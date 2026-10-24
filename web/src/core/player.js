@@ -12,8 +12,6 @@
 // what makes follow smooth.
 
 import {
-  DirectionalLight,
-  HemisphereLight,
   OrthographicCamera,
   Scene,
   Vector3,
@@ -31,6 +29,7 @@ import { FOLLOW_ALIASES, FOLLOW_SMOOTH_TIME, HOLD_SMOOTH_TIME, makeDamper, makeF
 import * as fmt from "./format.js";
 import { acquireMesh, releaseMesh } from "./geometry_cache.js";
 import { createGround } from "./ground.js";
+import { createLighting } from "./lighting.js";
 import { frameSpan, lerpPoses, yawOf } from "./interp.js";
 import { addPlayer, removePlayer, wake } from "./loop.js";
 import { createArrowLayer, createPolylineLayer } from "./overlays.js";
@@ -60,6 +59,8 @@ const _pan = [0, 0];
 function fail(message) {
   throw new Error(`simscope: ${message}`);
 }
+
+const _lightTarget = new Vector3();
 
 export class Player extends EventTarget {
   /**
@@ -105,11 +106,14 @@ export class Player extends EventTarget {
     this.groundForced = false;
 
     this.scene = new Scene();
-    // Physically-based units (r155+): intensities are pi times the old ones for the same look.
-    this.scene.add(new HemisphereLight(0xffffff, 0x444444, 0.5 * Math.PI));
-    const key = new DirectionalLight(0xffffff, 0.8 * Math.PI);
-    key.position.set(3, 3, 6);
-    this.scene.add(key);
+    this.lighting = createLighting(opts.lighting);
+    this.lighting.setTheme(this.theme);
+    for (const o of this.lighting.objects) this.scene.add(o);
+    // Every draw (the viewport's or a capture's) aims the lights for its own camera.
+    this.scene.onBeforeRender = (_renderer, _scene, camera) => {
+      this.lighting.update(camera, this.rig.getTarget(_lightTarget));
+      this.ground.setLight(this.lighting.groundLevel);
+    };
     this.ground = createGround(opts.ground || "checker", this.theme, opts.groundColor);
     this.scene.add(this.ground.mesh);
     this._groundStyle = opts.ground || "checker";
@@ -504,6 +508,7 @@ export class Player extends EventTarget {
     removePlayer(this);
     this.rig.dispose();
     this.ground.dispose();
+    this.lighting.dispose();
     this.renderer.detach(this);
   }
 
@@ -1412,6 +1417,7 @@ export class Player extends EventTarget {
   setTheme(theme, background) {
     this.theme = theme === "dark" ? "dark" : "light";
     this.ground.setTheme(this.theme);
+    this.lighting.setTheme(this.theme);
     if (this.r) {
       for (const p of this.r.parts) p.setTheme(this.theme);
       for (const o of this.r.overlays) if (o.layer) o.layer.setTheme(this.theme);
@@ -1442,6 +1448,12 @@ export class Player extends EventTarget {
     this.invalidate();
   }
 
+  /** The lights: "studio" or "sun", their brightness, shadows, and the sun's direction (see lighting.js). */
+  setLighting(settings) {
+    this.lighting.set(settings || {});
+    this.invalidate();
+  }
+
   /** The ground draws where the scene has a plane (or when a style was asked for). */
   _applyGroundVisibility() {
     const r = this.r;
@@ -1454,6 +1466,7 @@ export class Player extends EventTarget {
       const tile = [0.05, 0.1, 0.25, 0.5, 1, 2, 5].reduce((best, t) => (Math.abs(t - robot / 2) < Math.abs(best - robot / 2) ? t : best));
       this.ground.setPlane(pl.z, tile);
     }
+    this.lighting.setGround(this.ground.mesh.position.z, this.ground.mesh.visible);
   }
 
   setContacts(on) {

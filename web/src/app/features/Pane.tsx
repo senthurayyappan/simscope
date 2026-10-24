@@ -47,6 +47,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
       theme: s.resolvedTheme,
       ground: s.groundOn ? s.groundKind : "none",
       groundColor: s.groundColor,
+      lighting: s.lighting,
       view: s.camView ?? "iso",
       background: viewportColor(),
       // One big viewport draws through its own context; compare panes share one.
