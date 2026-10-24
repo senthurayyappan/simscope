@@ -9,6 +9,7 @@ export type Action =
   | { type: "rate"; value: number }
   | { type: "favorite" }
   | { type: "env"; delta: -1 | 1 }
+  | { type: "panel"; side: "left" | "right" }
   | { type: "follow" }
   | { type: "frame-all" }
   | { type: "zoom"; factor: number }
@@ -52,10 +53,14 @@ export function resolveKey(e: KeyLike): Action | null {
       return { type: "rate", value: Number(k) };
     case "v":
       return { type: "favorite" };
-    case "[":
+    case ",":
       return { type: "env", delta: -1 };
-    case "]":
+    case ".":
       return { type: "env", delta: 1 };
+    case "[":
+      return { type: "panel", side: "left" };
+    case "]":
+      return { type: "panel", side: "right" };
     case "f":
       return { type: "follow" };
     case "0":

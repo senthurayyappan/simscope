@@ -122,7 +122,7 @@ test("strip geometry: one time-to-pixel mapping for ruler, glyphs and pointer", 
 test("timeline height: bar, border, ruler, lanes, padding", () => {
   assert.equal(timelineHeight(0), BAR_H + 1 + RULER_H + BOTTOM_PAD);
   for (let n = 1; n <= 5; n++) assert.equal(timelineHeight(n) - timelineHeight(n - 1), LANE_H);
-  assert.equal(timelineHeight(1), 111);
+  assert.equal(timelineHeight(1), 89);
 });
 
 test("highlight kinds: built-ins have palette slots, custom kinds a validated hex or neutral", () => {
@@ -142,7 +142,10 @@ test("keys: the v3 map, modifiers ignored, typing suppressed", () => {
   assert.deepEqual(resolveKey({ key: "L", shiftKey: true }), { type: "step", frames: 10 });
   assert.deepEqual(resolveKey({ key: "j" }), { type: "step", frames: -1 });
   assert.deepEqual(resolveKey({ key: "3" }), { type: "rate", value: 3 });
-  assert.deepEqual(resolveKey({ key: "]" }), { type: "env", delta: 1 });
+  assert.deepEqual(resolveKey({ key: "." }), { type: "env", delta: 1 });
+  assert.deepEqual(resolveKey({ key: "," }), { type: "env", delta: -1 });
+  assert.deepEqual(resolveKey({ key: "[" }), { type: "panel", side: "left" });
+  assert.deepEqual(resolveKey({ key: "]" }), { type: "panel", side: "right" });
   assert.deepEqual(resolveKey({ key: "0" }), { type: "frame-all" });
   assert.equal(resolveKey({ key: "c", metaKey: true }), null);
   assert.equal(resolveKey({ key: "x" }), null);

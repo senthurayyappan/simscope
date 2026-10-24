@@ -11,7 +11,7 @@ export function LibraryRail({ onExpand }: { onExpand(): void }) {
   return (
     <div className="flex h-full flex-col items-center gap-1 bg-sidebar py-2">
       <Logo className="mb-1" />
-      <Hint label="Show library" side="right">
+      <Hint label="Show library" keys="[" side="right">
         <Button variant="ghost" size="icon-sm" onClick={onExpand} aria-label="Show library">
           <PanelLeftOpen />
         </Button>
@@ -37,7 +37,7 @@ export function InspectorRail({ onExpand, brand = false }: { onExpand(): void; b
   return (
     <div className="flex h-full flex-col items-center gap-1 bg-card py-2">
       {brand ? <Logo className="mb-1" /> : null}
-      <Hint label="Show panel" side="left">
+      <Hint label="Show panel" keys="]" side="left">
         <Button variant="ghost" size="icon-sm" onClick={onExpand} aria-label="Show panel">
           <PanelRightOpen />
         </Button>

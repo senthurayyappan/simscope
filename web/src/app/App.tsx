@@ -7,6 +7,7 @@ import { useApp } from "@/lib/store";
 import { readBoot } from "@/lib/api";
 import { isSoloExport } from "@/lib/boot";
 import { prefs } from "@/lib/persist";
+import { setPanelToggle } from "@/lib/runtime";
 
 import { Drivers } from "./features/Drivers";
 import { ErrorToast } from "./features/ErrorToast";
@@ -22,7 +23,7 @@ import { Viewport } from "./features/Viewport";
 // large one. Every restored size is clamped against the current window.
 const LIBRARY = { def: 256, min: 240, max: 420 };
 const INSPECTOR = { def: 320, min: 280, max: 440 };
-const CENTRE_MIN = 400; // the compare toolbar, with Export as an icon, needs about 390 px
+const CENTRE_MIN = 400; // the compare toolbar, with Export as an icon, needs about 350 px
 
 interface Sizes {
   left?: number;
@@ -136,6 +137,12 @@ export function App() {
     } else panel.expand();
     writeCollapsed({ ...readCollapsed(), [key]: collapse });
   };
+
+  // `[` and `]` show or hide the side panels, like their buttons.
+  useEffect(() => {
+    setPanelToggle((side) => toggle(side === "left" ? left : right, side)());
+    return () => setPanelToggle(null);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <TooltipProvider>

@@ -145,12 +145,12 @@ export function clusterHighlights(items: readonly Highlight[], view: View, width
 /** Width of the lane-label gutter, px. */
 export const GUTTER = 88;
 export const RIGHT_PAD = 14;
-export const RULER_H = 30;
-export const LANE_H = 28;
+export const RULER_H = 24;
+export const LANE_H = 24;
 /** Space under the last lane so glyphs never sit on the window edge. */
 export const BOTTOM_PAD = 8;
 /** Height of the transport bar above the strip. */
-export const BAR_H = 44;
+export const BAR_H = 32;
 
 /** Pixel x (canvas CSS px) of time `t`: the one mapping the ruler, glyphs, spans, loop and playhead share. */
 export function timeToX(t: number, view: View, width: number): number {

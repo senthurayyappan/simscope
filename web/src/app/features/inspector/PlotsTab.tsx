@@ -98,7 +98,7 @@ export function PlotsTab() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="@container flex h-10 shrink-0 items-center justify-between gap-1 overflow-hidden px-2">
+      <div className="@container flex h-8 shrink-0 items-center justify-between gap-1 overflow-hidden px-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-1.5 px-2" aria-label="Channels">
@@ -436,7 +436,7 @@ function ChannelPlot(props: {
 
   return (
     <section className="group/plot px-4 pb-1 pt-1">
-      <header className="flex h-7 items-center gap-2">
+      <header className="flex h-6 items-center gap-2">
         <h4 className="truncate text-sm font-medium">{channel.label}</h4>
         <span className="num ml-auto text-sm">
           <span ref={valueEl} />

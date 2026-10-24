@@ -190,7 +190,7 @@ export function Pane({ index, run, slot, count }: { index: number; run: string; 
       ) : null}
 
       {compare ? (
-        <div className="absolute left-3 top-3 z-20 flex h-8 max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg bg-popover pl-2.5 pr-0.5 text-sm shadow-md ring-1 ring-foreground/10">
+        <div className="absolute left-3 top-3 z-20 flex h-7 max-w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg bg-popover pl-2.5 pr-0.5 text-sm shadow-md ring-1 ring-foreground/10">
           <span className="size-2 shrink-0 rounded-full" style={{ background: seriesVar(slot) }} />
           <span className="shrink-0 text-xs text-muted-foreground">{SLOT_LETTERS[slot]}</span>
           <span className="truncate" title={run}>
@@ -226,18 +226,18 @@ function EnvStepper({ index, env, envs }: { index: number; env: number; envs: nu
   };
   return (
     <div
-      className="absolute bottom-3 left-3 z-20 flex h-8 items-center gap-1 rounded-lg bg-popover pl-2.5 pr-0.5 text-sm shadow-md ring-1 ring-foreground/10"
+      className="absolute bottom-3 left-3 z-20 flex h-7 items-center gap-1 rounded-lg bg-popover pl-2.5 pr-0.5 text-sm shadow-md ring-1 ring-foreground/10"
       onPointerDown={(e) => e.stopPropagation()}
     >
       <span className="num">
         Env {formatCount(env)} of {formatCount(envs)}
       </span>
-      <Hint label="Previous env" keys="[">
+      <Hint label="Previous env" keys=",">
         <Button variant="ghost" size="icon-sm" className="size-6" aria-label="Previous env" onClick={() => step(-1)}>
           <ChevronLeft />
         </Button>
       </Hint>
-      <Hint label="Next env" keys="]">
+      <Hint label="Next env" keys=".">
         <Button variant="ghost" size="icon-sm" className="size-6" aria-label="Next env" onClick={() => step(1)}>
           <ChevronRight />
         </Button>

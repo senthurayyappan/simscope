@@ -20,7 +20,7 @@ import type { SummariesDoc } from "@/lib/types";
 import { useScrollMemory } from "@/lib/use-scroll-memory";
 import { cn } from "@/lib/utils";
 
-const ROW = 32;
+const ROW = 24;
 
 /** Loads the per-env summaries, retrying while the server is still computing them. */
 function useSummaries(run: string | undefined): { doc: SummariesDoc | null; pending: boolean } {
@@ -160,7 +160,7 @@ export function EnvsTab() {
             onChange={(e) => setGoto(e.target.value.replace(/\D/g, ""))}
             placeholder="Go to #"
             inputMode="numeric"
-            className="num h-7 w-[72px] text-sm"
+            className="num h-6 w-[72px] text-sm"
             aria-label="Go to env number"
           />
         </form>
@@ -223,7 +223,7 @@ export function EnvsTab() {
                     togglePin(e);
                   }}
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground outline-none transition-opacity hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
+                    "flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground outline-none transition-opacity hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/40",
                     isPinned ? "text-foreground opacity-100" : "opacity-0 group-hover/env:opacity-100",
                   )}
                 >

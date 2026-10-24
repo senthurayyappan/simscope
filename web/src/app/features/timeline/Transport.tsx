@@ -40,7 +40,7 @@ export function Transport({
   const clock = getClock();
 
   return (
-    <div className="@container grid h-11 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 overflow-hidden px-2 @max-[40rem]:flex @max-[40rem]:justify-between">
+    <div className="@container grid h-8 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 overflow-hidden px-2 @max-[40rem]:flex @max-[40rem]:justify-between">
       <div className="flex min-w-0 items-center justify-self-start">
         <CameraMenu />
       </div>
@@ -57,7 +57,7 @@ export function Transport({
           </Button>
         </Hint>
         <Hint label={snap.playing ? "Pause" : "Play"} keys="K">
-          <Button variant="secondary" size="icon" className="rounded-full" disabled={!hasRun} onClick={() => clock.toggle()} aria-label={snap.playing ? "Pause" : "Play"}>
+          <Button variant="secondary" size="icon-lg" className="rounded-full" disabled={!hasRun} onClick={() => clock.toggle()} aria-label={snap.playing ? "Pause" : "Play"}>
             {snap.playing ? <Pause className="fill-current" /> : <Play className="fill-current" />}
           </Button>
         </Hint>
@@ -145,7 +145,7 @@ function Readout({ hasRun, dt, frames }: { hasRun: boolean; dt: number; frames: 
 
   // The button and the field share one box, so nothing moves when editing starts.
   // Narrow bars show only the current time, in a shorter box (the total is in the tooltip).
-  const box = "num mr-1 h-7 w-32 shrink-0 rounded-md px-2 text-sm @max-[36rem]:w-14";
+  const box = "num mr-1 h-6 w-32 shrink-0 rounded-md px-2 text-sm @max-[36rem]:w-14";
   if (editing) return <EditField className={box} initial={formatTimecode(getClock().time)} onCommit={commit} onCancel={() => setEditing(false)} />;
   return (
     <Tooltip onOpenChange={(o) => o && setTip(`Frame ${formatCount(Math.round(getClock().time / dt))} of ${formatCount(frames)}, ${formatTimecode(getClock().duration)} s long`)}>
