@@ -119,7 +119,7 @@ export type GroundColor = "auto" | "light" | "dark" | "mujoco";
 export type LightMode = "studio" | "sun";
 export interface Lighting {
   mode: LightMode;
-  /** Times the default intensity, 0.25 to 2. */
+  /** Times the default intensity, 0 (dark) to 2. */
   brightness: number;
   shadows: boolean;
   /** The sun's direction, degrees counterclockwise from +x (sun mode only). */

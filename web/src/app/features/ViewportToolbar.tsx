@@ -265,7 +265,7 @@ function LightingMenu() {
         <SliderRow
           label="Brightness"
           value={l.brightness}
-          min={0.25}
+          min={0}
           max={2}
           step={0.05}
           show={(v) => `${Math.round(v * 100)}%`}

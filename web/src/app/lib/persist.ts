@@ -73,7 +73,7 @@ export function sanitizePrefs(raw: unknown): Partial<Prefs> {
   set("groundColor", oneOf(raw.groundColor, ["auto", "light", "dark", "mujoco"]));
   if (isObj(raw.lighting)) {
     const l = raw.lighting;
-    set("lighting", defined({ mode: oneOf(l.mode, ["studio", "sun"]), brightness: num(l.brightness, 0.25, 2), shadows: bool(l.shadows), azimuth: num(l.azimuth, 0, 360), height: num(l.height, 5, 90) }));
+    set("lighting", defined({ mode: oneOf(l.mode, ["studio", "sun"]), brightness: num(l.brightness, 0, 2), shadows: bool(l.shadows), azimuth: num(l.azimuth, 0, 360), height: num(l.height, 5, 90) }));
   }
   set("cameraSync", bool(raw.cameraSync));
   set("speed", num(raw.speed, 0.01, 64));

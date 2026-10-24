@@ -106,3 +106,24 @@ test("modes, brightness, shadows and the ground", () => {
   assert.equal(fill.visible, true);
   l.dispose();
 });
+
+test("the ground's light level: 1 by default from any angle, 0 in the dark, lower for a low sun", () => {
+  const l = createLighting();
+  for (const deg of [0, 90, 200]) {
+    const a = (deg * Math.PI) / 180;
+    l.update(camera([5 * Math.cos(a), 5 * Math.sin(a), 3], [0, 0, 0]), new Vector3());
+    close(l.groundLevel, 1);
+  }
+  l.set({ brightness: 0.5 });
+  l.update(camera([5, 0, 3], [0, 0, 0]), new Vector3());
+  close(l.groundLevel, 0.5);
+  l.set({ brightness: 0 });
+  l.update(camera([5, 0, 3], [0, 0, 0]), new Vector3());
+  assert.equal(l.groundLevel, 0);
+  l.set({ mode: "sun", brightness: 1, height: 80 });
+  l.update(camera([5, 0, 3], [0, 0, 0]), new Vector3());
+  const high = l.groundLevel;
+  l.set({ height: 10 });
+  l.update(camera([5, 0, 3], [0, 0, 0]), new Vector3());
+  assert.ok(l.groundLevel < high);
+});

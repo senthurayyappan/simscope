@@ -40,6 +40,7 @@ uniform float uMode;
 uniform vec3 uA;
 uniform vec3 uB;
 uniform vec3 uLine;
+uniform float uLight;
 varying vec2 vWorld;
 
 void main() {
@@ -61,7 +62,7 @@ void main() {
   }
   float d = length(vWorld - uCenter) / uHalf;
   float alpha = 1.0 - smoothstep(0.55, 1.0, d);
-  gl_FragColor = vec4(col, alpha);
+  gl_FragColor = vec4(col * uLight, alpha);
   #include <colorspace_fragment>
 }
 `;
@@ -82,6 +83,7 @@ export function createGround(style = "checker", theme = "light", scheme = "auto"
       uA: { value: new Color() },
       uB: { value: new Color() },
       uLine: { value: new Color() },
+      uLight: { value: 1 },
     },
     transparent: true,
     depthWrite: false,
@@ -104,12 +106,12 @@ export function createGround(style = "checker", theme = "light", scheme = "auto"
   line.visible = false;
   mesh.add(line);
   const u = material.uniforms;
-  const state = { style, theme, scheme, z: 0 };
+  const state = { style, theme, scheme, z: 0, light: 1 };
 
   function restyle() {
     mesh.visible = state.style !== "none";
     const pal = groundPalette(state.scheme, state.theme);
-    lineMaterial.color.copy(colorOf(pal.horizon));
+    lineMaterial.color.copy(colorOf(pal.horizon)).multiplyScalar(state.light);
     if (state.style === "grid") {
       u.uMode.value = 1;
       setLch(u.uA.value, pal.grid.base);
@@ -138,6 +140,17 @@ export function createGround(style = "checker", theme = "light", scheme = "auto"
     /** The colour scheme: "auto" (the theme's), "light", "dark" or "mujoco". */
     setScheme(s) {
       state.scheme = s;
+      restyle();
+    },
+    /**
+     * How lit the ground is, relative to the default lighting (lighting.js `groundLevel`): its colours are scaled by
+     * it, so 1 shows the theme's greys and 0 is black. The ground takes no light of its own; this stands in for it.
+     */
+    setLight(level) {
+      const v = Math.max(0, level);
+      if (v === state.light) return;
+      state.light = v;
+      u.uLight.value = v;
       restyle();
     },
     /** Height of the plane and its tile size (from the scene's plane geom). */

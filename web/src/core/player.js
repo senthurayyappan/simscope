@@ -110,7 +110,10 @@ export class Player extends EventTarget {
     this.lighting.setTheme(this.theme);
     for (const o of this.lighting.objects) this.scene.add(o);
     // Every draw (the viewport's or a capture's) aims the lights for its own camera.
-    this.scene.onBeforeRender = (_renderer, _scene, camera) => this.lighting.update(camera, this.rig.getTarget(_lightTarget));
+    this.scene.onBeforeRender = (_renderer, _scene, camera) => {
+      this.lighting.update(camera, this.rig.getTarget(_lightTarget));
+      this.ground.setLight(this.lighting.groundLevel);
+    };
     this.ground = createGround(opts.ground || "checker", this.theme, opts.groundColor);
     this.scene.add(this.ground.mesh);
     this._groundStyle = opts.ground || "checker";

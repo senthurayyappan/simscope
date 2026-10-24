@@ -6,6 +6,10 @@
 // the dark. "sun" is one light fixed in the world, set by its azimuth and
 // height, as outdoors: shadows stay put while the camera moves.
 //
+// The ground is a shader plane that takes no light. `groundLevel` is how much
+// light falls on an upward surface, relative to the default setup (sky plus each
+// light times the cosine of its height); the ground's colours are scaled by it.
+//
 // The key light (or the sun) casts shadows. Its shadow camera is fitted to
 // the view each frame: a box around the camera target as wide as the view.
 // The ground is a shader plane that takes no light, so shadows fall on a
@@ -35,13 +39,16 @@ const _camRight = new Vector3();
 
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 
+/** Light falling on an upward surface, from the sky and two lights with these heights (z of their directions). */
+const upward = (lv, keyZ, fillZ) => lv.sky + lv.key * Math.max(keyZ, 0) + lv.fill * Math.max(fillZ, 0);
+
 /** A lighting setting with every field present and in range. */
 export function normalizeLighting(l = {}) {
   const d = DEFAULT_LIGHTING;
   const num = (v, lo, hi, def) => (typeof v === "number" && Number.isFinite(v) ? clamp(v, lo, hi) : def);
   return {
     mode: LIGHT_MODES.includes(l.mode) ? l.mode : d.mode,
-    brightness: num(l.brightness, 0.25, 2, d.brightness),
+    brightness: num(l.brightness, 0, 2, d.brightness),
     shadows: typeof l.shadows === "boolean" ? l.shadows : d.shadows,
     azimuth: num(l.azimuth, 0, 360, d.azimuth),
     height: num(l.height, 5, 90, d.height),
@@ -73,6 +80,18 @@ export function studioDirection(back, right, out = new Vector3()) {
   return out.copy(flat).multiplyScalar(0.6).addScaledVector(side, -0.4).addScaledVector(Z, 1).normalize();
 }
 
+/** The heights (z) of the studio key and fill; the same for every camera, since both are set relative to the horizon. */
+function studioHeights() {
+  const key = studioDirection(new Vector3(1, 0, 0.5), new Vector3(0, 1, 0), new Vector3());
+  const fill = fillDirection(key, new Vector3(0, 1, 0), new Vector3());
+  return [key.z, fill.z];
+}
+
+/** The studio fill, from the other side of the key and lower, so the key's far side is not black. */
+function fillDirection(key, right, out) {
+  return out.copy(key).addScaledVector(right, 1.2).setZ(key.z * 0.4).normalize();
+}
+
 export function createLighting(settings = DEFAULT_LIGHTING) {
   const sky = new HemisphereLight(0xffffff, 0x444444, 1);
   const key = new DirectionalLight(0xffffff, 1);
@@ -87,6 +106,7 @@ export function createLighting(settings = DEFAULT_LIGHTING) {
   catcher.material.polygonOffsetFactor = -1;
   catcher.material.polygonOffsetUnits = -4;
   const objects = [sky, key, key.target, fill, fill.target, catcher];
+  let reference = null; // light on the ground under the default setup
   const state = { ...normalizeLighting(settings), groundZ: 0, ground: true, theme: "light" };
 
   function apply() {
@@ -104,6 +124,8 @@ export function createLighting(settings = DEFAULT_LIGHTING) {
 
   return {
     objects,
+    /** Light on the ground relative to the default setup; valid after `update`. */
+    groundLevel: 1,
     get settings() {
       const { mode, brightness, shadows, azimuth, height } = state;
       return { mode, brightness, shadows, azimuth, height };
@@ -129,8 +151,7 @@ export function createLighting(settings = DEFAULT_LIGHTING) {
       if (state.mode === "sun") sunDirection(state.azimuth, state.height, _dir);
       else {
         studioDirection(back, right, _dir);
-        // The fill comes from the other side, lower, so the key's far side is not black.
-        _fill.copy(_dir).addScaledVector(right, 1.2).setZ(_dir.z * 0.4).normalize();
+        fillDirection(_dir, right, _fill);
       }
       // The shadow box covers the view around the target: half its diagonal, plus a margin.
       const zoom = camera.zoom || 1;
@@ -152,6 +173,9 @@ export function createLighting(settings = DEFAULT_LIGHTING) {
       key.shadow.normalBias = (2 * r) / SHADOW_SIZE;
       fill.target.position.copy(target);
       fill.position.copy(target).add(_fill);
+      const level = upward(LEVELS[state.mode], _dir.z, state.mode === "sun" ? 0 : _fill.z) * state.brightness;
+      if (reference === null) reference = upward(LEVELS.studio, ...studioHeights());
+      this.groundLevel = level / reference;
       catcher.position.set(target.x, target.y, state.groundZ);
       catcher.scale.set(1.5 * r, 1.5 * r, 1);
       // onBeforeRender runs after the scene's matrices were updated.
