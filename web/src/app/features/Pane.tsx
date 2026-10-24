@@ -232,12 +232,12 @@ function EnvStepper({ index, env, envs }: { index: number; env: number; envs: nu
       <span className="num">
         Env {formatCount(env)} of {formatCount(envs)}
       </span>
-      <Hint label="Previous env" keys="[">
+      <Hint label="Previous env" keys=",">
         <Button variant="ghost" size="icon-sm" className="size-6" aria-label="Previous env" onClick={() => step(-1)}>
           <ChevronLeft />
         </Button>
       </Hint>
-      <Hint label="Next env" keys="]">
+      <Hint label="Next env" keys=".">
         <Button variant="ghost" size="icon-sm" className="size-6" aria-label="Next env" onClick={() => step(1)}>
           <ChevronRight />
         </Button>

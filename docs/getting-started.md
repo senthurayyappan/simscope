@@ -65,7 +65,8 @@ The library sits on the left, five rollouts per section, grouped by date or by g
 | F | Follow the selected body |
 | C | Contacts |
 | M | Label the moment |
-| `[`, `]` | Step envs |
+| `,`, `.` | Step envs |
+| `[`, `]` | Show or hide the library, the right panel |
 | N, P | Next or previous rollout |
 | U | Next unrated rollout |
 | 1 to 5 | Rate |

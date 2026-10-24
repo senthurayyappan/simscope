@@ -7,6 +7,7 @@ import { useApp } from "@/lib/store";
 import { readBoot } from "@/lib/api";
 import { isSoloExport } from "@/lib/boot";
 import { prefs } from "@/lib/persist";
+import { setPanelToggle } from "@/lib/runtime";
 
 import { Drivers } from "./features/Drivers";
 import { ErrorToast } from "./features/ErrorToast";
@@ -136,6 +137,12 @@ export function App() {
     } else panel.expand();
     writeCollapsed({ ...readCollapsed(), [key]: collapse });
   };
+
+  // `[` and `]` show or hide the side panels, like their buttons.
+  useEffect(() => {
+    setPanelToggle((side) => toggle(side === "left" ? left : right, side)());
+    return () => setPanelToggle(null);
+  }); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <TooltipProvider>

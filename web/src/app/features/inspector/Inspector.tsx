@@ -23,7 +23,7 @@ export function Inspector({ onCollapse, brand = false }: { onCollapse(): void; b
   useScrollMemory(metaScroll, "metadata", value === "metadata" && manifestReady);
 
   const hide = (
-    <Hint label="Hide panel" side="left">
+    <Hint label="Hide panel" keys="]" side="left">
       <Button variant="ghost" size="icon-sm" onClick={onCollapse} aria-label="Hide panel">
         <PanelRightClose />
       </Button>

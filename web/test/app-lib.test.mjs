@@ -142,7 +142,10 @@ test("keys: the v3 map, modifiers ignored, typing suppressed", () => {
   assert.deepEqual(resolveKey({ key: "L", shiftKey: true }), { type: "step", frames: 10 });
   assert.deepEqual(resolveKey({ key: "j" }), { type: "step", frames: -1 });
   assert.deepEqual(resolveKey({ key: "3" }), { type: "rate", value: 3 });
-  assert.deepEqual(resolveKey({ key: "]" }), { type: "env", delta: 1 });
+  assert.deepEqual(resolveKey({ key: "." }), { type: "env", delta: 1 });
+  assert.deepEqual(resolveKey({ key: "," }), { type: "env", delta: -1 });
+  assert.deepEqual(resolveKey({ key: "[" }), { type: "panel", side: "left" });
+  assert.deepEqual(resolveKey({ key: "]" }), { type: "panel", side: "right" });
   assert.deepEqual(resolveKey({ key: "0" }), { type: "frame-all" });
   assert.equal(resolveKey({ key: "c", metaKey: true }), null);
   assert.equal(resolveKey({ key: "x" }), null);

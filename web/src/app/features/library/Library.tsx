@@ -264,7 +264,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
             </TooltipTrigger>
             <TooltipContent side="right">{s.library?.name ?? "Library"}</TooltipContent>
           </Tooltip>
-          <Hint label="Hide library" side="right">
+          <Hint label="Hide library" keys="[" side="right">
             <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={onCollapse} aria-label="Hide library">
               <PanelLeftClose />
             </Button>

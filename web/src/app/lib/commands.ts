@@ -2,7 +2,7 @@
 // these so they cannot drift.
 
 import type { FollowMode, PlayerLike, ViewName } from "./core";
-import { activePlayer, allPlayers, getClock } from "./runtime";
+import { activePlayer, allPlayers, getClock, togglePanel } from "./runtime";
 import { useApp, type Lighting } from "./store";
 import { fitTimeline, panTimeline, zoomTimeline } from "./timeline-view";
 import { clamp } from "./utils";
@@ -66,7 +66,7 @@ export function selectEnv(env: number): void {
   p.selectEnv?.(clamp(env, 0, info.envs - 1));
 }
 
-// The Envs tab publishes its current sort here so `[` and `]` follow it.
+// The Envs tab publishes its current sort here so `,` and `.` follow it.
 let envOrder: readonly number[] | null = null;
 
 export function setEnvOrder(order: readonly number[] | null): void {
@@ -136,6 +136,8 @@ export function runAction(a: Action): boolean {
     case "theme":
       toggleTheme();
       return true;
+    case "panel":
+      return togglePanel(a.side);
     case "escape":
       if (clock.loopRegion) clock.loopRegion = null;
       else if (s.labelDraft) useApp.setState({ labelDraft: null });
