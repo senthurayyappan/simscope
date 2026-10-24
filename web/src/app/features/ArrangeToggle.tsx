@@ -60,7 +60,7 @@ function Buttons({ value, onChange }: { value: Arrangement; onChange(a: Arrangem
         const Icon = ICONS[a];
         return (
           <Hint key={a} label={ARRANGE_LABELS[a]}>
-            <ToggleGroupItem value={a} aria-label={ARRANGE_LABELS[a]} className="size-7 min-w-7 shrink-0 px-0 [&_svg]:size-5! [&_svg]:shrink-0">
+            <ToggleGroupItem value={a} aria-label={ARRANGE_LABELS[a]} className="size-6 min-w-6 shrink-0 px-0 [&_svg]:size-4! [&_svg]:shrink-0">
               <Icon strokeWidth={1.75} />
             </ToggleGroupItem>
           </Hint>

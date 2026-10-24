@@ -56,7 +56,7 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
       data-cursor={p.cursor || undefined}
       onClick={(e) => p.onOpen(run, e)}
       className={cn(
-        "group/row relative my-px flex h-8 w-full items-center gap-2 rounded-md px-2 text-sm transition-colors hover:bg-sidebar-accent data-[active]:z-10 data-[active]:bg-sidebar-accent data-[active]:font-medium",
+        "group/row relative my-px flex h-6 w-full items-center gap-2 rounded-md px-2 text-sm transition-colors hover:bg-sidebar-accent data-[active]:z-10 data-[active]:bg-sidebar-accent data-[active]:font-medium",
         "group-focus-within/list:data-[cursor]:z-10 group-focus-within/list:data-[cursor]:shadow-[inset_0_0_0_2px_color-mix(in_oklab,var(--sidebar-ring)_70%,transparent)]",
       )}
     >
@@ -89,7 +89,7 @@ export const RunRowItem = memo(function RunRowItem(p: RunRowProps) {
           <div className="hidden shrink-0 items-center group-hover/row:flex has-[[data-state=open]]:flex" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="size-6" aria-label={`Actions for ${run.name}`}>
+                <Button variant="ghost" size="icon-sm" className="size-5" aria-label={`Actions for ${run.name}`}>
                   <Ellipsis />
                 </Button>
               </DropdownMenuTrigger>

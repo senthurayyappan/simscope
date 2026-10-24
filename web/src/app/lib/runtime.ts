@@ -7,6 +7,19 @@ import { useApp } from "./store";
 
 let sharedClock: ClockLike | null = null;
 
+/** Shows or hides a side panel (the app shell registers it; `[` and `]` call it). */
+let panelToggle: ((side: "left" | "right") => void) | null = null;
+
+export function setPanelToggle(fn: ((side: "left" | "right") => void) | null): void {
+  panelToggle = fn;
+}
+
+export function togglePanel(side: "left" | "right"): boolean {
+  if (!panelToggle) return false;
+  panelToggle(side);
+  return true;
+}
+
 /** The one master clock every pane and the timeline share. */
 export function getClock(): ClockLike {
   return (sharedClock ??= createClock());

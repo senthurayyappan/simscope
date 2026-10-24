@@ -103,7 +103,7 @@ function Menu({ kit, run, onNewGroup }: RunMenuProps & { kit: Kit }) {
               <Separator />
               <Sub>
                 <SubTrigger>
-                  <FolderInput className="size-4 text-muted-foreground" />
+                  <FolderInput className="size-3.5 text-muted-foreground" />
                   {targets.length > 1 ? `Move ${targets.length} runs to group` : "Move to group"}
                 </SubTrigger>
                 <SubContent className="w-48">

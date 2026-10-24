@@ -25,7 +25,7 @@ import { formatTimecode } from "@/lib/format";
 import { kindIcon } from "./icons";
 
 export { BOTTOM_PAD, GUTTER, LANE_H, RIGHT_PAD, RULER_H };
-export const GLYPH = 14;
+export const GLYPH = 12;
 
 export interface Palette {
   bg: string;
@@ -307,10 +307,11 @@ function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
 }
 
 /**
- * A marker: the lucide icon as a solid shape in its colour, no ring and no disc
- * behind it. The fill makes it read at 14 px; the round-joined stroke keeps the
- * corners soft. The centre snaps to whole pixels so the edges stay crisp at 1x
- * and 2x.
+ * A marker: the lucide icon drawn like the UI's icons, a 1.5 px outline in its
+ * colour over a faint fill of the same colour, no ring and no disc behind it
+ * (L12, TL6). The fill keeps a 12 px glyph findable; the outline keeps it as
+ * light as the toolbar icons. The centre snaps to whole pixels so the edges
+ * stay crisp at 1x and 2x.
  */
 function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: number, color: string, size = GLYPH) {
   ctx.save();
@@ -320,9 +321,11 @@ function glyph(ctx: CanvasRenderingContext2D, kind: string, cx: number, cy: numb
   ctx.lineJoin = "round";
   ctx.fillStyle = color;
   ctx.strokeStyle = color;
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = (1.5 * 24) / size; // 1.5 screen px in the icon's 24-unit space
   const icon = kindIcon(kind);
+  ctx.globalAlpha = 0.2;
   ctx.fill(icon);
+  ctx.globalAlpha = 1;
   ctx.stroke(icon);
   ctx.restore();
 }

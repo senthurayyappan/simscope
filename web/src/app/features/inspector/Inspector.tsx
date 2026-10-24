@@ -23,7 +23,7 @@ export function Inspector({ onCollapse, brand = false }: { onCollapse(): void; b
   useScrollMemory(metaScroll, "metadata", value === "metadata" && manifestReady);
 
   const hide = (
-    <Hint label="Hide panel" side="left">
+    <Hint label="Hide panel" keys="]" side="left">
       <Button variant="ghost" size="icon-sm" onClick={onCollapse} aria-label="Hide panel">
         <PanelRightClose />
       </Button>
@@ -33,13 +33,13 @@ export function Inspector({ onCollapse, brand = false }: { onCollapse(): void; b
   return (
     <Tabs value={value} onValueChange={(v) => useApp.setState({ tab: v as InspectorTab })} className="h-full min-h-0 flex-col gap-0 bg-card">
       {brand ? (
-        <div className="flex h-10 shrink-0 items-center gap-2 border-b pl-4 pr-2">
+        <div className="flex h-8 shrink-0 items-center gap-2 border-b pl-4 pr-2">
           <Logo />
           <span className="text-base font-semibold">simscope</span>
           <div className="ml-auto flex items-center">{hide}</div>
         </div>
       ) : null}
-      <div className="flex h-10 shrink-0 items-center border-b px-2">
+      <div className="flex h-8 shrink-0 items-center border-b px-2">
         <TabsList variant="line">
           <TabsTrigger value="plots">Plots</TabsTrigger>
           <TabsTrigger value="metadata">Metadata</TabsTrigger>

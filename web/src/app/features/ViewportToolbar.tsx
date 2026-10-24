@@ -328,7 +328,7 @@ function Choices<T extends string>({
           {it.cells ? (
             <span
               aria-hidden
-              className="ml-auto size-4 rounded-sm ring-1 ring-foreground/20"
+              className="ml-auto size-3.5 rounded-sm ring-1 ring-foreground/20"
               style={{ background: `linear-gradient(135deg, ${it.cells[0]} 50%, ${it.cells[1]} 50%)` }}
             />
           ) : null}

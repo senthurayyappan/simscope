@@ -1,4 +1,4 @@
-![simscope: record robot simulation rollouts and replay them](docs/images/banner.jpg)
+![simscope: record robot simulation rollouts and replay them](docs/images/banner.gif)
 
 [![CI](https://github.com/senthurayyappan/simscope/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/senthurayyappan/simscope/actions/workflows/ci.yml)
 [![Docs](https://img.shields.io/badge/docs-github.io%2Fsimscope-blue)](https://senthurayyappan.github.io/simscope/)

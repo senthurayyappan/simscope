@@ -49,7 +49,7 @@ type Item =
   | { kind: "new-group" };
 
 // Rows are 32 px plus 1 px of gap above and below, so a ring never touches its neighbour.
-const HEIGHT = { header: 32, row: 34, more: 28, empty: 28, "new-group": 36 } as const;
+const HEIGHT = { header: 28, row: 26, more: 24, empty: 24, "new-group": 28 } as const;
 /** Extra space above every section header but the first, so groups read as separate. */
 const SECTION_GAP = 14;
 /** Space kept under the last section when the sections are spread to the bottom. */
@@ -254,7 +254,7 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
   return (
     <Sidebar>
       <SidebarHeader className="gap-2 p-2 pb-1">
-        <div className="flex h-8 items-center gap-2 pl-2">
+        <div className="flex h-6 items-center gap-2 pl-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <span className="flex items-center gap-2">
@@ -264,14 +264,14 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
             </TooltipTrigger>
             <TooltipContent side="right">{s.library?.name ?? "Library"}</TooltipContent>
           </Tooltip>
-          <Hint label="Hide library" side="right">
+          <Hint label="Hide library" keys="[" side="right">
             <Button variant="ghost" size="icon-sm" className="ml-auto" onClick={onCollapse} aria-label="Hide library">
               <PanelLeftClose />
             </Button>
           </Hint>
         </div>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={s.query}
             onChange={(e) => act.setQuery(e.target.value)}
@@ -286,11 +286,11 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
               className="absolute right-1.5 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
               aria-label="Clear search"
             >
-              <X className="size-4" />
+              <X className="size-3.5" />
             </button>
           ) : null}
         </div>
-        <div className="flex h-7 items-center justify-between gap-2">
+        <div className="flex h-6 items-center justify-between gap-2">
           {s.groups && (s.groups.groups.length > 0 || s.writable) ? (
             <ToggleGroup type="single" value={s.view} onValueChange={(v) => v && act.setLibraryView(v as LibraryView)} aria-label="Group runs by">
               <ToggleGroupItem value="date">Date</ToggleGroupItem>
@@ -377,20 +377,20 @@ export function Library({ onCollapse }: { onCollapse(): void }) {
                     <button
                       type="button"
                       onClick={() => act.expandSection(it.section.id)}
-                      className="flex h-7 w-full items-center rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      className="flex h-6 w-full items-center rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     >
                       Show {it.remaining.toLocaleString("en-US")} more
                     </button>
                   ) : it.kind === "empty" ? (
-                    <div className="flex h-7 items-center px-2 text-sm text-muted-foreground">No runs in this group</div>
+                    <div className="flex h-6 items-center px-2 text-sm text-muted-foreground">No runs in this group</div>
                   ) : (
                     <div className="flex h-full items-end pb-1">
                       <button
                         type="button"
                         onClick={() => setDialog({ names: [] })}
-                        className="flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                        className="flex h-6 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       >
-                        <FolderPlus className="size-4" />
+                        <FolderPlus className="size-3.5" />
                         New group
                       </button>
                     </div>
@@ -451,22 +451,22 @@ function SectionHeader({
     };
     return (
       <div className="flex h-full items-end bg-sidebar">
-        <div className="flex h-8 w-full items-center px-2">
+        <div className="flex h-6 w-full items-center px-2">
           <InlineName initial={section.title} label="Group name" onSave={save} onCancel={() => setEditing(false)} />
         </div>
       </div>
     );
   }
   return (
-    <div className="group/header flex h-full items-end bg-sidebar"><div className="flex h-8 w-full items-center">
+    <div className="group/header flex h-full items-end bg-sidebar"><div className="flex h-6 w-full items-center">
       <button
         type="button"
         onClick={() => toggleFolded(section.id)}
         onDoubleClick={() => editable && setEditing(true)}
         aria-expanded={!folded}
-        className="flex h-8 min-w-0 flex-1 items-center gap-1 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+        className="flex h-6 min-w-0 flex-1 items-center gap-1 rounded-md px-2 text-left text-xs font-medium text-sidebar-foreground/70 outline-hidden transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
       >
-        <Chevron className="size-4 shrink-0" />
+        <Chevron className="size-3.5 shrink-0" />
         {cut ? (
           <Tooltip>
             <TooltipTrigger asChild>{title}</TooltipTrigger>
@@ -479,7 +479,7 @@ function SectionHeader({
       {editable ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="size-6 opacity-0 focus-visible:opacity-100 group-hover/header:opacity-100 data-[state=open]:opacity-100" aria-label={`Actions for ${section.title}`}>
+            <Button variant="ghost" size="icon-sm" className="size-5 opacity-0 focus-visible:opacity-100 group-hover/header:opacity-100 data-[state=open]:opacity-100" aria-label={`Actions for ${section.title}`}>
               <Ellipsis />
             </Button>
           </DropdownMenuTrigger>
@@ -500,9 +500,9 @@ function PickBar() {
   const picks = useApp((s) => s.picks);
   const { clearPicks, openCompare } = useApp.getState();
   return (
-    <div className="flex h-8 items-center gap-1.5">
+    <div className="flex h-6 items-center gap-1.5">
       <Hint label="Clear selection">
-        <Button variant="ghost" size="icon-sm" className="size-6 shrink-0" onClick={clearPicks} aria-label="Clear selection">
+        <Button variant="ghost" size="icon-sm" className="size-5 shrink-0" onClick={clearPicks} aria-label="Clear selection">
           <X />
         </Button>
       </Hint>
@@ -541,7 +541,7 @@ function ListSkeleton() {
   return (
     <div className="flex flex-col gap-1 p-2">
       {Array.from({ length: 8 }, (_, i) => (
-        <div key={i} className="flex h-8 items-center px-2">
+        <div key={i} className="flex h-6 items-center px-2">
           <div className="h-3 rounded bg-muted" style={{ width: `${40 + ((i * 23) % 45)}%` }} />
         </div>
       ))}
