@@ -4,7 +4,7 @@ simscope records rollouts from MuJoCo and Isaac Lab, opens a folder of them, and
 
 ## Why
 
-A rollout review needs the recording, the folder, and a file you can hand to someone else. Those three were split across separate viewers and file formats, and the viewers drifted apart. simscope is the one library for all three.
+Reviewing a rollout takes three things: the recording, a folder of recordings to browse, and a file to hand to someone else. Each lived in a different viewer and file format, and the viewers drifted apart. simscope covers all three in one library.
 
 ## The gap
 
@@ -27,4 +27,4 @@ These are the choices that still hold. Change one here, and say why.
 - Built-in timeline markers are net contact force and center-of-mass acceleration. Any other marker is registered in Python or placed by hand.
 - A rollout that is still recording is read from the finished blocks on disk. The recorder does not open a connection to the viewer.
 - Contact forces are a stream the simulator adapter records. The viewer draws them as arrows.
-- The window has three regions: the library, the viewport, and the inspector, with the timeline along the bottom. Colour identifies a rollout or a marker.
+- The window has three regions: the library, the viewport, and the inspector, with the timeline along the bottom. Color identifies a rollout or a marker.
