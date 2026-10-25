@@ -10,8 +10,8 @@
    **Pull request title**. You can also require the CI checks to pass
    before merging.
 
-The Makefile contains the uv commands for each task. You can also run those
-commands directly on Windows. If a Git hook changes a file, review and stage
+The Makefile holds the uv command for each task. On Windows, run those
+commands directly. If a Git hook changes a file, review and stage
 the change before you commit again. In a new repository, `make docs-test`
 needs at least one commit.
 
@@ -37,9 +37,7 @@ To publish them:
 2. Run the **Docs** workflow once, or push to `main`.
 3. In Settings → Pages, select **Deploy from a branch**, `gh-pages`, `/ (root)`.
 
-For a private repository, check that your GitHub plan supports Pages.
-A private repository can have a public docs site, so check the Pages visibility
-before publishing. You can publish docs without publishing a Python package.
+You can publish the docs without publishing a Python package.
 
 ## Releases
 
@@ -64,7 +62,7 @@ workflows that token triggers.
 
 ### Publish to PyPI
 
-To publish releases to PyPI:
+simscope is published at [pypi.org/project/simscope](https://pypi.org/project/simscope/), and each release goes out automatically. To set up publishing for a repository like this one:
 
 1. On PyPI, add a [pending publisher][pending] for this repository. It is
    "pending" because the first release creates the project. Use workflow

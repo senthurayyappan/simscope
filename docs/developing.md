@@ -24,13 +24,13 @@ make docs-test
 cd web && npm ci && npm test && npm run build
 ```
 
-`make install` installs the tools and the git hooks. `make check` lints, formats, and type-checks. Node 26 is what CI uses. After a change under `web/src/`, commit the rebuilt files in `src/simscope/_assets/` and `web/src/core/decode_worker.generated.js`. The build is byte for byte the same on every machine, and CI fails if the commit differs.
+The Makefile uses [uv](https://docs.astral.sh/uv/getting-started/installation/), so install it first. `make install` installs the tools and the git hooks, and `make check` lints, formats, and type-checks. CI uses Node 26. After a change under `web/src/`, commit the rebuilt files in `src/simscope/_assets/` and `web/src/core/decode_worker.generated.js`. The build is byte for byte the same on every machine, and CI fails if the commit differs.
 
 Do not add `tests/io/__init__.py`. Pytest would then treat `io` as a top-level package and shadow the standard library.
 
 ## Files an extension has to respect
 
-Coordinates are Z-up, right-handed, in metres. Time is in seconds. A pose is `[px, py, pz, qx, qy, qz, qw]`, with the quaternion in xyzw order. Within a stream, flip `q` to `-q` when the dot product with the previous frame is negative, so the signs stay continuous.
+Coordinates are Z-up, right-handed, in meters. Time is in seconds. A pose is `[px, py, pz, qx, qy, qz, qw]`, with the quaternion in xyzw order. Within a stream, flip `q` to `-q` when the dot product with the previous frame is negative, so the signs stay continuous.
 
 A library is a folder:
 
@@ -52,7 +52,7 @@ A scene's geoms use these kinds. Convert anything else, and turn an unsupported 
 
 | `kind` | `size` | Shape |
 | --- | --- | --- |
-| `box` | `[hx, hy, hz]` | Half-extents, centred on the origin |
+| `box` | `[hx, hy, hz]` | Half-extents, centered on the origin |
 | `sphere` | `[r, 0, 0]` | Sphere |
 | `capsule` | `[r, h, 0]` | Half-length `h` along local +z, plus caps |
 | `cylinder` | `[r, h, 0]` | Half-length `h` along local +z |
@@ -73,7 +73,7 @@ A stream is one array of shape `[n_frames, n_envs, *item_shape]`.
 | `points` | `[K, 3]` | World points |
 | `polyline` | `[K, 3]` | One polyline |
 
-Name an arrows stream `contacts` to record contact forces. Each row is the contact point in metres, then the force on the body in newtons. Pad unused slots with zeros. Set `units` to `N`.
+Name an arrows stream `contacts` to record contact forces. Each row is the contact point in meters, then the force on the body in newtons. Pad unused slots with zeros. Set `units` to `N`.
 
 Curation does not rewrite `rollout.json`. Notes, ratings, labels, and the group live in `annotations.json`. A label is an event with an empty `type`. Highlights are a separate derived file, not part of the sidecar. A rollout belongs to at most one group, named by `marks.group`. If `.simscope/event_types.json` is missing, the library uses four types: `fall`, `slip`, `success`, and `note`.
 

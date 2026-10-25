@@ -1,8 +1,8 @@
 # CLI
 
-Look up every option of the `simscope` command.
+Every `simscope` command and option. Run `simscope --help` for the command list, or `simscope COMMAND --help` for one command.
 
-Run `simscope --help` for the command list, or `simscope COMMAND --help` for one command. Every command takes a folder as its first argument. `ls`, `serve`, and `export` treat that folder as a library, and they also find libraries nested under it. A library is a directory whose `runs/` folder holds rollouts. A folder that is itself one library keeps the same behavior. `serve` needs the `viewer` extra. The other commands do not.
+Every command takes a folder as its first argument. For `ls`, `serve`, and `export`, that folder can be a library or a folder that contains libraries, and simscope finds the nested ones. A library is a directory whose `runs/` folder holds rollouts. `serve` needs the `viewer` extra, and the other commands do not.
 
 ## Exit status
 
@@ -15,7 +15,7 @@ Run `simscope --help` for the command list, or `simscope COMMAND --help` for one
 
 ## simscope serve
 
-Opens the library in a browser. Runs that are still recording appear, and the app tails their finished blocks.
+Serves the library over HTTP and prints the address to open in a browser. Rollouts that are still recording appear too, and the app reads each block as the recorder finishes it.
 
 ```bash
 simscope serve DIR [--host HOST] [--port PORT] [--author NAME]
@@ -99,7 +99,7 @@ simscope pack DIR RUN [RUN ...] -o OUT.simscope [--no-transcode] [--no-annotatio
 
 ## simscope import
 
-Imports `.rbundle` files and Brax HTML viewers. A folder is searched for those files.
+Imports `.rbundle` files and Brax HTML pages. Given a folder, it searches the folder for them.
 
 ```bash
 simscope import DIR PATH [PATH ...] [--tag TAG] [--overwrite] [--jobs N]
@@ -116,7 +116,7 @@ A file that cannot be read is skipped and reported. If every file fails, the com
 
 ## simscope recover
 
-Repairs a rollout whose recording stopped before the manifest was finalized. Complete blocks are kept. Frames that exist on a longer stream and not on a shorter one are dropped.
+Repairs a rollout whose recording stopped before the manifest was finalized. Complete blocks are kept. If the streams differ in length, the frames past the shortest stream are dropped.
 
 ```bash
 simscope recover DIR RUN
