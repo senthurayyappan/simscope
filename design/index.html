@@ -497,7 +497,7 @@
     <h1 id="design">Design<a class="headerlink" href="#design" title="Permanent link">&para;</a></h1>
 <p>simscope records rollouts from MuJoCo and Isaac Lab, opens a folder of them, and writes one HTML file that plays offline.</p>
 <h2 id="why">Why<a class="headerlink" href="#why" title="Permanent link">&para;</a></h2>
-<p>A rollout review needs the recording, the folder, and a file you can hand to someone else. Those three were split across separate viewers and file formats, and the viewers drifted apart. simscope is the one library for all three.</p>
+<p>Reviewing a rollout takes three things: the recording, a folder of recordings to browse, and a file to hand to someone else. Each lived in a different viewer and file format, and the viewers drifted apart. simscope covers all three in one library.</p>
 <h2 id="the-gap">The gap<a class="headerlink" href="#the-gap" title="Permanent link">&para;</a></h2>
 <p>Rerun is the closest existing tool. It does not take annotations, and its viewer is about 50 MB, so it does not produce a small standalone file. A viewer driven from Python also cannot follow a body smoothly: the camera arrives after the body moves. simscope keeps the player in the browser, next to the poses, and uses that same player for the live folder and the offline file.</p>
 <h2 id="decisions">Decisions<a class="headerlink" href="#decisions" title="Permanent link">&para;</a></h2>
@@ -516,7 +516,7 @@
 <li>Built-in timeline markers are net contact force and center-of-mass acceleration. Any other marker is registered in Python or placed by hand.</li>
 <li>A rollout that is still recording is read from the finished blocks on disk. The recorder does not open a connection to the viewer.</li>
 <li>Contact forces are a stream the simulator adapter records. The viewer draws them as arrows.</li>
-<li>The window has three regions: the library, the viewport, and the inspector, with the timeline along the bottom. Colour identifies a rollout or a marker.</li>
+<li>The window has three regions: the library, the viewport, and the inspector, with the timeline along the bottom. Color identifies a rollout or a marker.</li>
 </ul>
   </div>
   

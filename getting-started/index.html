@@ -495,22 +495,22 @@
   </div>
   <div class="typography w-full flex-1 *:data-[slot=alert]:first:mt-0">
     <h1 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
-<p>simscope needs Python 3.12 or newer and <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It is not on PyPI yet, so work from a clone:</p>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<p>Install simscope from PyPI:</p>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"simscope[viewer,mujoco]"</span>
+</code></pre></div>
+
+<p>simscope needs Python 3.12 or newer. The extras are optional. <code>viewer</code> is what <code>simscope serve</code> runs on, and <code>mujoco</code> is for recording from MuJoCo. Without them, everything else still works: recording from your own code, importing, and exporting. Isaac Lab needs no extra, because you install simscope into its environment. With uv, use <code>uv add "simscope[viewer,mujoco]"</code>.</p>
+<h3 id="from-source">From source<a class="headerlink" href="#from-source" title="Permanent link">&para;</a></h3>
+<p>To develop or modify simscope, work from a clone. This path needs <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>:</p>
 <div class="codehilite"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/senthurayyappan/simscope
 <span class="nb">cd</span><span class="w"> </span>simscope
 uv<span class="w"> </span>sync<span class="w"> </span>--extra<span class="w"> </span>viewer<span class="w"> </span>--extra<span class="w"> </span>mujoco
 </code></pre></div>
 
-<p>The built browser code is in the repository, so this install does not need Node.</p>
-<div class="codehilite"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>examples/viewer_demo.py<span class="w"> </span>--out<span class="w"> </span>demo_lib
-uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span>serve<span class="w"> </span>demo_lib
-uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span>ls<span class="w"> </span>demo_lib
-uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span><span class="nb">export</span><span class="w"> </span>demo_lib<span class="w"> </span>box_drop<span class="w"> </span>-o<span class="w"> </span>box.html
-</code></pre></div>
-
-<p><code>serve</code> opens http://127.0.0.1:8080. The <a href="../cli/">CLI reference</a> lists every flag.</p>
+<p>In a clone, put <code>uv run</code> in front of every <code>simscope</code> command and Python script in these docs, as in <code>uv run simscope serve rollouts</code>. The built browser code is committed, so you only need Node to change it. <a href="../developing/">Developing</a> covers that.</p>
 <h2 id="record">Record<a class="headerlink" href="#record" title="Permanent link">&para;</a></h2>
-<p>A recording wraps the simulation loop. This one drops a box and logs its pose, its contact forces, and its height:</p>
+<p>A recording wraps the simulation loop. This one drops a box and logs its pose, contact forces, and height:</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">mujoco</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">simscope</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">simscope</span><span class="w"> </span><span class="kn">import</span> <span class="n">mujoco</span> <span class="k">as</span> <span class="n">smj</span>
@@ -535,11 +535,11 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
         <span class="p">)</span>
 </code></pre></div>
 
-<p>Open the rollout with <code>simscope serve rollouts</code>. The camera follows the box. The plot shows <code>height</code>. The timeline marks the landing twice, once for center-of-mass acceleration and once for net contact force. Contact forces are drawn as arrows.</p>
-<p>For Isaac Lab, call <code>simscope.isaaclab</code> from inside that environment: <code>scene_from_env</code>, <code>PoseBuffer</code>, and <code>contacts</code>.</p>
-<p><code>examples/viewer_demo.py</code> records a longer tumbling drop into a folder you choose with <code>--out</code>.</p>
+<p>Open it with <code>simscope serve rollouts</code>, which prints the address to visit (<code>http://127.0.0.1:8080</code> by default). The camera follows the box, the plot shows <code>height</code>, and the timeline marks the landing twice: once as a peak in center-of-mass acceleration and once as a peak in net contact force. Contact forces are drawn as arrows.</p>
+<p>For Isaac Lab, call <code>simscope.isaaclab</code> from inside the environment: <code>scene_from_env</code>, <code>PoseBuffer</code>, and <code>contacts</code>.</p>
+<p>In a clone, <code>examples/viewer_demo.py --out FOLDER</code> records a longer tumbling drop.</p>
 <h2 id="in-the-app">In the app<a class="headerlink" href="#in-the-app" title="Permanent link">&para;</a></h2>
-<p>The library sits on the left, five rollouts per section, grouped by date or by group. Plots and metadata sit on the right. The timeline sits at the bottom. Each region collapses.</p>
+<p>The library is on the left and lists rollouts by date or by group, five per section. Plots and metadata are on the right, and the timeline runs along the bottom. Each region collapses.</p>
 <div class="table-wrapper"><table>
 <thead>
 <tr>
@@ -574,7 +574,7 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 </tr>
 <tr>
 <td><code>[</code>, <code>]</code></td>
-<td>Show or hide the library, the right panel</td>
+<td>Show or hide the library (<code>[</code>) and the right panel (<code>]</code>)</td>
 </tr>
 <tr>
 <td>N, P</td>
@@ -610,8 +610,8 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 </tr>
 </tbody>
 </table></div>
-<p>Highlights are the markers on the timeline. Two kinds are built in, and they mean the same thing for any rollout. <strong>Contact force</strong> is the net force of the <code>contacts</code> stream. <strong>Acceleration</strong> is the acceleration of the centre of mass. A peak is a moment that stands out from that rollout's usual level. The markers are cached under <code>.simscope/derived/</code> and travel inside a full export. The lean player does not draw them.</p>
-<p>Anything else you want marked is yours to add. The next section shows how.</p>
+<p>Highlights are the markers on the timeline. Two kinds are built in, and they mean the same thing for any rollout. <strong>Contact force</strong> is the net force of the <code>contacts</code> stream. <strong>Acceleration</strong> is the acceleration of the center of mass. A peak is a moment that stands out from that rollout's usual level. The markers are cached under <code>.simscope/derived/</code> and travel inside a full export. The lean player does not draw them.</p>
+<p>To mark anything else, add your own markers, as described next.</p>
 <h2 id="custom-markers">Custom markers<a class="headerlink" href="#custom-markers" title="Permanent link">&para;</a></h2>
 <p>There are two ways to put your own markers on the timeline.</p>
 <p><strong>Compute them.</strong> Write a function that takes the rollout and returns a list of <code>highlights.Highlight</code>, and register it. Each <code>Highlight</code> has a time <code>t</code> in seconds, a <code>frame</code>, an <code>env</code>, your kind's key, a <code>score</code> (higher is more notable), and a <code>value</code>. Set <code>t1</code> and <code>frame1</code> to mark a span. This detector marks every stretch of at least 0.2 s where the root sits below 0.2 m:</p>
@@ -638,7 +638,7 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 <span class="n">highlights</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s2">"low"</span><span class="p">,</span> <span class="n">low_stretches</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Low"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"#d9480f"</span><span class="p">)</span>
 </code></pre></div>
 
-<p>The key is lower case letters, digits, and <code>_</code>. The colour is a CSS hex colour, and it is optional. The detector runs once per rollout, in the background, and its markers are cached with the built-in ones. Changing the label or the colour, or adding another detector, refreshes the cache. A detector that raises, or that returns a marker with a frame or env outside the rollout or a time that is not finite, is logged and skipped. The other kinds still show.</p>
+<p>The key is lower case letters, digits, and <code>_</code>. The color is an optional CSS hex color. The detector runs once per rollout, in the background, and its markers are cached with the built-in ones. Changing the label or the color, or adding another detector, refreshes the cache. A detector that raises, or that returns a marker with a frame or env outside the rollout or a time that is not finite, is logged and skipped. The other kinds still show.</p>
 <p>Register before you serve or export, in the same process:</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">simscope</span><span class="w"> </span><span class="kn">import</span> <span class="n">server</span>
 <span class="n">server</span><span class="o">.</span><span class="n">serve</span><span class="p">(</span><span class="s2">"my_library"</span><span class="p">)</span>
@@ -655,12 +655,13 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 </code></pre></div>
 
 <p>Use a detector for something the data can find in every rollout. Use an event for something you noticed.</p>
+<h2 id="the-viewport">The viewport<a class="headerlink" href="#the-viewport" title="Permanent link">&para;</a></h2>
+<p>View options are at the top left: the theme, the ground, the lighting, geometry, contacts, and, in a comparison, the arrangement. Capture and Export are at the top right.</p>
+<p>The arrow beside the ground button opens its menu: a checkerboard or a grid, and a color (Automatic, Light, Dark, or Classic, MuJoCo's blue checkerboard). Automatic follows the theme. The other colors stay the same in light and dark mode, so you can have a dark ground under a light interface. simscope remembers your choice.</p>
+<p>The light bulb opens the lighting menu. Studio, the default, turns the lights with the camera, so the robot stays lit from any angle. Sun fixes one light in the world. You set its direction and height, and its shadows stay put while you orbit. Brightness and shadows apply to both, and the shadows fall on the ground. simscope remembers the lighting too.</p>
 <h2 id="screenshots-and-gifs">Screenshots and GIFs<a class="headerlink" href="#screenshots-and-gifs" title="Permanent link">&para;</a></h2>
-<p>The viewport has two groups of controls. View options sit at the top left: the theme, the ground, the lighting, geometry, contacts, and for a comparison the arrangement. Capture and Export sit at the top right.</p>
-<p>The arrow beside the ground button opens its menu. Choose a checkerboard or a grid, and a color: Automatic, Light, Dark, or Classic, the blue checkerboard of MuJoCo. Automatic follows the theme. The other colors stay the same in light and dark mode, so you can have a dark ground under a light interface. The choice is remembered.</p>
-<p>The light bulb opens the lighting menu. Studio, the default, turns the lights with the camera, so the robot stays lit from any angle. Sun fixes one light in the world; set its direction and height, and its shadows stay put while you orbit. Brightness and shadows apply to both. Shadows fall on the ground and show in screenshots and GIFs. The lighting is remembered.</p>
-<p>The camera button opens the capture menu. It works in the served app and in a full export. It captures the active pane. The menu stays open while you pan, zoom, hide a sidebar, or move the stretch on the timeline. Close it with the camera button or Escape.</p>
-<p>A capture has a fixed size, so it does not depend on your window or your screen. Pick a shape (16:9, 4:3, or 1:1) and a width. While the menu is open, the pane outlines the frame it will save: the largest frame of that shape that fits in the view, centred on it. Pan, zoom, or orbit to change the framing.</p>
+<p>The camera button opens the capture menu. It works in the served app and in a full export, and it captures the active pane. The menu stays open while you pan, zoom, hide a sidebar, or move the selection on the timeline. Close it with the camera button or Escape. Screenshots and GIFs include the lighting and shadows you see.</p>
+<p>A capture has a fixed size, so it does not depend on your window or your screen. Pick a shape (16:9, 4:3, or 1:1) and a width. While the menu is open, the pane outlines the frame it will save: the largest frame of that shape that fits in the view, centered on it. Pan, zoom, or orbit to change the framing.</p>
 <p>A screenshot is a PNG, 1280, 1920, or 3840 pixels wide. The longest side is capped at 8192 pixels, or at what your GPU allows.</p>
 <p>A GIF plays for at most 5 seconds, so it stays small enough to share. It shows the loop region when there is one, and the whole run otherwise. It plays at the speed set on the timeline, so at 2× a 10-second stretch makes a 5-second GIF, and at 0.5× a 2.5-second stretch does. For a stretch that plays for longer than 5 seconds:</p>
 <ol>
@@ -695,8 +696,8 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 </tr>
 </tbody>
 </table></div>
-<div class="codehilite"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span><span class="nb">export</span><span class="w"> </span>demo_lib<span class="w"> </span>drop_a<span class="w"> </span>drop_b<span class="w"> </span>-o<span class="w"> </span>compare.html<span class="w"> </span>--layout<span class="w"> </span>compare
-uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span><span class="nb">export</span><span class="w"> </span>demo_lib<span class="w"> </span>drop_a<span class="w"> </span>drop_b<span class="w"> </span>drop_c<span class="w"> </span>-o<span class="w"> </span>compare.html<span class="w"> </span><span class="se">\</span>
+<div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span><span class="nb">export</span><span class="w"> </span>rollouts<span class="w"> </span>drop_a<span class="w"> </span>drop_b<span class="w"> </span>-o<span class="w"> </span>compare.html<span class="w"> </span>--layout<span class="w"> </span>compare
+simscope<span class="w"> </span><span class="nb">export</span><span class="w"> </span>rollouts<span class="w"> </span>drop_a<span class="w"> </span>drop_b<span class="w"> </span>drop_c<span class="w"> </span>-o<span class="w"> </span>compare.html<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--layout<span class="w"> </span>compare<span class="w"> </span>--arrange<span class="w"> </span>stack
 </code></pre></div>
 
@@ -705,21 +706,21 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
 <p>A lean file on an mkdeck slide is an image of that file. Copy it next to the deck and write <code>![Rollout](assets/box.html)</code>.</p>
 <h2 id="usd-for-blender">USD for Blender<a class="headerlink" href="#usd-for-blender" title="Permanent link">&para;</a></h2>
 <p><code>simscope usd</code> writes one rollout as a <code>.usdz</code> file: the scene and its motion as a USD stage, with the scene's textures inside. In the app, choose Export, then USD for Blender. A rollout with several envs exports the env you selected and the ones you pinned.</p>
-<div class="codehilite"><pre><span></span><code>uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </span>usd<span class="w"> </span>demo_lib<span class="w"> </span>drop_a<span class="w"> </span>-o<span class="w"> </span>drop_a.usdz
+<div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span>usd<span class="w"> </span>rollouts<span class="w"> </span>drop_a<span class="w"> </span>-o<span class="w"> </span>drop_a.usdz
 </code></pre></div>
 
-<p>In Blender, choose File, then Import, then Universal Scene Description. Each body is an object that follows its recorded pose, one USD time code per recorded frame. Two things to know:</p>
+<p>In Blender, choose File, then Import, then Universal Scene Description. Each body is an object that follows its recorded pose, one USD time code per recorded frame. Two details affect playback:</p>
 <ul>
 <li>Blender plays one recorded frame per scene frame and keeps its own frame rate. Set the scene's frame rate to the rollout's (the menu says which) to play it in real time.</li>
 <li>Blender reads the motion from the <code>.usdz</code> file as it plays, so keep the file where it was imported from.</li>
 </ul>
 <p>Collision geometry is marked as guide geometry. Tick Guide in the import options to bring it in. An infinite ground plane becomes a square that covers everywhere the bodies go, plus 2 m. In Python, call <code>simscope.usd.export_usd</code>.</p>
 <h2 id="rename">Rename<a class="headerlink" href="#rename" title="Permanent link">&para;</a></h2>
-<p><code>simscope rename demo_lib old_name new_name</code> renames a rollout. In Python, call <code>Library.rename(old, new)</code>. In the app, double-click the name.</p>
+<p><code>simscope rename rollouts old_name new_name</code> renames a rollout. In Python, call <code>Library.rename(old, new)</code>. In the app, double-click the name.</p>
 <p>The name is the folder name. The id never changes, so notes, ratings, groups, cached highlights, and exports stay with the rollout. A rollout that is still recording cannot be renamed. The new name must not already exist. Reopen any <code>Rollout</code> you had open, because it still points at the old folder.</p>
 <h2 id="import">Import<a class="headerlink" href="#import" title="Permanent link">&para;</a></h2>
 <p><code>simscope import rollouts path/to/episode.rbundle</code> reads <code>.rbundle</code> files and Brax HTML pages. Pass a folder to import every such file inside it. <code>--tag</code> adds a tag, and <code>--overwrite</code> replaces a rollout that already has that name.</p>
-<h2 id="work-on-simscope">Work on simscope<a class="headerlink" href="#work-on-simscope" title="Permanent link">&para;</a></h2>
+<h2 id="contribute">Contribute<a class="headerlink" href="#contribute" title="Permanent link">&para;</a></h2>
 <p><a href="../developing/">Developing</a> covers the layout, the checks, and where to add an adapter or a marker. Pull requests and releases are in <a href="https://github.com/senthurayyappan/simscope/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a>.</p>
   </div>
   
@@ -837,6 +838,22 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
         
         
         
+        <a href="#install"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#install');">
+            Install
+        </a>
+        
+        
+        <a href="#from-source"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="3" onClick="deferSetActiveTocLink('#from-source');">
+            From source
+        </a>
+        
+        
+
+        
         <a href="#record"
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
             data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#record');">
@@ -857,6 +874,14 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
             data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#custom-markers');">
             Custom markers
+        </a>
+        
+
+        
+        <a href="#the-viewport"
+            class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#the-viewport');">
+            The viewport
         </a>
         
 
@@ -901,10 +926,10 @@ uv<span class="w"> </span>run<span class="w"> </span>simscope<span class="w"> </
         
 
         
-        <a href="#work-on-simscope"
+        <a href="#contribute"
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
-            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#work-on-simscope');">
-            Work on simscope
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#contribute');">
+            Contribute
         </a>
         
 

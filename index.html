@@ -482,28 +482,32 @@
   </div>
   <div class="typography w-full flex-1 *:data-[slot=alert]:first:mt-0">
     <h1 id="simscope">simscope<a class="headerlink" href="#simscope" title="Permanent link">&para;</a></h1>
-<p>simscope records robot simulation rollouts and replays ones you already have. A folder of rollouts opens in the browser, and any rollout exports as one HTML file that plays offline.</p>
-<h2 id="what-simscope-is">What simscope is<a class="headerlink" href="#what-simscope-is" title="Permanent link">&para;</a></h2>
-<p>A library is a folder of rollouts. Record new ones from MuJoCo or Isaac Lab 3.0+, or import <code>.rbundle</code> files and Brax HTML pages you already have. <code>simscope serve</code> opens the folder in the browser. <code>simscope export</code> writes one HTML file that uses the same player and makes no network requests.</p>
-<p>simscope needs Python 3.12 or newer. The browser code ships inside the package, so using it does not require Node.</p>
-<h2 id="who-it-is-for">Who it is for<a class="headerlink" href="#who-it-is-for" title="Permanent link">&para;</a></h2>
-<p>simscope is for people who produce robot simulations, or who already have saved rollouts, and want to look through them and hand one file to someone else.</p>
+<p>simscope is a viewer for robot simulation rollouts. Record rollouts from MuJoCo or Isaac Lab, or import ones you already have, then browse, compare, and annotate them in the browser. Any rollout exports as one HTML file that plays offline.</p>
+<h2 id="install">Install<a class="headerlink" href="#install" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span><span class="s2">"simscope[viewer,mujoco]"</span>
+</code></pre></div>
+
+<p>simscope needs Python 3.12 or newer. <a href="getting-started/">Getting started</a> explains the extras and how to install from source.</p>
+<h2 id="how-it-works">How it works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>A library is a folder of rollouts. Record into it from MuJoCo or Isaac Lab 3.0+, or import <code>.rbundle</code> files and Brax HTML pages you already have. <code>simscope serve</code> shows the folder in the browser. <code>simscope export</code> writes one HTML file that uses the same player and makes no network requests. The browser code ships inside the package, so using simscope does not require Node.</p>
 <h2 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Record a rollout and open it while it is still recording.</li>
 <li>Replay a <code>.rbundle</code> file or a Brax HTML page.</li>
-<li>Browse by date or by group. Search, rate, pin, and add notes.</li>
-<li>Compare up to four rollouts on one clock. Cameras and ground stay aligned.</li>
-<li>Mark peaks in contact force and in center-of-mass acceleration. Add your own markers.</li>
-<li>Export one offline HTML file. A lean file is the player. A full file is the whole app.</li>
+<li>Browse by date or by group, with search, ratings, pins, and notes.</li>
+<li>Compare up to four rollouts on one clock, with cameras and ground aligned.</li>
+<li>Mark peaks in contact force and center-of-mass acceleration, or add your own markers.</li>
+<li>Light the scene from the camera or from a fixed sun, and capture screenshots and GIFs of the viewport.</li>
+<li>Export one offline HTML file. A lean file is the player, and a full file is the whole app.</li>
+<li>Open a rollout in Blender as a USD file.</li>
 <li>Put an export on an <a href="https://github.com/senthurayyappan/mkdeck">mkdeck</a> slide.</li>
 </ul>
 <h2 id="where-to-start">Where to start<a class="headerlink" href="#where-to-start" title="Permanent link">&para;</a></h2>
 <ol>
-<li><a href="getting-started/">Getting started</a> records a rollout, opens it, and exports it.</li>
+<li><a href="getting-started/">Getting started</a> installs simscope, records a rollout, opens it, and exports it.</li>
 <li>The <a href="cli/">CLI</a> lists every command.</li>
 <li>The <a href="api/">API reference</a> covers the Python library.</li>
-<li><a href="design/">Design</a> records why simscope exists and the decisions behind it.</li>
+<li><a href="design/">Design</a> explains why simscope exists and records the decisions behind it.</li>
 <li><a href="developing/">Developing</a> is for changing or extending the code.</li>
 </ol>
   </div>
@@ -609,18 +613,18 @@
         
         
         
-        <a href="#what-simscope-is"
+        <a href="#install"
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
-            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#what-simscope-is');">
-            What simscope is
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#install');">
+            Install
         </a>
         
 
         
-        <a href="#who-it-is-for"
+        <a href="#how-it-works"
             class="text-muted-foreground hover:text-foreground data-[active=true]:text-foreground text-[0.8rem] no-underline transition-colors data-[depth=3]:pl-4 data-[depth=4]:pl-6"
-            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#who-it-is-for');">
-            Who it is for
+            data-active="false" data-depth="2" onClick="deferSetActiveTocLink('#how-it-works');">
+            How it works
         </a>
         
 

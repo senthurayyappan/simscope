@@ -523,10 +523,10 @@ make<span class="w"> </span>docs-test
 <span class="nb">cd</span><span class="w"> </span>web<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>ci<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>build
 </code></pre></div>
 
-<p><code>make install</code> installs the tools and the git hooks. <code>make check</code> lints, formats, and type-checks. Node 26 is what CI uses. After a change under <code>web/src/</code>, commit the rebuilt files in <code>src/simscope/_assets/</code> and <code>web/src/core/decode_worker.generated.js</code>. The build is byte for byte the same on every machine, and CI fails if the commit differs.</p>
+<p>The Makefile uses <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>, so install it first. <code>make install</code> installs the tools and the git hooks, and <code>make check</code> lints, formats, and type-checks. CI uses Node 26. After a change under <code>web/src/</code>, commit the rebuilt files in <code>src/simscope/_assets/</code> and <code>web/src/core/decode_worker.generated.js</code>. The build is byte for byte the same on every machine, and CI fails if the commit differs.</p>
 <p>Do not add <code>tests/io/__init__.py</code>. Pytest would then treat <code>io</code> as a top-level package and shadow the standard library.</p>
 <h2 id="files-an-extension-has-to-respect">Files an extension has to respect<a class="headerlink" href="#files-an-extension-has-to-respect" title="Permanent link">&para;</a></h2>
-<p>Coordinates are Z-up, right-handed, in metres. Time is in seconds. A pose is <code>[px, py, pz, qx, qy, qz, qw]</code>, with the quaternion in xyzw order. Within a stream, flip <code>q</code> to <code>-q</code> when the dot product with the previous frame is negative, so the signs stay continuous.</p>
+<p>Coordinates are Z-up, right-handed, in meters. Time is in seconds. A pose is <code>[px, py, pz, qx, qy, qz, qw]</code>, with the quaternion in xyzw order. Within a stream, flip <code>q</code> to <code>-q</code> when the dot product with the previous frame is negative, so the signs stay continuous.</p>
 <p>A library is a folder:</p>
 <div class="codehilite"><pre><span></span><code>&lt;library&gt;/
   .simscope/index.sqlite          cache; deleting it loses nothing
@@ -553,7 +553,7 @@ make<span class="w"> </span>docs-test
 <tr>
 <td><code>box</code></td>
 <td><code>[hx, hy, hz]</code></td>
-<td>Half-extents, centred on the origin</td>
+<td>Half-extents, centered on the origin</td>
 </tr>
 <tr>
 <td><code>sphere</code></td>
@@ -630,7 +630,7 @@ make<span class="w"> </span>docs-test
 </tr>
 </tbody>
 </table></div>
-<p>Name an arrows stream <code>contacts</code> to record contact forces. Each row is the contact point in metres, then the force on the body in newtons. Pad unused slots with zeros. Set <code>units</code> to <code>N</code>.</p>
+<p>Name an arrows stream <code>contacts</code> to record contact forces. Each row is the contact point in meters, then the force on the body in newtons. Pad unused slots with zeros. Set <code>units</code> to <code>N</code>.</p>
 <p>Curation does not rewrite <code>rollout.json</code>. Notes, ratings, labels, and the group live in <code>annotations.json</code>. A label is an event with an empty <code>type</code>. Highlights are a separate derived file, not part of the sidecar. A rollout belongs to at most one group, named by <code>marks.group</code>. If <code>.simscope/event_types.json</code> is missing, the library uses four types: <code>fall</code>, <code>slip</code>, <code>success</code>, and <code>note</code>.</p>
 <p>A reader rejects a major version it does not know, and an unknown codec. It accepts a newer minor version and ignores unknown JSON fields. A byte change goes in <code>src/simscope/io/</code> and in <code>web/src/core/format.js</code>. A compatible addition bumps the minor version. Anything a current reader would misread bumps the major version.</p>
 <h2 id="extend">Extend<a class="headerlink" href="#extend" title="Permanent link">&para;</a></h2>

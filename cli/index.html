@@ -495,8 +495,8 @@
   </div>
   <div class="typography w-full flex-1 *:data-[slot=alert]:first:mt-0">
     <h1 id="cli">CLI<a class="headerlink" href="#cli" title="Permanent link">&para;</a></h1>
-<p>Look up every option of the <code>simscope</code> command.</p>
-<p>Run <code>simscope --help</code> for the command list, or <code>simscope COMMAND --help</code> for one command. Every command takes a folder as its first argument. <code>ls</code>, <code>serve</code>, and <code>export</code> treat that folder as a library, and they also find libraries nested under it. A library is a directory whose <code>runs/</code> folder holds rollouts. A folder that is itself one library keeps the same behavior. <code>serve</code> needs the <code>viewer</code> extra. The other commands do not.</p>
+<p>Every <code>simscope</code> command and option. Run <code>simscope --help</code> for the command list, or <code>simscope COMMAND --help</code> for one command.</p>
+<p>Every command takes a folder as its first argument. For <code>ls</code>, <code>serve</code>, and <code>export</code>, that folder can be a library or a folder that contains libraries, and simscope finds the nested ones. A library is a directory whose <code>runs/</code> folder holds rollouts. <code>serve</code> needs the <code>viewer</code> extra, and the other commands do not.</p>
 <h2 id="exit-status">Exit status<a class="headerlink" href="#exit-status" title="Permanent link">&para;</a></h2>
 <div class="table-wrapper"><table>
 <thead>
@@ -525,7 +525,7 @@
 </tbody>
 </table></div>
 <h2 id="simscope-serve">simscope serve<a class="headerlink" href="#simscope-serve" title="Permanent link">&para;</a></h2>
-<p>Opens the library in a browser. Runs that are still recording appear, and the app tails their finished blocks.</p>
+<p>Serves the library over HTTP and prints the address to open in a browser. Rollouts that are still recording appear too, and the app reads each block as the recorder finishes it.</p>
 <div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span>serve<span class="w"> </span>DIR<span class="w"> </span><span class="o">[</span>--host<span class="w"> </span>HOST<span class="o">]</span><span class="w"> </span><span class="o">[</span>--port<span class="w"> </span>PORT<span class="o">]</span><span class="w"> </span><span class="o">[</span>--author<span class="w"> </span>NAME<span class="o">]</span>
 </code></pre></div>
 
@@ -710,7 +710,7 @@
 </code></pre></div>
 
 <h2 id="simscope-import">simscope import<a class="headerlink" href="#simscope-import" title="Permanent link">&para;</a></h2>
-<p>Imports <code>.rbundle</code> files and Brax HTML viewers. A folder is searched for those files.</p>
+<p>Imports <code>.rbundle</code> files and Brax HTML pages. Given a folder, it searches the folder for them.</p>
 <div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span>import<span class="w"> </span>DIR<span class="w"> </span>PATH<span class="w"> </span><span class="o">[</span>PATH<span class="w"> </span>...<span class="o">]</span><span class="w"> </span><span class="o">[</span>--tag<span class="w"> </span>TAG<span class="o">]</span><span class="w"> </span><span class="o">[</span>--overwrite<span class="o">]</span><span class="w"> </span><span class="o">[</span>--jobs<span class="w"> </span>N<span class="o">]</span>
 </code></pre></div>
 
@@ -747,7 +747,7 @@
 </table></div>
 <p>A file that cannot be read is skipped and reported. If every file fails, the command exits 1.</p>
 <h2 id="simscope-recover">simscope recover<a class="headerlink" href="#simscope-recover" title="Permanent link">&para;</a></h2>
-<p>Repairs a rollout whose recording stopped before the manifest was finalized. Complete blocks are kept. Frames that exist on a longer stream and not on a shorter one are dropped.</p>
+<p>Repairs a rollout whose recording stopped before the manifest was finalized. Complete blocks are kept. If the streams differ in length, the frames past the shortest stream are dropped.</p>
 <div class="codehilite"><pre><span></span><code>simscope<span class="w"> </span>recover<span class="w"> </span>DIR<span class="w"> </span>RUN
 </code></pre></div>
 
