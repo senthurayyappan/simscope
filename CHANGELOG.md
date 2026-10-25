@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.5](https://github.com/senthurayyappan/simscope/compare/v0.1.4...v0.1.5) (2026-10-25)
+
+
+### Documentation
+
+* install from PyPI, rewrite the README, and tighten the docs ([bee2722](https://github.com/senthurayyappan/simscope/commit/bee272297c25667f1b1975d32086585eb93fe716))
+* install from PyPI, rewrite the README, and tighten the docs ([7538c01](https://github.com/senthurayyappan/simscope/commit/7538c013eae9a8183d791ee926a65ed664d72ff1))
+
 ## [0.1.4](https://github.com/senthurayyappan/simscope/compare/v0.1.3...v0.1.4) (2026-10-24)
 
 
