@@ -37,7 +37,7 @@ simscope = "simscope.cli:main"
 
 [project.optional-dependencies]
 viewer = [
-    "starlette==1.7.0",
+    "starlette==1.10.0",
     "uvicorn==0.54.0",
     "watchfiles>=1.1",
 ]
